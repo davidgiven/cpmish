@@ -17,6 +17,11 @@ macro safeorg, addr
     ds addr - $
 endm
 
+; The main startup vector.
+
+safeorg 0x000
+    jp startup
+
 ; Sector 0: the main FAT boot sector.
 
 safeorg 0x003
@@ -35,6 +40,10 @@ safeorg 0x00b
     dw 9    ; number of sectors per track
     dw 2    ; number of heads
     dw 0    ; number of hidden sectors
+
+; Interrupt vector
+safeorg 0x038
+    rti
 
     ; Boot signature
 safeorg 0x1fe
@@ -55,11 +64,19 @@ safeorg 0x20b
     dw 2    ; number of heads
     dw 0    ; number of hidden sectors
 
+include startup.inc
+include tty.inc
+
 ; The first FAT (the only one the NC200 looks at).
 
     safeorg 0x400
     db 0xf9, 0xff, 0xff
     db 0xff, 0x7f, 0xff ; One reserved cluster, one used cluster
+
+; The font.
+
+.data.font:
+    incbin font.img
 
 ; The root directory.
 
@@ -80,18 +97,16 @@ safeorg 0x1000
 ; The 1kB of code here gets loaded at 0x4000 as part of the boot process.
 ; At this point we take over from the NC200 OS, disable interupts, reshuffle
 ; the things, and load the supervisor proper.
+;
+; On entry, the OS puts bank 0x40 at 0x0000 and a different bank (we don't
+; care which one) at 0x4000. This means we can write to bank 0x40 without
+; stepping on our own toes.
 
 safeorg 0x1e00
 bootblock:
-    di
-    ld a, 0x40      ; First 16kB of physical RAM
-    out (0x10), a   ; -> first 16kB RAM bank
-    ld a, 0x20      ; Video memory address to 8kB (of physical RAM)
-    out (0x00), a
-    jr bootblock
-    ret
+    incbin auto.img
 
 ; The data area stops at 0x2400.
-if $ >= 0x2400
+if $ > 0x2400
     .error Code bigger than 9kB
 endif
