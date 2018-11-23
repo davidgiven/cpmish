@@ -17,7 +17,7 @@ tty_init:
 tty_clear_screen:
     ld hl, VIDEORAM_BASE
     ld de, VIDEORAM_BASE+1
-    ld bc, VIDEORAM_SIZE
+    ld bc, VIDEORAM_SIZE-1
     ld (hl), 0
     ldir
     xor a
@@ -37,6 +37,34 @@ tty_puts:
     call tty_putc
     pop hl
     jr tty_puts
+
+; --- Prints the hex bytes in HL or A ---------------------------------------
+
+; prints HL
+tty_puthex16:
+    ld a, h
+    call tty_puthex8
+    ld a, l
+tty_puthex8:
+    ld c, a
+    rra
+    rra
+    rra
+    rra
+    call tty_puthex8_conv
+    ld a, c
+tty_puthex8_conv:
+    and 15
+    add a, 0x90
+    daa
+    adc a, 0x40
+    daa
+    push hl
+    push bc
+    call tty_putc
+    pop bc
+    pop hl
+    ret
 
 ; --- Calculates the address of the cursor ----------------------------------
 
@@ -72,6 +100,7 @@ tty_carriagereturn:
     ret
 
 ; --- Prints the character in A ---------------------------------------------
+; (also tty_newline)
 
 tty_putc:
     ; Handle special characters.
@@ -112,36 +141,36 @@ tty_putc_loop:
 
     ; Now we've drawn a character, advance the cursor.
 
-    ld a, (cursorx)
+    ld hl, cursorx
+    ld a, (hl)
     inc a
-    ld (cursorx), a
+    ld (hl), a
     cp SCREEN_WIDTH
-    jr z, tty_newline
-    ret
-
-; --- Performs a newline ----------------------------------------------------
-
+    ret nz
 tty_newline:
     xor a
     ld (cursorx), a
-    ld a, (cursory)
+    ld hl, cursory
+    ld a, (hl)
     inc a
-    ld (cursory), a
+    ld (hl), a
     cp SCREEN_HEIGHT
-    call z, tty_scroll
-    ret
+    ret nz
+    dec (hl)                ; oops, don't go the next line after all
+    jr tty_scroll
 
 ; --- Scrolls the screen by one line ----------------------------------------
 
 tty_scroll:
     ld de, VIDEORAM_BASE
     ld hl, VIDEORAM_BASE + 512
-    ld bc, VIDEORAM_SIZE - 512
+    ld bc, VIDEORAM_SIZE - 511
     ldir
+    ret
     ld h, d
     ld l, e
     inc de
-    ld bc, 512
+    ld bc, 511
     ld (hl), 0
     ldir
     ret

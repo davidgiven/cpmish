@@ -41,9 +41,19 @@ safeorg 0x00b
     dw 2    ; number of heads
     dw 0    ; number of hidden sectors
 
+.data.keyboard_bitmap:
+    ds 10, 0x55
+.data.keyboard_buffer: ; must be contained within a single page
+    ds 8, 0x55
+.data.keyboard_rdptr:
+    db 0
+.data.keyboard_wrptr:
+    db 0
+
 ; Interrupt vector
 safeorg 0x038
-    rti
+    include interrupts.inc
+    include keyboard.inc
 
     ; Boot signature
 safeorg 0x1fe

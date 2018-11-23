@@ -1,5 +1,7 @@
-boot.img: supervisor.asm auto.img startup.inc tty.inc
-	pasmo supervisor.asm supervisor.img
+OBJ = .obj
 
-auto.img: auto.asm
-	pasmo auto.asm auto.img
+supervisor.img: supervisor/supervisor.asm $(OBJ)/auto.img $(wildcard supervisor/*.inc)
+	pasmo -I supervisor $< $@
+
+$(OBJ)/auto.img: supervisor/auto.asm
+	pasmo $< $@
