@@ -1,11 +1,13 @@
 ; im 1 interrupt handler.
 
 IRQ_FDC:         equ 5
+IRQ_POWER:       equ 4
 IRQ_KEYBOARD:    equ 3
 IRQ_SERIAL:      equ 2
 IRQ_PARALLEL:    equ 0
 
 IRQ_MASK_PORT:   equ 0x60
+POWER_PORT:      equ 0x70
 IRQ_STATUS_PORT: equ 0x90
 KBD_SCAN_PORT:   equ 0xb0
 
@@ -18,12 +20,19 @@ interrupt_handler:
 
     in a, (IRQ_STATUS_PORT)
     out (IRQ_STATUS_PORT), a        ; clear pending interrupts
+    bit IRQ_POWER, a
+    call z, power_interrupt_handler
     bit IRQ_KEYBOARD, a
     call z, keyboard_interrupt_handler
     
     pop af
     ei
     ret
+
+power_interrupt_handler:
+    xor a
+    out (0x70), a
+    ; does not return
 
 keyboard_interrupt_handler:
     push hl
@@ -101,7 +110,7 @@ keyboard_byte_hasnt_changed_status:
     ret
 
 init_interrupts:
-    ld a, 1<<IRQ_KEYBOARD
+    ld a, 1<<IRQ_KEYBOARD | 1<<IRQ_POWER
     out (IRQ_MASK_PORT), a
     im 1
     in a, (KBD_SCAN_PORT+9)     ; trigger a keyboard scan
