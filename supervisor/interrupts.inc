@@ -38,6 +38,12 @@ keyboard_interrupt_handler:
     push hl
     push bc
     push de
+
+    ; The keyboard handler is also the timer interrupt, so increment that.
+    ld hl, (.data.approximate_time)
+    inc hl
+    ld (.data.approximate_time), hl
+
     ld hl, .data.keyboard_bitmap
     ld c, KBD_SCAN_PORT
 keyboard_read_loop:
@@ -113,6 +119,9 @@ init_interrupts:
     ld a, 1<<IRQ_KEYBOARD | 1<<IRQ_POWER
     out (IRQ_MASK_PORT), a
     im 1
-    in a, (KBD_SCAN_PORT+9)     ; trigger a keyboard scan
+    call keyboard_interrupt_handler ; scan the keyboard now
+    xor a
+    ld (.data.keyboard_rdptr), a ; flush the keyboard event buffer
+    ld (.data.keyboard_wrptr), a
     ei
     ret

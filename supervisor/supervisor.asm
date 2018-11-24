@@ -49,6 +49,8 @@ safeorg 0x00b
     db 0
 .data.keyboard_wrptr:
     db 0
+.data.approximate_time:
+    dw 0
 
 ; Interrupt vector
 safeorg 0x038
