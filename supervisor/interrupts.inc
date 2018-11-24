@@ -72,7 +72,7 @@ keyboard_read_loop:
             dec a
 
             bit 0, h            ; c = key pressed
-            jr z, keyboard_read_key_not_pressed
+            jr nz, keyboard_read_key_not_pressed
             or 0x80
         keyboard_read_key_not_pressed:
             ld (de), a

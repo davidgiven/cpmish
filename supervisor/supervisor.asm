@@ -114,7 +114,7 @@ safeorg 0x1000
 
 safeorg 0x1e00
 bootblock:
-    incbin auto.img
+    incbin .obj/auto.img
 
 ; The data area stops at 0x2400.
 if $ > 0x2400

@@ -9,9 +9,11 @@ startup:
     call tty_puts
 
 outerloop:
-    call kbd_get_next_event
-    call tty_puthex8
-    ld a, ' '
+    call tty_draw_cursor
+    call kbd_get_next_key
+    push af
+    call tty_draw_cursor
+    pop af
     call tty_putc
     jr outerloop
 
