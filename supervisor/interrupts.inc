@@ -15,16 +15,31 @@ KBD_SCAN_PORT:   equ 0xb0
 safeorg 0x0038
 interrupt_handler:
     push af
+    push hl
+    push bc
+    push de
 
     ; Status port bits are *zero* to indicate a pending interrupt.
 
     in a, (IRQ_STATUS_PORT)
     out (IRQ_STATUS_PORT), a        ; clear pending interrupts
+
     bit IRQ_POWER, a
+    push af
     call z, power_interrupt_handler
+    pop af
+
     bit IRQ_KEYBOARD, a
+    push af
     call z, keyboard_interrupt_handler
+    pop af
+    push af
+    call z, fd765_motor_interrupt_handler
+    pop af
     
+    pop de
+    pop bc
+    pop hl
     pop af
     ei
     ret
@@ -35,10 +50,6 @@ power_interrupt_handler:
     ; does not return
 
 keyboard_interrupt_handler:
-    push hl
-    push bc
-    push de
-
     ; The keyboard handler is also the timer interrupt, so increment that.
     ld hl, (.data.approximate_time)
     inc hl
@@ -110,9 +121,6 @@ keyboard_byte_hasnt_changed_status:
     ld a, KBD_SCAN_PORT+10
     cp c
     jr nz, keyboard_read_loop
-    pop de
-    pop bc
-    pop hl
     ret
 
 init_interrupts:

@@ -66,13 +66,7 @@ read_status_loop:
     ; We're done.
 
 finished:
-    ; Turn the FDD motor off.
-
-    ld a, 0xb8
-    out (CONTROL), a
-
-    ; And jump to the newly loaded code.
-
+    ; Jump to the newly loaded code.
     jp 0
 
 ; The baked command to read a track.

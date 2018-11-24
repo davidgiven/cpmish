@@ -90,6 +90,8 @@ include tty.inc
 .data.font:
     incbin font.img
 
+include floppy.inc
+
 ; The root directory.
 
 safeorg 0x1000

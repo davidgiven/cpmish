@@ -9,13 +9,43 @@ startup:
     call tty_puts
 
 outerloop:
-    call tty_draw_cursor
     call kbd_get_next_key
+
+    cp 'm'
     push af
-    call tty_draw_cursor
+    call z, motor_on_and_wait
     pop af
-    call tty_putc
+
+    cp 'r'
+    push af
+    call z, recalibrate_and_report
+    pop af
+
+    cp 's'
+    push af
+    call z, seek_and_report
+    pop af
+
     jr outerloop
+
+recalibrate_and_report:
+    call fd765_recalibrate_twice
+    jr report
+
+seek_and_report:
+    ld a, 79
+    call fd765_seek
+    jr report
+
+motor_on_and_wait:
+    call fd765_wait_until_drive_ready
+report:
+    ld a, 'Y'
+    jr nz, skip
+    ld a, 'N'
+skip:
+    call tty_putc
+    ret
 
 .str.banner: db "NC200 CP/M Supervisor (C) 2018 David Given", 10, 0
 
