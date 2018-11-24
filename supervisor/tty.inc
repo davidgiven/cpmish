@@ -1,7 +1,7 @@
 VIDEORAM_BASE: equ 0x2000
 VIDEORAM_SIZE: equ 0x2000
 SCREEN_WIDTH:  equ 480 / 8
-SCREEN_HEIGHT: equ 160 / 8
+SCREEN_HEIGHT: equ 128 / 8
 
 cursorx: db 0
 cursory: db 0
@@ -166,7 +166,6 @@ tty_scroll:
     ld hl, VIDEORAM_BASE + 512
     ld bc, VIDEORAM_SIZE - 511
     ldir
-    ret
     ld h, d
     ld l, e
     inc de
