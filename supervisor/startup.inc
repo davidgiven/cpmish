@@ -16,7 +16,7 @@ outerloop:
     call z, motor_on_and_wait
     pop af
 
-    cp 'r'
+    cp 'h'
     push af
     call z, recalibrate_and_report
     pop af
@@ -26,6 +26,11 @@ outerloop:
     call z, seek_and_report
     pop af
 
+    cp 'r'
+    push af
+    call z, read_and_report
+    pop af
+
     jr outerloop
 
 recalibrate_and_report:
@@ -33,8 +38,14 @@ recalibrate_and_report:
     jr report
 
 seek_and_report:
-    ld a, 79
+    ld b, 79
     call fd765_seek
+    jr report
+
+read_and_report:
+    ld b, 0
+    ld hl, VIDEORAM_BASE
+    call fd765_read_track
     jr report
 
 motor_on_and_wait:
@@ -45,6 +56,10 @@ report:
     ld a, 'N'
 skip:
     call tty_putc
+    ld a, (.data.fd765_status)
+    call tty_puthex8
+    ld a, (.data.fd765_status+1)
+    call tty_puthex8
     ret
 
 .str.banner: db "NC200 CP/M Supervisor (C) 2018 David Given", 10, 0

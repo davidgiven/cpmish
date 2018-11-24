@@ -141,18 +141,18 @@ fd765_wait_for_seek_ending:
     call fd765_recalibrate
     ret z
     jr fd765_recalibrate
-    
+
  ; --- Does SEEK ------------------------------------------------------------
 
- ; Seeks to track A.
+ ; Seeks to track B.
  ; Returns nz on success, z on failure.
 
  fd765_seek:
-    ld b, a
     push bc
     call fd765_wait_until_drive_ready
     pop bc
     ret z
+
     ld a, 15                    ; SEEK
     call fd765_tx
     xor a                       ; head 0, drive 0
@@ -160,4 +160,110 @@ fd765_wait_for_seek_ending:
     ld a, b                     ; track number
     call fd765_tx
     jr fd765_wait_for_seek_ending
-    
+
+; --- Reads or writes a track -----------------------------------------------
+
+; Seeks to track B and reads it into the buffer at HL. This will transfer
+; NINE KILOBYTES of data.
+; Returns nz on success, z on failure.
+
+fd765_read_track:
+    ld a, 0xc6 ; READ SECTORS MULTITRACK
+    call fd765_setup_read_or_write
+    ret z
+    ld de, 9*1024
+    jr fd765_read_bytes_from_controller
+
+; Read de bytes from the 765 into HL.
+fd765_read_bytes_from_controller:
+	ld c, FD_DT_PORT
+    di ; terribly important
+fd765_read_loop:
+	in a, (FD_ST_PORT)
+	rla							; RQM...
+	jr nc, fd765_read_loop      ; ...low, keep waiting
+	rla							; DIO (ignore)
+	rla							; EXM...
+	jr nc, fd765_read_loop_finished ; ...low, transfer complete
+	ini							; (HL++) = port(C), B--
+
+    dec de
+    ld a, d
+    or e
+    jr nz, fd765_read_loop
+fd765_read_loop_finished:
+    ei
+    jr fd765_complete_transfer
+
+; Finish up a read or write transfer.
+; Returns nz on success, z on failure.
+fd765_complete_transfer:
+    call fd765_nudge_tc
+    call fd765_read_status
+    ; Parsing the status code is fiddly, because we're allowed a readfail if
+    ; EN is set.
+    ld a, (.data.fd765_status+1)
+    rla                         ; EN->C
+    ld a, (.data.fd765_status+0)
+    rla                         ; IC6->b7, IC7->C, EN->b0
+    rla                         ; IC6->C, IC7->b0, EN->b1
+    rla                         ; IC6->b0, IC7->b1, EN->b2
+    and 7                       ; clip off stray bits
+    ld hl, (.data.fd765_status_codes)
+    ld b, 0
+    ld c, a
+    add hl, bc
+    ld a, (hl)
+    or a
+    ret
+
+.data.fd765_status_codes:
+    ; EN, IC7, IC6
+    db 1    ; OK
+    db 0    ; readfail
+    db 0    ; unknown command
+    db 0    ; disk removed
+    db 1    ; OK
+    db 1    ; reached end of track
+    db 0    ; unknown command
+    db 0    ; disk removed
+
+; On entry, A contains the opcode, B contains the track. HL is preserved.
+; Returns nz on success, z on failure.
+fd765_setup_read_or_write:
+    push hl
+    ld (.data.readwritetrack+0), a
+    ld hl, .data.readwritetrack+2
+    ld (hl), b
+    call fd765_seek
+    pop hl
+    ret z
+
+    push hl
+    ld hl, .data.readwritetrack
+    ld b, .data.readwritetrack.end - .data.readwritetrack
+    ld c, FD_DT_PORT
+fd765_setup_read_or_write_loop:
+	in a, (FD_ST_PORT)
+	rla							; RQM...
+	jr nc, fd765_setup_read_or_write_loop ; ...low, keep waiting
+    outi                        ; port(C) = (HL++), B++
+    jr nz, fd765_setup_read_or_write_loop
+    pop hl
+    or 1                        ; set nz
+    ret
+
+; The baked command to read or write a track.
+
+.data.readwritetrack:
+    db 0        ; 0: opcode, filled in later
+    db 0        ; 1: physical head 0, drive 0
+    db 0        ; 2: track, filled in later
+    db 0        ; 3: logical head 0
+    db 1        ; 4: start sector, always 1
+    db 2        ; 5: bytes per sector: 512
+    db 9        ; 6: last sector for one track (*inclusive*)
+    db 27       ; 7: gap 3 length (27 is standard for 3.5" drives)
+    db 0        ; 8: sector length (unused)
+.data.readwritetrack.end
+
