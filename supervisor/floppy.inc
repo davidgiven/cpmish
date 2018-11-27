@@ -338,5 +338,5 @@ fd765_setup_read_or_write_loop:
     db 9        ; 6: last sector for one track (*inclusive*)
     db 27       ; 7: gap 3 length (27 is standard for 3.5" drives)
     db 0        ; 8: sector length (unused)
-.data.readwritetrack.end
+.data.readwritetrack.end:
 
