@@ -1,7 +1,9 @@
 OBJ = .obj
 
-$(OBJ)/supervisor.img: \
-	supervisor/supervisor.asm \
+all: $(OBJ)/supervisor.img
+
+$(OBJ)/supervisor.o: \
+	$(OBJ)/font.inc \
 	$(OBJ)/keyboard.inc \
 	$(OBJ)/auto.img.inc \
 	$(wildcard supervisor/*.inc)

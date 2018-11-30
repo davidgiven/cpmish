@@ -85,7 +85,7 @@ include "supervisor/tty.inc"
 ; The font.
 
 .data.font:
-    incbin "supervisor/font.img"
+    include ".obj/font.inc"
 
 include "supervisor/floppy.inc"
 
