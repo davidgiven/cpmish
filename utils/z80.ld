@@ -15,5 +15,6 @@ SECTIONS {
     splashscreen : { *(SPLASH) } >splashscreen
     ccp :          { *(CCP) } >ccp
     bdos :         { *(BDOS) } >bdos
+    bios :         { *(BIOS) } >bios
     supervisor :   { *(.text) } >supervisor
 }
