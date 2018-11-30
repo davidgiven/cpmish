@@ -1,11 +1,11 @@
 OBJ = .obj
 
-all: $(OBJ)/supervisor.img
+all: $(OBJ)/supervisor/supervisor.img
 
-$(OBJ)/supervisor.o: \
+$(OBJ)/supervisor/supervisor.o: \
 	$(OBJ)/font.inc \
 	$(OBJ)/keyboard.inc \
-	$(OBJ)/auto.img.inc \
+	$(OBJ)/supervisor/auto.img \
 	$(wildcard supervisor/*.inc)
 
 $(OBJ)/%: utils/%.c
@@ -20,9 +20,9 @@ $(OBJ)/keyboard.inc: $(OBJ)/mkkeytab
 	@mkdir -p $(dir $@)
 	$(OBJ)/mkkeytab > $@
 
-$(OBJ)/%.o: supervisor/%.asm
+$(OBJ)/%.o: %.asm
 	@mkdir -p $(dir $@)
-	z80-unknown-coff-as -g -o $@ $<
+	z80-unknown-coff-as -I$(OBJ) -g -o $@ $<
 
 $(OBJ)/%.img: $(OBJ)/%.o utils/z80.ld
 	@mkdir -p $(dir $@)

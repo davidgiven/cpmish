@@ -85,7 +85,7 @@ include "supervisor/tty.inc"
 ; The font.
 
 .data.font:
-    include ".obj/font.inc"
+    include "font.inc"
 
 include "supervisor/floppy.inc"
 
@@ -115,4 +115,4 @@ safeorg 0x1000
 
 safeorg 0x1e00
 bootblock:
-    include ".obj/auto.img.inc"
+    incbin "supervisor/auto.img"
