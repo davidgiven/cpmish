@@ -235,16 +235,19 @@ fd765_wait_for_seek_ending:
 
 ; --- Reads or writes a track -----------------------------------------------
 
-; Seeks to track B and reads it into the buffer at HL. This will transfer
-; NINE KILOBYTES of data.
+; Seeks to track B and reads up to DE bytes from it into the buffer at HL.
+; This can transfer up to NINE KILOBYTES of data.
 ; Returns nz on success, z on failure.
 
+fd765_read_complete_track:
+    ld de, 9*1024
 fd765_read_track:
     call fd765_stop_polling
+    ld a, 9
+    ld (.data.readwritecommand+6), a
     ld a, 0xc6 ; READ SECTORS MULTITRACK
     call fd765_setup_read_or_write
     jp z, fd765_start_polling
-    ld de, 9*1024
     jr fd765_read_bytes_from_controller
 
 ; Read de bytes from the 765 into HL.
@@ -305,16 +308,16 @@ fd765_complete_transfer:
 ; Returns nz on success, z on failure.
 fd765_setup_read_or_write:
     push hl
-    ld (.data.readwritetrack+0), a
-    ld hl, .data.readwritetrack+2
+    ld (.data.readwritecommand+0), a
+    ld hl, .data.readwritecommand+2
     ld (hl), b
     call fd765_seek
     pop hl
     ret z
 
     push hl
-    ld hl, .data.readwritetrack
-    ld b, .data.readwritetrack.end - .data.readwritetrack
+    ld hl, .data.readwritecommand
+    ld b, .data.readwritecommand.end - .data.readwritecommand
     ld c, FD_DT_PORT
 fd765_setup_read_or_write_loop:
 	in a, (FD_ST_PORT)
@@ -328,7 +331,7 @@ fd765_setup_read_or_write_loop:
 
 ; The baked command to read or write a track.
 
-.data.readwritetrack:
+.data.readwritecommand:
     db 0        ; 0: opcode, filled in later
     db 0        ; 1: physical head 0, drive 0
     db 0        ; 2: track, filled in later
@@ -338,5 +341,5 @@ fd765_setup_read_or_write_loop:
     db 9        ; 6: last sector for one track (*inclusive*)
     db 27       ; 7: gap 3 length (27 is standard for 3.5" drives)
     db 0        ; 8: sector length (unused)
-.data.readwritetrack.end:
+.data.readwritecommand.end:
 

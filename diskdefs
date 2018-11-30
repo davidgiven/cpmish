@@ -1,0 +1,9 @@
+diskdef nc200cpm
+  seclen 512
+  tracks 80
+  sectrk 18
+  blocksize 2048
+  maxdir 128
+  boottrk 2
+  os 2.2
+end

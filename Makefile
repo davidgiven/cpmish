@@ -1,6 +1,19 @@
 OBJ = .obj
 
-all: $(OBJ)/supervisor/supervisor.img
+all: bootdisk.img
+
+bootdisk.img: \
+		$(OBJ)/boottracks.img \
+		diskdefs
+	mkfs.cpm -f nc200cpm -b $(OBJ)/boottracks.img $@
+
+$(OBJ)/boottracks.img: \
+		$(OBJ)/supervisor/supervisor.img \
+		$(OBJ)/cpm/ccp.img \
+		$(OBJ)/cpm/bdos.img
+	cp $(OBJ)/supervisor/supervisor.img $@
+	dd if=$(OBJ)/cpm/ccp.img of=$@ bs=1 seek=9K
+	dd if=$(OBJ)/cpm/bdos.img of=$@ bs=1 seek=11K
 
 $(OBJ)/supervisor/supervisor.o: \
 	$(OBJ)/font.inc \

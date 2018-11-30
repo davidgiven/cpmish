@@ -9,6 +9,9 @@
 ; supervisor. That will then cold-start CP/M by loading all of cylinder 1
 ; into memory.
 
+include "include/supervisor.inc"
+include "include/cpm.inc"
+
 .text
 .macro safeorg addr    
     .org \addr
@@ -73,8 +76,8 @@ safeorg 0x20b
     .dw 2    ; number of heads
     .dw 0    ; number of hidden sectors
 
-include "supervisor/startup.inc"
 include "supervisor/tty.inc"
+include "supervisor/syscalls.inc"
 
 ; The first FAT (the only one the NC200 looks at).
 
@@ -87,8 +90,8 @@ include "supervisor/tty.inc"
 .data.font:
     include "font.inc"
 
+include "supervisor/startup.inc"
 include "supervisor/floppy.inc"
-include "supervisor/syscalls.inc"
 
 ; The root directory.
 

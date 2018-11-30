@@ -47,6 +47,13 @@ syscall_return:
     ld hl, (L_syscall_return_address)
     jp (hl)
 
+; Warm boot: reload the CCP, BDOS and BIOS.
+
+sys_wboot:
+    ei
+    jp warmboot
+    ; does not return
+
 ; Read console: returns char in A.
 
 sys_conin:
@@ -69,6 +76,7 @@ sys_const:
     jr syscall_return
 
 syscall_jump_table:
+    dw sys_wboot
     dw sys_interrupt
     dw sys_conin
     dw sys_conout
