@@ -3,6 +3,7 @@
 
 startup:
     ld sp, .data.supervisor_stack_end
+    call syscalls_init
     call init_interrupts
     call tty_init
     ld hl, .str.banner

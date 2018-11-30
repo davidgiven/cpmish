@@ -6,7 +6,8 @@ $(OBJ)/supervisor/supervisor.o: \
 	$(OBJ)/font.inc \
 	$(OBJ)/keyboard.inc \
 	$(OBJ)/supervisor/auto.img \
-	$(wildcard supervisor/*.inc)
+	$(wildcard supervisor/*.inc) \
+	$(wildcard include/*.inc)
 
 $(OBJ)/%: utils/%.c
 	@mkdir -p $(dir $@)

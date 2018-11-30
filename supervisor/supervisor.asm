@@ -88,6 +88,7 @@ include "supervisor/tty.inc"
     include "font.inc"
 
 include "supervisor/floppy.inc"
+include "supervisor/syscalls.inc"
 
 ; The root directory.
 

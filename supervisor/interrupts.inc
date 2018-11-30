@@ -13,12 +13,23 @@ KBD_SCAN_PORT:   equ 0xb0
 
 ; WARNING: registers must be preserved!
 safeorg 0x0038
-interrupt_handler:
+raw_interrupt_handler:
     push af
     push hl
     push bc
     push de
+    call interrupt_handler
+    pop de
+    pop bc
+    pop hl
+    pop af
+    ei
+    ret
 
+; This routine actually does the work; it's called by the supervisor's own
+; interrupt handler and also the one proxied through the BIOS.
+
+interrupt_handler:
     ; Status port bits are *zero* to indicate a pending interrupt.
 
     in a, (IRQ_STATUS_PORT)
@@ -30,20 +41,10 @@ interrupt_handler:
     pop af
 
     bit IRQ_KEYBOARD, a
-    push af
-    call z, keyboard_interrupt_handler
-    pop af
-    push af
-    call z, fd765_motor_interrupt_handler
-    pop af
+    ret nz
+    call keyboard_interrupt_handler
+    jp fd765_motor_interrupt_handler
     
-    pop de
-    pop bc
-    pop hl
-    pop af
-    ei
-    ret
-
 power_interrupt_handler:
     xor a
     out (0x70), a
