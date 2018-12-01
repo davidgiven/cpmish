@@ -34,36 +34,40 @@ kbd_get_next_event:
 ; --- Returns the next key, blocking ----------------------------------------
 
 kbd_get_next_key:
+    call tty_draw_cursor
+1:
     call kbd_get_next_event
     ld b, a
     and 0x7e
-    jr z, kbd_get_next_key_shift_pressed_or_released
+    jr nz, 2f
+
+    ; Shift is being pressed or released.
+    ld hl, .data.modifiers
+    res 0, (hl)
+    bit 7, b
+    jr nz, 1b
+    set 0, (hl)
+    jr 1b
+
+2:
     ld a, b
     sla a
-    jr nc, kbd_get_next_key
+    jr nc, 1b
     srl a
     ld b, 0
     ld c, a
     ld a, (.data.modifiers)
     ld hl, keyboard_normal_map
     bit 0, a
-    jr z, kbd_get_next_key_lookup_key_in_map
+    jr z, 2f
     ld hl, keyboard_shifted_map
-kbd_get_next_key_lookup_key_in_map:
+2:
     add hl, bc
     ld a, (hl)
     or a
-    jr z, kbd_get_next_key
+    jr z, 1b
+    call tty_draw_cursor
     ret
-
-; On entry, the key is in B.
-kbd_get_next_key_shift_pressed_or_released:
-    ld hl, .data.modifiers
-    res 0, (hl)
-    bit 7, b
-    jr nz, kbd_get_next_key
-    set 0, (hl)
-    jr kbd_get_next_key
 
 .data.modifiers:
     db 0
