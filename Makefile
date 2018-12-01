@@ -8,14 +8,19 @@ bootdisk.img: \
 	mkfs.cpm -f nc200cpm -b $(OBJ)/boottracks.img $@
 
 $(OBJ)/boottracks.img: \
-		$(OBJ)/supervisor/supervisor.img \
-		$(OBJ)/cpm/ccp.img \
-		$(OBJ)/cpm/bdos.img \
-		$(OBJ)/cpm/bios.img
-	cp $(OBJ)/supervisor/supervisor.img $@
-	dd if=$(OBJ)/cpm/ccp.img of=$@ bs=1 seek=9K
-	dd if=$(OBJ)/cpm/bdos.img of=$@ bs=1 seek=11K
-	dd if=$(OBJ)/cpm/bios.img of=$@ bs=1 seek=14848
+		$(OBJ)/mammoth.img
+	rm -f $@
+	dd if=$< of=$@ bs=1K count=9
+	dd if=$< of=$@ bs=1K seek=9 skip=58 count=6
+
+$(OBJ)/mammoth.img: \
+		utils/mammoth.ld \
+		$(OBJ)/supervisor/supervisor.o \
+		$(OBJ)/cpm/ccp.o \
+		$(OBJ)/cpm/bdos.o \
+		$(OBJ)/cpm/bios.o
+	@mkdir -p $(dir $@)
+	z80-unknown-coff-ld -T utils/mammoth.ld -o $@ $(filter %.o, $^)
 
 $(OBJ)/supervisor/supervisor.o: \
 	$(OBJ)/font.inc \
@@ -36,7 +41,7 @@ $(OBJ)/keyboard.inc: $(OBJ)/mkkeytab
 	@mkdir -p $(dir $@)
 	$(OBJ)/mkkeytab > $@
 
-$(OBJ)/%.o: %.asm
+$(OBJ)/%.o: %.asm $(wildcard include/*.inc)
 	@mkdir -p $(dir $@)
 	z80-unknown-coff-as -I$(OBJ) -g -o $@ $<
 

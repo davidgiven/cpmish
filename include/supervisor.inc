@@ -20,3 +20,8 @@ SYS_WBOOT       = 1
 SYS_CONIN       = 2
 SYS_CONOUT      = 3
 SYS_CONST       = 4
+
+.macro label name
+    .global \name
+    \name:
+.endm

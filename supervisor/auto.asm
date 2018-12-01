@@ -1,8 +1,4 @@
-CONTROL_PORT = 0x30
-FD_POWER_PORT = 0x20
-FD_ST_PORT = 0xe0
-FD_DT_PORT = 0xe1
-
+include "include/nc200.inc"
 
 .section AUTOPRG
 
@@ -22,9 +18,9 @@ main:
 
     ld hl, .data.readtrack
     ld b, .data.readtrack.end - .data.readtrack
-    ld c, FD_DT_PORT
+    ld c, PORT_NEC765_DATA
 cmd_loop:
-	in a, (FD_ST_PORT)
+	in a, (PORT_NEC765_STATUS)
 	rla							; RQM...
 	jr nc, cmd_loop             ; ...low, keep waiting
     outi                        ; port(C) = (HL++), B++
@@ -33,9 +29,9 @@ cmd_loop:
     ; Now read bytes from the 765 until we're done.
 
 	ld hl, 0                   ; destination address
-	; ld c, FD_DT               ; still in C from previously
+	; ld c, PORT_NEC765_DATA   ; still in C from previously
 read_loop:
-	in a, (FD_ST_PORT)
+	in a, (PORT_NEC765_STATUS)
 	rla							; RQM...
 	jr nc, read_loop      		; ...low, keep waiting
 	rla							; DIO (ignore)
@@ -49,19 +45,19 @@ read_finished:
     ; we're done.
 
 	ld a, 0x83
-	out (FD_POWER_PORT), a
+	out (PORT_WAIT_STATE_CONTROL), a
 	dec a
-	out (FD_POWER_PORT), a
+	out (PORT_WAIT_STATE_CONTROL), a
 
     ; Read and then discard the status.
 
 read_status_loop:
-	in a, (FD_ST_PORT)
+	in a, (PORT_NEC765_STATUS)
 	rla 						; RQM...
 	jr nc, read_status_loop 	; ...low, keep waiting 
 	rla							; DIO...
     jr nc, finished             ; ...low, no more data
-    in a, (FD_DT_PORT)
+    in a, (PORT_NEC765_DATA)
 	jr read_status_loop
 
     ; We're done.

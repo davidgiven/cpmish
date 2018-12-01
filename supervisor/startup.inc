@@ -3,7 +3,6 @@
 
 startup:
     ld sp, .data.supervisor_stack_end
-    call syscalls_init
     call init_interrupts
     call tty_init
     ld hl, .str.banner
@@ -23,7 +22,7 @@ warmboot:
     call fd765_recalibrate_twice
     jr z, bootfailure
     ld a, USER3_BANK            ; Map user space 0xc000 to 0xc000.
-    out (0x13), a
+    out (PORT_BANK3), a
     ld b, 1
     ld de, 6*1024
     ld hl, 0x10000 - (6*1024)
@@ -33,7 +32,7 @@ warmboot:
     ; Initialise the page zero CP/M-y things.
 
     ld a, USER0_BANK
-    out (0x11), a               ; Map user space 0x0000 to 0x4000.
+    out (PORT_BANK1), a         ; Map user space 0x0000 to 0x4000.
     ld a, 0xc3                  ; JP instruction
 
     ld (0x4000 + 0x0000), a     ; For warm boot
@@ -45,10 +44,10 @@ warmboot:
     ld (0x4000 + BDOSCALL+1), hl
 
     ld (0x4000 + 0x0038), a     ; Interrupt handler
-    ld hl, INTERRUPT
+    ld hl, bios_interrupt_handler
     ld (0x4000 + 0x0039), hl
 
-    ; Now jump to the BIOS so it can page in the reset of userspace
+    ; Now jump to the BIOS so it can page in the rest of userspace
     ; and start the CCP.
 
     jp BOOT

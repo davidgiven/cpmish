@@ -11,6 +11,7 @@
 
 include "include/supervisor.inc"
 include "include/cpm.inc"
+include "include/nc200.inc"
 
 .text
 .macro safeorg addr    
