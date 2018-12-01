@@ -12,6 +12,7 @@
 
 label call_supervisor_from_bios
     ld sp, .data.supervisor_stack_end
+    ei
     jp (hl)
 
 syscall_exit:
@@ -23,14 +24,12 @@ syscall_exit:
 ; Warm boot: reload the CCP, BDOS and BIOS.
 
 label sys_wboot
-    ei
     jp warmboot
     ; does not return
 
 ; Read console: returns char in A.
 
 label sys_conin
-    ei
     call kbd_get_next_key
     ld l, a
     jr syscall_exit
@@ -38,12 +37,51 @@ label sys_conin
 ; Write console: writes char in A.
 
 label sys_conout
-    ei
     ld a, c
     call tty_putc
     jr syscall_exit
 
 ; Test console: returns 0xff in A if console has characters to read.
 label sys_const
+    ld l, 0
+    jr syscall_exit
+
+; Home disk (only drive A).
+label sys_home
+    ld a, (bios_selected_disk)
+    or a
+    jr nz, 1f
+    call fd765_recalibrate
+1:
+    jr syscall_exit
+
+; Read 128-byte CP/M sector.
+label sys_read128
+    ld a, (bios_selected_disk)
+    call tty_puthex8
+    ld a, ' '
+    call tty_putc
+    ld a, (bios_selected_track)
+    call tty_puthex8
+    ld a, ' '
+    call tty_putc
+    ld a, (bios_selected_sector)
+    call tty_puthex8
+    ld l, 1
+    jr syscall_exit
+
+; Write 128-byte CP/M sector.
+label sys_write128
+    ld hl, .str.write
+    call tty_puts
+    ld l, 1
+    jr syscall_exit
+.str.write: db "[write]", 0
+
+; Miscellaneous unsupported system calls.
+label sys_list
+label sys_listst
+label sys_punch
+label sys_reader
     ld l, 0
     jr syscall_exit

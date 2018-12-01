@@ -95,16 +95,63 @@ CONOUTE:
     jr syscall
 
 LISTE:
+    ld hl, sys_list
+    jr syscall
+
 PUNCHE:
+    ld hl, sys_punch
+    jr syscall
+    
 READERE:
+    ld hl, sys_reader
+    jr syscall
+
 HOMEE:
+    ld hl, sys_home
+    jr syscall
+
+; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
+; error).
 SELDSKE:
+    ld a, c
+    ld (bios_selected_disk), a
+    or a
+    jr z, select_drive_a
+    ld hl, 0
+    ret
+select_drive_a:
+    ld hl, drive_a_dph
+    ret
+
 SETTRKE:
+    ld a, c
+    ld (bios_selected_track), a
+    ret
+
 SETSECE:
+    ld a, c
+    ld (bios_selected_sector), a
+    ret
+
 SETDMAE:
+    ld hl, bios_selected_dma
+    ld (hl), c
+    inc hl
+    ld (hl), b
+    ret
+
 READE:
+    ld hl, sys_read128
+    jr syscall
+
 WRITEE:
+    ld hl, sys_write128
+    jr syscall
+    
 LISTSTE:
+    ld hl, sys_listst
+    jr syscall
+
 SECTRANE:
     ret
 
@@ -143,4 +190,41 @@ label return_to_bios_from_supervisor
     ret
 
 saved_stack:
+    dw 0
+
+drive_a_dph:
+    dw 0            ; Sector translation vector
+    dw 0, 0, 0      ; BDOS scratchpad
+    dw dirbuf       ; Directory scratchpad
+    dw drive_a_dpb  ; Drive parameter block
+    dw drive_a_check_vector ; Disk change check vector
+    dw drive_a_bitmap ; Allocation bitmap
+
+DRIVE_A_SIZE = 720
+DRIVE_A_BLOCKS = (DRIVE_A_SIZE - (2*9)) / 2
+
+drive_a_dpb:
+    dw 18*4         ; Number of CP/M sectors per track
+    db 4, 15        ; BSH/BLM for 2048-byte blocks
+    db 0            ; EXM for 2048-byte allocation units and >255 blocks
+    dw DRIVE_A_BLOCKS-1 ; DSM
+    dw 127          ; DRM, one less than the number of directory entries
+    db 0xc0, 0x00   ; Initial allocation vector for two directory blocks
+    dw 32           ; Size of disk change check vector: (DRM+1)/4
+    dw 2            ; Number of reserved tracks
+
+drive_a_bitmap:
+    ds (DRIVE_A_BLOCKS+7) / 8
+drive_a_check_vector:
+    ds 32
+dirbuf:
+    ds 128
+
+label bios_selected_disk
+    db 0
+label bios_selected_track
+    db 0
+label bios_selected_sector
+    db 0
+label bios_selected_dma
     dw 0

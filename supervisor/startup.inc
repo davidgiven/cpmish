@@ -47,6 +47,11 @@ warmboot:
     ld hl, bios_interrupt_handler
     ld (0x4000 + 0x0039), hl
 
+    ; Initialise BIOS-y things.
+
+    ld hl, 0x0080
+    ld (bios_selected_dma), hl
+    
     ; Now jump to the BIOS so it can page in the rest of userspace
     ; and start the CCP.
 
