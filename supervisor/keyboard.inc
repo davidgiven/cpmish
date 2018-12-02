@@ -33,27 +33,27 @@ kbd_get_next_event:
 
 ; --- Returns the next key, blocking ----------------------------------------
 
+MODIFIER_BIT_SHIFT = 0
+MODIFIER_BIT_CTRL = 1
+
 kbd_get_next_key:
     call tty_draw_cursor
-1:
+kbd_get_next_key_again:
     call kbd_get_next_event
     ld b, a
+    and 0x7f
+    cp 0x09                         ; real control key
+    jr z, ctrl_change
+    cp 0x10                         ; caps lock key
+    jr z, ctrl_change
     and 0x7e
-    jr nz, 2f
+    jr z, shift_change
 
-    ; Shift is being pressed or released.
-    ld hl, .data.modifiers
-    res 0, (hl)
-    bit 7, b
-    jr nz, 1b
-    set 0, (hl)
-    jr 1b
-
-2:
     ld a, b
     sla a
-    jr nc, 1b
+    jr nc, kbd_get_next_key_again   ; ignore keyups
     srl a
+
     ld b, 0
     ld c, a
     ld a, (.data.modifiers)
@@ -64,10 +64,32 @@ kbd_get_next_key:
 2:
     add hl, bc
     ld a, (hl)
+
+    ld hl, .data.modifiers
+    bit MODIFIER_BIT_CTRL, (hl)
+    jr z, 1f
+    and 31
+1:
     or a
     jr z, 1b
     call tty_draw_cursor
     ret
+
+shift_change:
+    ld hl, .data.modifiers
+    res MODIFIER_BIT_SHIFT, (hl)
+    bit 7, b
+    jr nz, kbd_get_next_key_again
+    set MODIFIER_BIT_SHIFT, (hl)
+    jr kbd_get_next_key_again
+
+ctrl_change:
+    ld hl, .data.modifiers
+    res MODIFIER_BIT_CTRL, (hl)
+    bit 7, b
+    jr nz, kbd_get_next_key_again
+    set MODIFIER_BIT_CTRL, (hl)
+    jr kbd_get_next_key_again
 
 .data.modifiers:
     db 0
