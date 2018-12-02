@@ -1,12 +1,14 @@
 OBJ = .obj
+CPMTOOLS = $(wildcard cpmtools/*)
 
 all: bootdisk.img
 
 bootdisk.img: \
 		$(OBJ)/boottracks.img \
+		$(CPMTOOLS) \
 		diskdefs
 	mkfs.cpm -f nc200cpm -b $(OBJ)/boottracks.img $@
-	#cpmcp -f nc200cpm $@ bbcbasic.com 0:bbcbasic.com
+	cpmcp -f nc200cpm $@ $(CPMTOOLS) 0:
 
 $(OBJ)/boottracks.img: \
 		$(OBJ)/mammoth.img
