@@ -24,6 +24,7 @@ syscall_exit:
 ; Warm boot: reload the CCP, BDOS and BIOS.
 
 label sys_wboot
+    call cache_evict_all
     jp warmboot
     ; does not return
 
@@ -37,6 +38,10 @@ label sys_conin
 ; Write console: writes char in A.
 
 label sys_conout
+    push bc
+    call cache_flush_unwritten
+    pop bc
+    
     ld a, c
     call tty_putc
     jr syscall_exit
@@ -66,7 +71,7 @@ label sys_read128
     ld hl, bios_selected_sector
     ld e, (hl)
     ld hl, (bios_selected_dma)
-    call read128_from_cache
+    call cache_read128
     ld l, 0
     jr z, general_purpose_failure
     jr syscall_exit
@@ -81,11 +86,15 @@ label sys_write128
     or a
     jr nz, general_purpose_failure
 
-    ld hl, .str.write
-    call tty_puts
-    ld l, 1
+    ld hl, bios_selected_track
+    ld d, (hl)
+    ld hl, bios_selected_sector
+    ld e, (hl)
+    ld hl, (bios_selected_dma)
+    call cache_write128
+    ld l, 0
+    jr z, general_purpose_failure
     jr syscall_exit
-.str.write: db "[write]", 0
 
 ; Miscellaneous unsupported system calls.
 label sys_list

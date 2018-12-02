@@ -271,6 +271,41 @@ fd765_read_loop_finished:
     ei
     jr fd765_complete_transfer
 
+; Seeks to track B and writes a complete track to it from the buffer at HL.
+; This will write NINE KILOBYTES of data.
+; Returns nz on success, z on failure.
+
+fd765_write_complete_track:
+    ld de, 9*1024
+    call fd765_stop_polling
+    ld a, 9
+    ld (.data.readwritecommand+6), a
+    ld a, 0xc5 ; WRITE SECTORS MULTITRACK
+    call fd765_setup_read_or_write
+    jp z, fd765_start_polling
+    jr fd765_write_bytes_to_controller
+
+; Writes de bytes to the 765 from HL.
+fd765_write_bytes_to_controller:
+	ld c, FD_DT_PORT
+    di ; terribly important
+1:
+	in a, (FD_ST_PORT)
+	rla							; RQM...
+	jr nc, 1b                   ; ...low, keep waiting
+	rla							; DIO (ignore)
+	rla							; EXM...
+	jr nc, 2f                   ; ...low, transfer complete
+	outi						; port(C) = (HL++), B--
+
+    dec de
+    ld a, d
+    or e
+    jr nz, 1b
+2:
+    ei
+    jr fd765_complete_transfer
+
 ; Finish up a read or write transfer.
 ; Returns nz on success, z on failure.
 fd765_complete_transfer:

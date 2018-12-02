@@ -40,8 +40,6 @@ label LISTST
     jp LISTSTE
 label SECTRAN
     jp SECTRANE
-label INTERRUPT
-    jp INTERRUPTE
 
 ; BIOS interrupt handler. This is only invoked when the USER0 is mapped, and
 ; we can assume the stack is valid.
@@ -156,10 +154,6 @@ SECTRANE:
     ld h, b
     ld l, c
     ret
-
-INTERRUPTE:
-    ld e, SYS_INTERRUPT
-    ; fall through
 
 ; On entry, HL contains the system call handler address and BC the argument.
 syscall:
