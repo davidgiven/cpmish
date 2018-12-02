@@ -93,6 +93,7 @@ include "supervisor/syscalls.inc"
 
 include "supervisor/startup.inc"
 include "supervisor/floppy.inc"
+include "supervisor/cache.inc"
 
 ; The root directory.
 

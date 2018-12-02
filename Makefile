@@ -6,6 +6,7 @@ bootdisk.img: \
 		$(OBJ)/boottracks.img \
 		diskdefs
 	mkfs.cpm -f nc200cpm -b $(OBJ)/boottracks.img $@
+	#cpmcp -f nc200cpm $@ bbcbasic.com 0:bbcbasic.com
 
 $(OBJ)/boottracks.img: \
 		$(OBJ)/mammoth.img

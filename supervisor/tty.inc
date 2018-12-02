@@ -115,7 +115,6 @@ tty_calculate_screen_address:
     rl h
     djnz 1b
     ld (L_char_mask), hl ; H is on the LEFT
-
     ret
 L_cursor_address:
     dw 0

@@ -48,30 +48,39 @@ label sys_const
 
 ; Home disk (only drive A).
 label sys_home
-    ld a, (bios_selected_disk)
-    or a
-    jr nz, 1f
-    call fd765_recalibrate
-1:
+;    ld a, (bios_selected_disk)
+;    or a
+;    jr nz, 1f
+;    call fd765_recalibrate
+;1:
     jr syscall_exit
 
 ; Read 128-byte CP/M sector.
 label sys_read128
     ld a, (bios_selected_disk)
-    call tty_puthex8
-    ld a, ' '
-    call tty_putc
-    ld a, (bios_selected_track)
-    call tty_puthex8
-    ld a, ' '
-    call tty_putc
-    ld a, (bios_selected_sector)
-    call tty_puthex8
-    ld l, 1
+    or a
+    jr nz, general_purpose_failure
+
+    ld hl, bios_selected_track
+    ld d, (hl)
+    ld hl, bios_selected_sector
+    ld e, (hl)
+    ld hl, (bios_selected_dma)
+    call read128_from_cache
+    ld l, 0
+    jr z, general_purpose_failure
     jr syscall_exit
 
+general_purpose_failure:
+    ld l, 1
+    jr syscall_exit
+    
 ; Write 128-byte CP/M sector.
 label sys_write128
+    ld a, (bios_selected_disk)
+    or a
+    jr nz, general_purpose_failure
+
     ld hl, .str.write
     call tty_puts
     ld l, 1

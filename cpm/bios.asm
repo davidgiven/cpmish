@@ -147,12 +147,14 @@ READE:
 WRITEE:
     ld hl, sys_write128
     jr syscall
-    
+
 LISTSTE:
     ld hl, sys_listst
     jr syscall
 
 SECTRANE:
+    ld h, b
+    ld l, c
     ret
 
 INTERRUPTE:
