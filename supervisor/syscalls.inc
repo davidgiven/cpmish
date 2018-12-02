@@ -41,7 +41,7 @@ label sys_conout
     push bc
     call cache_flush_unwritten
     pop bc
-    
+
     ld a, c
     call tty_putc
     jr syscall_exit

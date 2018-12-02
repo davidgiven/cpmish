@@ -41,10 +41,14 @@ label LISTST
 label SECTRAN
     jp SECTRANE
 
-; BIOS interrupt handler. This is only invoked when the USER0 is mapped, and
-; we can assume the stack is valid.
+; BIOS interrupt handler. This is only invoked when the USER0 bank is mapped,
+; and we can assume the stack is valid (because interrupts won't work
+; otherwise).
 
 label bios_interrupt_handler
+    ld (saved_stack), sp
+    ld sp, interrupt_stack_end
+    
     push af
     ld a, SUPERVISOR_BANK
     out (PORT_BANK0), a
@@ -52,8 +56,10 @@ label bios_interrupt_handler
     ld a, USER0_BANK
     out (PORT_BANK0), a
     pop af
+    
+    ld sp, (saved_stack)
     ei
-    ret
+    reti
 
 ; Actual BIOS entrypoints.
 ;
@@ -65,12 +71,15 @@ label bios_interrupt_handler
 
 BOOTE:
     ; Map userspace.
+    di                      ; can't change mapping as our stack may be invalidated
     ld a, USER0_BANK
     out (PORT_BANK0), a
     inc a
     out (PORT_BANK1), a
     inc a
     out (PORT_BANK2), a
+    ld sp, CBASE            ; ephemeral startup stack
+    ei
 
     ld a, (CDISK)
     ld c, a
@@ -104,10 +113,6 @@ READERE:
     ld hl, sys_reader
     jr syscall
 
-HOMEE:
-    ld hl, sys_home
-    jr syscall
-
 ; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
 ; error).
 SELDSKE:
@@ -121,6 +126,9 @@ select_drive_a:
     ld hl, drive_a_dph
     ret
 
+HOMEE:
+    ld c, 0
+    ; fall through
 SETTRKE:
     ld a, c
     ld (bios_selected_track), a
@@ -224,3 +232,7 @@ label bios_selected_sector
     db 0
 label bios_selected_dma
     dw 0
+
+interrupt_stack:
+    ds 32
+interrupt_stack_end:

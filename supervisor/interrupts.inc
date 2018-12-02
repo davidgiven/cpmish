@@ -16,7 +16,7 @@ safeorg 0x0038
 raw_interrupt_handler:
     call supervisor_interrupt_handler
     ei
-    ret
+    reti
 
 ; This routine actually does the work; it's called by the supervisor's own
 ; interrupt handler and also the one proxied through the BIOS.
