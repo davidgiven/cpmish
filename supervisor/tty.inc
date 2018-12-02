@@ -183,7 +183,7 @@ tty_putc:
     call tty_calculate_screen_address
     pop af
 
-    ; Copy the character data into the buffer.
+    ; Get the pointer to the character data.
 
     and 0x7f
     sub 32
@@ -191,74 +191,69 @@ tty_putc:
     ld h, 0
     add hl, hl          ; hl = a*2
     add hl, hl          ; hl = a*4
-    ld b, 0
-    ld c, a
-    add hl, bc          ; hl = a*4 + a = a*5
-    ld bc, .data.font
-    add hl, bc
-    ld de, L_chardata
-    ld bc, 5
-    ldir
-
-    ; We are now *finally* ready to start drawing. Miraculously, C is not used
-    ; anywhere, so we use it to count scanlines.
-
-    ld c, 8
-L_putc_loop:
-    ; Load the font data.
-
-    ld a, (L_chardata+0)
-    and 0xf8            ; 1111.1000; five bits LEFT justified
-    ld l, a
-    ld h, 0
-
-    ; Rotate the font data to the right offset.
-
-    ld a, (L_char_shift)
-    sub 3               ; because our data is already shifted left three bits
-    ld b, a
-1:
-    add hl, hl
-    djnz 1b
-    ex de, hl           ; put the adjusted data in DE. Remember, D is on the LEFT.
-
-    ; Actually adjust the screen.
-
-    ld hl, (L_cursor_address)
-    ld a, (L_char_mask+1)
-    and (hl)
-    or d
-    ld (hl), a
-    inc hl              ; note, HL changes by 1
-    ld a, (L_char_mask+0)
-    and (hl)
-    or e
-    ld (hl), a
-
-    ; Advance to the next scanline.
-
-    ld de, 63           ; advance address to next scanline; remember HL has changed
+    ld e, a
+    ld d, 0
+    add hl, de          ; hl = a*4 + a = a*5
+    ld de, .data.font
     add hl, de
-    ld (L_cursor_address), hl
+    ; hl points at font data
 
-    ; Adjust the font data.
+    ; We are now *finally* ready to start drawing.
 
-    ld a, 5
-2:
-    ld hl, L_chardata+4
-    ld b, 5
-    ccf
-1:
-    rl (hl)
-    dec hl
-    djnz 1b
-    dec a
-    jr nz, 2b
+    ld a, (hl)              ; XXXXX???.????????
+    call draw_single_scanline
 
-    ; And around the loop again.
+    ld b, (hl)              ; ?????XXX.XX??????
+    inc hl
+    ld a, (hl)
+    srl b
+    rra
+    srl b
+    rra
+    srl b
+    rra
+    call draw_single_scanline
 
-    dec c
-    jr nz, L_putc_loop
+    ld a, (hl)              ; ??XXXXX?
+    add a, a
+    add a, a
+    call draw_single_scanline
+
+    ld a, (hl)              ; ???????X.XXXX????
+    srl a
+    inc hl
+    ld a, (hl)  
+    rra
+    call draw_single_scanline
+
+    ld a, (hl)              ; ????XXXX.X???????
+    inc hl
+    ld b, (hl)
+    sll b
+    rla
+    add a, a
+    add a, a
+    add a, a
+    call draw_single_scanline
+
+    ld a, (hl)              ; ?XXXXX??
+    add a, a
+    call draw_single_scanline
+
+    ld b, (hl)              ; ??????XX.XXX?????
+    inc hl
+    ld a, (hl)
+    srl b
+    rra
+    srl b
+    rra
+    call draw_single_scanline
+
+    ld a, (hl)              ; ???XXXXX
+    add a, a
+    add a, a
+    add a, a
+    call draw_single_scanline
 
     ; Now we've drawn a character, advance the cursor.
 
@@ -279,6 +274,47 @@ tty_newline:
     ret nz
     dec (hl)                ; oops, don't go the next line after all
     jr tty_scroll
+
+; On entry, the font data is in A, left justified.
+; Font pointer is in HL.
+draw_single_scanline:
+    ex de, hl           ; save font pointer in DE
+    and 0xf8
+    ld l, a
+    ld h, 0
+
+    ; Rotate the font data to the right offset.
+
+    ld a, (L_char_shift)
+    sub 3               ; because our data is already shifted left three bits
+1:
+    add hl, hl
+    dec a
+    jr nz, 1b
+    ld b, h
+    ld c, l             ; put the adjusted data in BC. Remember, B is on the LEFT.
+
+    ; Actually adjust the screen.
+
+    ld hl, (L_cursor_address)
+    ld a, (L_char_mask+1)
+    and (hl)
+    or b
+    ld (hl), a
+    inc hl              ; note, HL changes by 1
+    ld a, (L_char_mask+0)
+    and (hl)
+    or c
+    ld (hl), a
+
+    ; Advance to the next scanline.
+
+    ld bc, 63           ; advance address to next scanline; remember HL has changed
+    add hl, bc
+    ld (L_cursor_address), hl
+
+    ex de, hl           ; put font pointer back in HL
+    ret
 
 L_chardata:
     ds 5

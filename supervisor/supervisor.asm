@@ -77,7 +77,6 @@ safeorg 0x20b
     .dw 2    ; number of heads
     .dw 0    ; number of hidden sectors
 
-include "supervisor/tty.inc"
 include "supervisor/syscalls.inc"
 
 ; The first FAT (the only one the NC200 looks at).
@@ -94,6 +93,7 @@ include "supervisor/syscalls.inc"
 include "supervisor/startup.inc"
 include "supervisor/floppy.inc"
 include "supervisor/cache.inc"
+include "supervisor/tty.inc"
 
 ; The root directory.
 
