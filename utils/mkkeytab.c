@@ -54,7 +54,7 @@ int main(int argc, const char* argv[])
     key(0x4c, ';', ':');
     key(0x44, 39,  '@');
     key(0x34, '#', '~');
-    key(0x04, 10,  10);
+    key(0x04, 13,  13);
 
     key(0x00, 0,   0); // left shift
     key(0x22, 'z', 'Z');

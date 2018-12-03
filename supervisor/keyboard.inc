@@ -1,45 +1,12 @@
-; --- !z if there is a pending keyboard event -------------------------------
-
-kbd_test_pending_event:
-    ld de, .data.keyboard_rdptr
-    ld hl, .data.keyboard_wrptr
-    di
-    ld a, (de)
-    cp (hl)
-    ei
-    ret
-
-; --- Returns the next keyboard event, blocking -----------------------------
-
-; (Event returned in A.)
-kbd_get_next_event:
-    call kbd_test_pending_event
-    jr z, kbd_get_next_event
-
-    di
-    ld a, (de)
-    ld hl, .data.keyboard_buffer
-    add a, l
-    ld l, a
-
-    ld a, (de)
-    inc a
-    and 7
-    ld (de), a
-
-    ld a, (hl)
-    ei
-    ret
-
-; --- Returns the next key, blocking ----------------------------------------
-
 MODIFIER_BIT_SHIFT = 0
 MODIFIER_BIT_CTRL = 1
 
-kbd_get_next_key:
-    call tty_draw_cursor
-kbd_get_next_key_again:
-    call kbd_get_next_event
+; --- Processes an incoming keyboard event ----------------------------------
+
+; Given a keyboard event in A, processes it and pushes a key into the buffer.
+; Called from an interrupt state.
+
+process_keyboard_event:
     ld b, a
     and 0x7f
     cp 0x09                         ; real control key
@@ -51,12 +18,12 @@ kbd_get_next_key_again:
 
     ld a, b
     sla a
-    jr nc, kbd_get_next_key_again   ; ignore keyups
+    ret nc                          ; ignore keyups
     srl a
 
     ld b, 0
     ld c, a
-    ld a, (.data.modifiers)
+    ld a, (keyboard_modifiers)
     ld hl, keyboard_normal_map
     bit 0, a
     jr z, 2f
@@ -65,33 +32,106 @@ kbd_get_next_key_again:
     add hl, bc
     ld a, (hl)
 
-    ld hl, .data.modifiers
+    ld hl, keyboard_modifiers
     bit MODIFIER_BIT_CTRL, (hl)
     jr z, 1f
     and 31
 1:
     or a
-    jr z, 1b
-    call tty_draw_cursor
-    ret
+    ret z                           ; ignore ignored keys
+    jp queue_key                    ; ...and push the keypress
 
 shift_change:
-    ld hl, .data.modifiers
+    ld hl, keyboard_modifiers
     res MODIFIER_BIT_SHIFT, (hl)
     bit 7, b
-    jr nz, kbd_get_next_key_again
+    ret nz
     set MODIFIER_BIT_SHIFT, (hl)
-    jr kbd_get_next_key_again
+    ret
 
 ctrl_change:
-    ld hl, .data.modifiers
+    ld hl, keyboard_modifiers
     res MODIFIER_BIT_CTRL, (hl)
     bit 7, b
-    jr nz, kbd_get_next_key_again
+    ret nz
     set MODIFIER_BIT_CTRL, (hl)
-    jr kbd_get_next_key_again
+    ret
 
-.data.modifiers:
+keyboard_modifiers:
     db 0
+    
+; --- Pushes a key into the buffer ------------------------------------------
+
+; Pushes A into the keyboard buffer.
+; Interrupts must be DISABLED for this to work safely.
+
+queue_key:
+    ld c, a
+    
+    ; Compute the keyboard buffer address in DE.
+
+    ld a, (.data.keyboard_rdptr)
+    dec a
+    and 7
+    ld hl, .data.keyboard_wrptr
+    cp (hl)
+    ret z                   ; keyboard buffer full
+
+    ld l, (hl)
+    ld h, 0
+    ld de, .data.keyboard_buffer
+    add hl, de
+
+    ld (hl), c              ; write key
+
+    ; Increment write pointer.
+
+    ld hl, .data.keyboard_wrptr
+    ld a, (hl)
+    inc a
+    and 7
+    ld (hl), a
+
+    ret
+
+; --- nz if there is a pending keypress -------------------------------------
+
+kbd_test_pending_key:
+    ld de, .data.keyboard_rdptr
+    ld hl, .data.keyboard_wrptr
+    di
+    ld a, (de)
+    cp (hl)
+    ei
+    ret
+
+; --- Returns the next keypress, blocking -----------------------------------
+
+; (Event returned in A.)
+kbd_get_next_key:
+    call tty_draw_cursor
+1:
+    call kbd_test_pending_key
+    jr z, 1b
+    call tty_draw_cursor
+
+    ld hl, .data.keyboard_rdptr
+    ld de, .data.keyboard_buffer
+    di
+    ld a, (hl)
+    add a, e
+    ld e, a
+    ld a, 0
+    add a, d
+    ld d, a
+
+    ld a, (hl)
+    inc a
+    and 7
+    ld (hl), a
+
+    ld a, (de)
+    ei
+    ret
 
 .include ".obj/keyboard.inc"

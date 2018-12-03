@@ -11,7 +11,7 @@
 ; On exit, the system call jumps to syscall_exit with the result in HL.
 
 label call_supervisor_from_bios
-    ld sp, .data.supervisor_stack_end
+    ld sp, supervisor_stack_end
     ei
     jp (hl)
 
@@ -48,7 +48,10 @@ label sys_conout
 
 ; Test console: returns 0xff in A if console has characters to read.
 label sys_const
+    call kbd_test_pending_key
     ld l, 0
+    jr z, syscall_exit
+    dec l
     jr syscall_exit
 
 ; Home disk (only drive A).

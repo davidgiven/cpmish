@@ -2,7 +2,7 @@
 ; disabled, and the world is ours to play with.
 
 startup:
-    ld sp, .data.supervisor_stack_end
+    ld sp, supervisor_stack_end
     call init_interrupts
     call tty_init
     ld hl, .str.banner
@@ -67,6 +67,6 @@ bootfailure:
 
 .str.banner: db "NC200 CP/M Supervisor (C) 2018 David Given", 10, 0
 
-.data.supervisor_stack:
+supervisor_stack:
     ds 48
-.data.supervisor_stack_end:
+label supervisor_stack_end

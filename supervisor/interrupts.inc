@@ -61,11 +61,11 @@ keyboard_interrupt_handler:
 
     ld hl, .data.keyboard_bitmap
     ld c, KBD_SCAN_PORT
-keyboard_read_loop:
+2:
     in a, (c)
     ld b, a
     xor (hl)
-    jr z, keyboard_byte_hasnt_changed_status
+    jr z, 3f                ; skip loop if no bits changed state
 
         ; This byte has changed status. a tells us which.
         push hl
@@ -73,58 +73,38 @@ keyboard_read_loop:
         ld h, a             ; h = change bitset
         ld l, b             ; l = pressed bitset
         ld b, 8
-    keyboard_read_bit_loop:
+        1:
             add hl, hl          ; shift h and l left one bit
-            jr nc, keyboard_read_bit_loop_end
+            jr nc, 4f
+                ; Compute the keycode.
 
-            ; Compute the keyboard buffer address in DE.
+                ld a, c
+                sub KBD_SCAN_PORT
+                add a, a
+                add a, a
+                add a, a
+                add a, b
+                dec a
 
-            ld a, (.data.keyboard_rdptr)
-            dec a
-            and 7
-            ld d, a
-            ld a, (.data.keyboard_wrptr)
-            cp d
-            jr z, keyboard_read_bit_loop_end ; keyboard buffer full
-            ld (.data.keyboard_wrptr), a
-            ld de, .data.keyboard_buffer
-            add a, e
-            ld e, a
-
-            ; Compute the keycode.
-
-            ld a, c
-            sub KBD_SCAN_PORT
-            add a, a
-            add a, a
-            add a, a
-            add a, b
-            dec a
-
-            bit 0, h            ; c = key pressed
-            jr nz, keyboard_read_key_not_pressed
-            or 0x80
-        keyboard_read_key_not_pressed:
-            ld (de), a
-
-            ; Increment write pointer.
-
-            ld de, .data.keyboard_wrptr
-            ld a, (de)
-            inc a
-            and 7
-            ld (de), a
-
-        keyboard_read_bit_loop_end:
-            djnz keyboard_read_bit_loop
+                bit 0, h            ; set z if key pressed
+                jr nz, 5f
+                or 0x80
+            5:
+                push bc
+                push hl
+                call process_keyboard_event
+                pop hl
+                pop bc
+            4:
+        djnz 1b
         pop hl
 
-keyboard_byte_hasnt_changed_status:
+3:
     inc hl
     inc c
     ld a, KBD_SCAN_PORT+10
     cp c
-    jr nz, keyboard_read_loop
+    jr nz, 2b
     ret
 
 init_interrupts:
