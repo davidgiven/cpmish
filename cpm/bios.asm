@@ -47,7 +47,7 @@ label SECTRAN
 
 label bios_interrupt_handler
     ld (saved_stack), sp
-    ld sp, interrupt_stack_end
+    ld sp, supervisor_stack_end
     
     push af
     ld a, SUPERVISOR_BANK
@@ -232,7 +232,3 @@ label bios_selected_sector
     db 0
 label bios_selected_dma
     dw 0
-
-interrupt_stack:
-    ds 32
-interrupt_stack_end:
