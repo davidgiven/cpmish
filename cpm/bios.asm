@@ -46,18 +46,19 @@ label SECTRAN
 ; otherwise).
 
 label bios_interrupt_handler
+    push af
+
     ld (saved_stack), sp
     ld sp, supervisor_stack_end
     
-    push af
     ld a, SUPERVISOR_BANK
     out (PORT_BANK0), a
     call supervisor_interrupt_handler
     ld a, USER0_BANK
     out (PORT_BANK0), a
-    pop af
     
     ld sp, (saved_stack)
+    pop af
     ei
     reti
 
@@ -232,3 +233,4 @@ label bios_selected_sector
     db 0
 label bios_selected_dma
     dw 0
+    

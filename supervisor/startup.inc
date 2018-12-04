@@ -68,5 +68,5 @@ bootfailure:
 .str.banner: db "NC200 CP/M Supervisor (C) 2018 David Given", 10, 0
 
 supervisor_stack:
-    ds 48
+    ds 64
 label supervisor_stack_end
