@@ -89,22 +89,20 @@ tty_calculate_screen_address:
 	; Calculate the font data shift.
 
     ld a, b
-    and 0x03
-    add a, a            ; calculate remainder (0, 2, 4, 6)
-    ld b, a
-    ld a, 10
-    sub b               ; calculate LEFT shift
+    and 0x03            ; calculate remainder of cursorx*3/4 (0, 1, 2, 3)
+    add a, a            ; calculate remainder of cursorx*6/8 (0, 2, 4, 6)
     ld (L_char_shift), a
 
     ; Calculate the mask.
 
-    ld hl, 0xffc0       ; 1111.1111 1100.0000
-    ld b, a
-1:
-    scf
-    rl l
-    rl h
-    djnz 1b
+    ld hl, char_mask_table
+    ld d, 0
+    ld e, a
+    add hl, de
+    ld a, (hl)
+    inc hl
+    ld h, (hl)
+    ld l, a
     ld (L_char_mask), hl ; H is on the LEFT
     ret
 L_cursor_address:
@@ -113,6 +111,12 @@ L_char_shift:
     db 0
 L_char_mask:
 	dw 0
+
+char_mask_table:
+    dw 0x03ff           ; 0000.0011 1111.1111
+    dw 0xc0ff           ; 1100.0000 1111.1111
+    dw 0xf03f           ; 1111.0000 0011.1111
+    dw 0xfc0f           ; 1111.1100.0000.1111
 
 ; --- Draw (or undraw) the cursor -------------------------------------------
 
@@ -478,11 +482,19 @@ draw_single_scanline:
     ; Rotate the font data to the right offset.
 
     ld a, (L_char_shift)
-    sub 3               ; because our data is already shifted left three bits
-1:
+    ; Self modifying code ahoy! A can be 0, 2, 4 or 6. Our data is already
+    ; left-justified, so it's already shifted left three bits, so we want
+    ; to shift by 7, 5, 3 or 1 bits respectively.
+    ld (scanline_shift_amount), a
+scanline_shift_amount = . + 1
+    jr .+2              ; offset based on start of *next* instruction
     add hl, hl
-    dec a
-    jr nz, 1b
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
     ld b, h
     ld c, l             ; put the adjusted data in BC. Remember, B is on the LEFT.
 
@@ -507,9 +519,6 @@ draw_single_scanline:
 
     ex de, hl           ; put font pointer back in HL
     ret
-
-L_chardata:
-    ds 5
 
 ; --- Scrolls the screen by one line ----------------------------------------
 
