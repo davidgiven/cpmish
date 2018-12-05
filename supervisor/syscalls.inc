@@ -31,6 +31,10 @@ label sys_wboot
 ; Read console: returns char in A.
 
 label sys_conin
+    call cache_flush_unwritten
+    ld hl, disk_activity_flag
+    ld (hl), 0
+
     call tty_draw_cursor
     call kbd_get_next_key
     ld l, a
@@ -40,10 +44,7 @@ label sys_conin
 ; Write console: writes char in A.
 
 label sys_conout
-    push bc
     call tty_undraw_cursor
-    call cache_flush_unwritten
-    pop bc
 
     ld a, c
     call tty_putc
@@ -51,12 +52,18 @@ label sys_conout
 
 ; Test console: returns 0xff in A if console has characters to read.
 label sys_const
+    ld hl, disk_activity_flag
+    bit 0, (hl)
+    ld (hl), 0
+    jr nz, 1f                   ; only flush buffers if there *hasn't* been activity
     call cache_flush_unwritten
+1:
     call tty_draw_cursor
     call kbd_test_pending_key
     ld l, 0
     jr z, syscall_exit
-    dec l
+    call cache_flush_unwritten  ; or if the user pressed a key
+    ld l, 0xff
     jr syscall_exit
 
 ; Read 128-byte CP/M sector.
@@ -65,6 +72,8 @@ label sys_read128
     or a
     jr nz, general_purpose_failure
 
+    ld hl, disk_activity_flag
+    ld (hl), 1
     ld hl, bios_selected_track
     ld d, (hl)
     ld hl, bios_selected_sector
@@ -85,6 +94,8 @@ label sys_write128
     or a
     jr nz, general_purpose_failure
 
+    ld hl, disk_activity_flag
+    ld (hl), 1
     ld hl, bios_selected_track
     ld d, (hl)
     ld hl, bios_selected_sector
@@ -93,7 +104,7 @@ label sys_write128
     call cache_write128
     ld l, 0
     jr z, general_purpose_failure
-    jr syscall_exit
+    jp syscall_exit
 
 ; Miscellaneous unsupported system calls.
 label sys_list
@@ -101,4 +112,7 @@ label sys_listst
 label sys_punch
 label sys_reader
     ld l, 0
-    jr syscall_exit
+    jp syscall_exit
+
+disk_activity_flag:
+    db 0
