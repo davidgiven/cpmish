@@ -62,7 +62,6 @@ tty_puthex8_conv:
 ; --- Calculates the address of the cursor ----------------------------------
 
 ; Sets cursor_screen_address to the address of the current char.
-; Also sets current_pixel_decoder to the pixel decoder routine.
 
 tty_calculate_screen_address:
     ld a, (cursory)
@@ -119,6 +118,31 @@ char_mask_table:
     dw 0xf03f           ; 1111.0000 0011.1111
     dw 0xfc0f           ; 1111.1100.0000.1111
 
+; As above, but calculates the address of the beginning of the current line.
+; Returns the address in HL (as well as updating L_cursor_address).
+tty_calculate_screen_address_of_line:
+    call tty_calculate_screen_address
+    ld hl, (L_cursor_address)
+    ld a, 0xc0
+    and l
+    ld l, a                     ; get address of start of line
+    ld (L_cursor_address), hl
+    ret
+
+; As above, but calculates the address of the beginning of the *next* line.
+; Returns the address in HL (as well as updating L_cursor_address).
+; Returns z if we're on the last line of the screen.
+tty_calculate_screen_address_of_next_line:
+    call tty_calculate_screen_address_of_line
+    ld bc, 64
+    add hl, bc                  ; get address of start of *next* line
+    ld (L_cursor_address), hl
+    ld bc, VIDEORAM_BASE + VIDEORAM_SIZE
+    or a
+    sbc hl, bc
+    add hl, bc
+    ret
+
 ; --- Draw (or undraw) the cursor -------------------------------------------
 
 tty_draw_cursor:
@@ -142,7 +166,7 @@ tty_undraw_cursor:
 1:
     pop hl
     ret
-    
+
 tty_xor_draw_cursor:
 	push af
 	push bc
@@ -192,33 +216,27 @@ tty_home_cursor:
 ; --- Screen clearing -------------------------------------------------------
 
 tty_clear_to_eol:
-    call tty_calculate_screen_address
-    ld b, FONT_HEIGHT
-    ld hl, (L_cursor_address)
+    ld a, (cursorx)
+    push af
 1:
-    ld (hl), 0
-    inc hl
-    ld a, 63
-    and l
-    jr nz, 1b
-
-    ld hl, (L_cursor_address)
-    ld de, 64
-    add hl, de
-    ld (L_cursor_address), hl
-    djnz 1b
+    ld a, (cursorx)
+    cp SCREEN_WIDTH
+    jr z, 2f
+    ld a, ' '
+    call tty_rawwrite
+    ld hl, cursorx
+    inc (hl)
+    jr 1b
+2:
+    pop af
+    ld (cursorx), a
     ret
 
 tty_clear_to_eos:
     ; Compute the start of the area to clear.
 
-    call tty_calculate_screen_address
-    ld hl, (L_cursor_address)
-    ld a, 0xc0
-    and l
-    ld l, a                     ; get address of start of line
-    ld bc, 64
-    add hl, bc                  ; get address of start of *next* line
+    call tty_calculate_screen_address_of_next_line
+    ret z
 
     ; Compute the *size* of the area to clear.
 
@@ -226,9 +244,6 @@ tty_clear_to_eos:
     ld hl, VIDEORAM_BASE + VIDEORAM_SIZE
     and a                       ; clear carry flag
     sbc hl, de                  ; HL is amount to clear
-    ld a, h
-    or l
-    ret z                       ; give up if nothing
     dec hl                      ; need one *fewer* than the size to clear
     ld b, h
     ld c, l
@@ -278,10 +293,11 @@ tty_cursor_down:
     ld hl, cursory
     ld a, (hl)
     inc a
-    cp SCREEN_HEIGHT
-    ret z
     ld (hl), a
-    ret
+    cp SCREEN_HEIGHT
+    ret nz
+    dec (hl)                ; oops, don't go the next line after all
+    jp tty_scroll
 
 ; Move to (B, C).
 tty_goto_xy:
@@ -296,9 +312,106 @@ tty_goto_xy:
     ld (cursory), a
     ret
 
+; --- Line insertion/removal ------------------------------------------------
+
+tty_insert_line:
+    call tty_calculate_screen_address_of_next_line
+    jr z, 1f                    ; skip the copy if we're on the last line.
+    ; HL is address of the *next* line of text.
+
+    ; Compute the size of the area to move
+    call calculate_insert_delete_size
+
+    ; We want to copy in reverse, which means HL and BC are fixed.
+    
+    ld hl, VIDEORAM_BASE + VIDEORAM_SIZE - (64*FONT_HEIGHT) - 1 ; source
+    ld de, VIDEORAM_BASE + VIDEORAM_SIZE - 1 ; dest
+    ; BC is size-1
+    lddr
+
+1:
+    ; Clear the current line.
+
+    call tty_calculate_screen_address_of_line
+    ld d, h
+    ld e, l
+    inc de
+    ld bc, FONT_HEIGHT*64 - 1
+    ld (hl), 0
+    ldir
+    ret
+
+tty_delete_line:
+    call tty_calculate_screen_address_of_next_line
+    jr z, 1b                    ; if we're on the last line, just clear it
+
+    ; Compute the size of the area to move
+    call calculate_insert_delete_size
+
+    ; We want to copy forwards.
+
+    push hl
+    ld de, -(64*FONT_HEIGHT)
+    add hl, de                  ; Start of *current* line, source
+    pop de                      ; Start of *next* line, dest
+    ex de, hl                   ; Copy from next line to current line
+    ldir
+
+    ; Clear the last line.
+
+    ld hl, VIDEORAM_BASE + VIDEORAM_SIZE - (64*FONT_HEIGHT)
+    ld de, VIDEORAM_BASE + VIDEORAM_SIZE - (64*FONT_HEIGHT) + 1
+    ld bc, (64*FONT_HEIGHT) - 1
+    ld (hl), 0
+    ldir
+    ret
+    
+; On entry: HL is the start of the NEXT line.
+; On exit: HL is preserved; BC contains the amount to move.
+calculate_insert_delete_size:
+    ex de, hl                   ; stash start address in DE
+    ld hl, VIDEORAM_BASE + VIDEORAM_SIZE - 1
+    and a                       ; clear carry flag
+    sbc hl, de                  ; HL is amount to clear
+    ld b, h
+    ld c, l
+    ex de, hl
+    ret
+
 ; --- Prints the character in A ---------------------------------------------
 ; (also tty_newline)
 
+; Helper routine: called from tty_putc if this is a non-printable control
+; character. The character is in A.
+controlcharacter:
+    cp 0x08
+    jp z, tty_cursor_left
+    cp 0x0c
+    jr z, tty_cursor_right
+    cp 0x0a
+    jr z, tty_cursor_down
+    cp 0x0b
+    jp z, tty_cursor_up
+    cp 0x1e
+    jp z, tty_home_cursor
+    cp 0x0d
+    jp z, tty_carriagereturn
+    cp 0x18
+    jp z, tty_clear_to_eol
+    cp 0x17
+    jp z, tty_clear_to_eos
+    cp 0x1a
+    jp z, tty_clear_screen
+    cp 0x1b
+    ret nz ; give up if not an escape character
+
+    ; Escape characters need parameters, starting with one.
+    xor a
+    ld (commandgot), a
+    inc a
+    ld (commandlen), a
+    ret
+    
 ; Helper routine: deal with command bytes (passed in C).
 queue_command_byte:
     ; Write the byte to the buffer.
@@ -324,23 +437,41 @@ queue_command_byte:
     ; Process a command.
 
     ld a, (commandbuf+0)
-    cp 'A'
-    jr z, tty_cursor_up
     cp 'B'
-    jr z, tty_cursor_down
+    jr z, setresetattr
     cp 'C'
-    jr z, tty_cursor_right
-    cp 'D'
-    jr z, tty_cursor_left
-    cp 'H'
-    jp z, tty_home_cursor
-    cp 'J'
-    jp z, tty_clear_to_eos
-    cp 'K'
-    jp z, tty_clear_to_eol
-    cp 'Y'
-    ret nz ; unknown command
-    ld a, (commandgot)  ; Y takes parameters
+    jr z, setresetattr
+    cp 'E'
+    jp z, tty_insert_line
+    cp 'R'
+    jp z, tty_delete_line
+    cp '='
+    jr z, gotoxy
+    ret
+
+; Helper routine: handles set/reset attributes.
+setresetattr:
+    ld a, (commandgot)  ; B, C takes parameters
+    cp 2                ; do we have enough bytes?
+    jr z, 1f            ; yes, execute command
+    ld a, 2             ; not enough bytes read yet
+    ld (commandlen), a
+    ret
+1:
+;    ld a, (commandbuf+1)
+;    cp '0'              ; reverse intensity
+;    ret nz              ; don't support anything else
+;    ld a, (commandbuf+0)
+;    cp 'C'              ; B=on, C=off
+;    ld hl, font_xor_value
+;    ld (hl), 0
+;    ret z
+;    dec (hl)
+    ret
+    
+; Helper routine: handles ESC = (gotoxy).
+gotoxy:
+    ld a, (commandgot)  ; = takes parameters
     cp 3                ; do we have enough bytes?
     jr z, 1f            ; yes, execute command
     ld a, 3             ; not enough bytes read yet
@@ -355,19 +486,8 @@ queue_command_byte:
     ld a, (hl)
     sub 32
     ld b, a             ; X
-    jr tty_goto_xy
+    jp tty_goto_xy
 
-negchar:
-    add a, 32
-    push af
-    ld a, '['
-    call tty_putc
-    pop af
-    call tty_puthex8
-    ld a, ']'
-    call tty_putc
-    ret
-    
 tty_putc:
     ; Check to see if there's a pending command.
 
@@ -379,24 +499,25 @@ tty_putc:
     ; Handle special characters.
 
     ld a, c
-    cp 8
-    jp z, tty_cursor_left
-    cp 10
-    jr z, tty_newline
-    cp 13
-    jp z, tty_carriagereturn
-    cp 27
-    jp nz, 1f
-        ; Escape characters mean commands.
-        xor a
-        ld (commandgot), a
-        inc a
-        ld (commandlen), a
-        ret
-    1:
+    cp 32
+    jp c, controlcharacter
 
-    ; Calculate screen address and which pixel decoder to use.
+    ; This is a printable character, so print it.
 
+    call tty_rawwrite
+
+    ; Now we've drawn a character, advance the cursor.
+
+    ld hl, cursorx
+    ld a, (hl)
+    inc a
+    ld (hl), a
+    cp SCREEN_WIDTH
+    ret nz
+
+; Writes A to the current cursor location, without advancing the cursor.
+
+tty_rawwrite:
     push af
     call tty_calculate_screen_address
     pop af
@@ -405,7 +526,7 @@ tty_putc:
 
     and 0x7f
     sub 32
-    jp m, negchar
+    ret m
     ld l, a
     ld h, 0
     add hl, hl          ; hl = a*2
@@ -472,27 +593,7 @@ tty_putc:
     add a, a
     add a, a
     add a, a
-    call draw_single_scanline
-
-    ; Now we've drawn a character, advance the cursor.
-
-    ld hl, cursorx
-    ld a, (hl)
-    inc a
-    ld (hl), a
-    cp SCREEN_WIDTH
-    ret nz
-tty_newline:
-    xor a
-    ld (cursorx), a
-    ld hl, cursory
-    ld a, (hl)
-    inc a
-    ld (hl), a
-    cp SCREEN_HEIGHT
-    ret nz
-    dec (hl)                ; oops, don't go the next line after all
-    jr tty_scroll
+    ; fall through
 
 ; On entry, the font data is in A, left justified.
 ; Font pointer is in HL.
