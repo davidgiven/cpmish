@@ -24,8 +24,8 @@ int main(int argc, const char* argv[])
     key(0x49, '0', ')');
     key(0x41, '-', '_');
     key(0x39, '=', '+');
-    key(0x32, 8,   8);
-    key(0x4a, 127, 127);
+    key(0x32, 127, 127);
+    key(0x4a, 8  , 8);
 
     key(0x13, 9,   9);
     key(0x1a, 'q', 'Q');

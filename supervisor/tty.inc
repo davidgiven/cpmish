@@ -1,29 +1,20 @@
-VIDEORAM_BASE: equ 0x2000
-VIDEORAM_SIZE: equ 0x2000
-SCREEN_WIDTH:  equ 480 / 6
-SCREEN_HEIGHT: equ 128 / 8
+VIDEORAM_BASE  = 0x2000
+VIDEORAM_SIZE  = 0x2000
+FONT_HEIGHT    = 8
+SCREEN_WIDTH   = 480 / 6
+SCREEN_HEIGHT  = 128 / FONT_HEIGHT
 
-cursorx: db 0
-cursory: db 0
+cursorx:       db 0
+cursory:       db 0
+
+commandlen:    db 0
+commandgot:    db 0
+commandbuf:    ds 3
 
 tty_init:
-    call tty_clear_screen
     ld a, VIDEORAM_BASE>>8
-    out (0x00), a           ; set base address of video RAM
-    ret
-
-; --- Clears (and initialises) the screen -----------------------------------
-
-tty_clear_screen:
-    ld hl, VIDEORAM_BASE
-    ld de, VIDEORAM_BASE+1
-    ld bc, VIDEORAM_SIZE-1
-    ld (hl), 0
-    ldir
-tty_home_cursor:
-    xor a
-    ld (cursorx), a
-    ld (cursory), a
+    out (PORT_DISPLAY_MEMORY_ADDR), a ; set base address of video RAM
+    call tty_clear_screen
     ret
 
 ; --- Prints a zero-terminated string in HL ---------------------------------
@@ -159,6 +150,71 @@ tty_draw_cursor_loop:
     pop af
     ret
 
+; --- Clears (and initialises) the screen -----------------------------------
+
+tty_clear_screen:
+    call tty_home_cursor
+    jr tty_clear_to_eos
+    
+tty_home_cursor:
+    xor a
+    ld (cursorx), a
+    ld (cursory), a
+    ret
+
+; --- Screen clearing -------------------------------------------------------
+
+tty_clear_to_eol:
+    call tty_calculate_screen_address
+    ld b, FONT_HEIGHT
+    ld hl, (L_cursor_address)
+1:
+    ld (hl), 0
+    inc hl
+    ld a, 63
+    and l
+    jr nz, 1b
+
+    ld hl, (L_cursor_address)
+    ld de, 64
+    add hl, de
+    ld (L_cursor_address), hl
+    djnz 1b
+    ret
+
+tty_clear_to_eos:
+    ; Compute the start of the area to clear.
+
+    call tty_calculate_screen_address
+    ld hl, (L_cursor_address)
+    ld a, 0xc0
+    and l
+    ld l, a                     ; get address of start of line
+    ld bc, 64
+    add hl, bc                  ; get address of start of *next* line
+
+    ; Compute the *size* of the area to clear.
+
+    ex de, hl                   ; stash start address in DE
+    ld hl, VIDEORAM_BASE + VIDEORAM_SIZE
+    and a                       ; clear carry flag
+    sbc hl, de                  ; HL is amount to clear
+    ld a, h
+    or l
+    ret z                       ; give up if nothing
+    dec hl                      ; need one *fewer* than the size to clear
+    ld b, h
+    ld c, l
+    ex de, hl
+
+    ld d, h
+    ld e, l
+    inc de
+    ld (hl), 0
+    ldir
+
+    jr tty_clear_to_eol         ; we haven't cleared the rest of this line
+
 ; --- Performs a carriage return --------------------------------------------
 
 tty_carriagereturn:
@@ -166,16 +222,151 @@ tty_carriagereturn:
     ld (cursorx), a
     ret
 
+; --- Move the cursor -------------------------------------------------------
+
+tty_cursor_left:
+    ld hl, cursorx
+    dec (hl)
+    ret p
+    inc (hl)
+    ret
+
+tty_cursor_up:
+    ld hl, cursory
+    dec (hl)
+    ret p
+    inc (hl)
+    ret
+
+tty_cursor_right:
+    ld hl, cursorx
+    ld a, (hl)
+    inc a
+    cp SCREEN_WIDTH
+    ret z
+    ld (hl), a
+    ret
+
+tty_cursor_down:
+    ld hl, cursory
+    ld a, (hl)
+    inc a
+    cp SCREEN_HEIGHT
+    ret z
+    ld (hl), a
+    ret
+
+; Move to (B, C).
+tty_goto_xy:
+    ld a, b
+    cp SCREEN_WIDTH
+    ret nc
+    ld (cursorx), a
+
+    ld a, c
+    cp SCREEN_HEIGHT
+    ret nc
+    ld (cursory), a
+    ret
+
 ; --- Prints the character in A ---------------------------------------------
 ; (also tty_newline)
 
+; Helper routine: deal with command bytes (passed in C).
+queue_command_byte:
+    ; Write the byte to the buffer.
+
+    ld hl, commandgot
+    ld d, 0
+    ld e, (hl)
+    inc (hl)
+
+    ld hl, commandbuf
+    add hl, de
+    ld (hl), c
+
+    ; Have we reached the end of the buffer?
+
+    ld hl, commandlen
+    ld a, (commandgot)
+    cp (hl)
+    ret nz              ; no, go back for more bytes.
+    xor a
+    ld (hl), a          ; end of command
+
+    ; Process a command.
+
+    ld a, (commandbuf+0)
+    cp 'A'
+    jr z, tty_cursor_up
+    cp 'B'
+    jr z, tty_cursor_down
+    cp 'C'
+    jr z, tty_cursor_right
+    cp 'D'
+    jr z, tty_cursor_left
+    cp 'H'
+    jp z, tty_home_cursor
+    cp 'J'
+    jp z, tty_clear_to_eos
+    cp 'K'
+    jp z, tty_clear_to_eol
+    cp 'Y'
+    ret nz ; unknown command
+    ld a, (commandgot)  ; Y takes parameters
+    cp 3                ; do we have enough bytes?
+    jr z, 1f            ; yes, execute command
+    ld a, 3             ; not enough bytes read yet
+    ld (commandlen), a
+    ret
+1:
+    ld hl, commandbuf+1 ; got enough bytes; process command
+    ld a, (hl)
+    sub 32
+    ld c, a             ; Y
+    inc hl
+    ld a, (hl)
+    sub 32
+    ld b, a             ; X
+    jr tty_goto_xy
+
+negchar:
+    add a, 32
+    push af
+    ld a, '['
+    call tty_putc
+    pop af
+    call tty_puthex8
+    ld a, ']'
+    call tty_putc
+    ret
+    
 tty_putc:
+    ; Check to see if there's a pending command.
+
+    ld c, a
+    ld a, (commandlen)
+    or a
+    jr nz, queue_command_byte
+
     ; Handle special characters.
 
+    ld a, c
+    cp 8
+    jp z, tty_cursor_left
     cp 10
-    jp z, tty_newline
+    jr z, tty_newline
     cp 13
     jp z, tty_carriagereturn
+    cp 27
+    jp nz, 1f
+        ; Escape characters mean commands.
+        xor a
+        ld (commandgot), a
+        inc a
+        ld (commandlen), a
+        ret
+    1:
 
     ; Calculate screen address and which pixel decoder to use.
 
@@ -187,6 +378,7 @@ tty_putc:
 
     and 0x7f
     sub 32
+    jp m, negchar
     ld l, a
     ld h, 0
     add hl, hl          ; hl = a*2
