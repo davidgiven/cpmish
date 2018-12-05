@@ -6,6 +6,7 @@ SCREEN_HEIGHT  = 128 / FONT_HEIGHT
 
 cursorx:       db 0
 cursory:       db 0
+cursor_shown:  db 0
 
 commandlen:    db 0
 commandgot:    db 0
@@ -121,6 +122,28 @@ char_mask_table:
 ; --- Draw (or undraw) the cursor -------------------------------------------
 
 tty_draw_cursor:
+    push hl
+    ld hl, cursor_shown
+    bit 0, (hl)
+    jr nz, 1f
+    set 0, (hl)
+    call tty_xor_draw_cursor
+1:
+    pop hl
+    ret
+
+tty_undraw_cursor:
+    push hl
+    ld hl, cursor_shown
+    bit 0, (hl)
+    jr z, 1f
+    res 0, (hl)
+    call tty_xor_draw_cursor
+1:
+    pop hl
+    ret
+    
+tty_xor_draw_cursor:
 	push af
 	push bc
 	push de

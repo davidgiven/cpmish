@@ -109,11 +109,9 @@ kbd_test_pending_key:
 
 ; (Event returned in A.)
 kbd_get_next_key:
-    call tty_draw_cursor
 1:
     call kbd_test_pending_key
     jr z, 1b
-    call tty_draw_cursor
 
     ld hl, .data.keyboard_rdptr
     ld de, .data.keyboard_buffer

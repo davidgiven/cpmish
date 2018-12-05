@@ -31,14 +31,17 @@ label sys_wboot
 ; Read console: returns char in A.
 
 label sys_conin
+    call tty_draw_cursor
     call kbd_get_next_key
     ld l, a
+    call tty_undraw_cursor
     jr syscall_exit
 
 ; Write console: writes char in A.
 
 label sys_conout
     push bc
+    call tty_undraw_cursor
     call cache_flush_unwritten
     pop bc
 
@@ -48,19 +51,12 @@ label sys_conout
 
 ; Test console: returns 0xff in A if console has characters to read.
 label sys_const
+    call cache_flush_unwritten
+    call tty_draw_cursor
     call kbd_test_pending_key
     ld l, 0
     jr z, syscall_exit
     dec l
-    jr syscall_exit
-
-; Home disk (only drive A).
-label sys_home
-;    ld a, (bios_selected_disk)
-;    or a
-;    jr nz, 1f
-;    call fd765_recalibrate
-;1:
     jr syscall_exit
 
 ; Read 128-byte CP/M sector.
