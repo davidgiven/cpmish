@@ -12,7 +12,7 @@ coldboot:
     ; Initialise CP/M-y things in the base of userspace.
 
     ld a, USER0_BANK
-    out (0x11), a               ; Map user space 0x0000 to 0x4000.
+    out (PORT_BANK1), a         ; Map user space 0x0000 to 0x4000.
     xor a
     ld (0x4000 + IOBYTE), a     ; reset iobyte
     ld (0x4000 + CDISK), a      ; reset current disk

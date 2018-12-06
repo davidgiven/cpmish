@@ -14,6 +14,7 @@ KBD_SCAN_PORT:   equ 0xb0
 ; WARNING: registers must be preserved!
 safeorg 0x0038
 raw_interrupt_handler:
+    di
     call supervisor_interrupt_handler
     ei
     reti

@@ -46,8 +46,8 @@ label SECTRAN
 ; otherwise).
 
 label bios_interrupt_handler
+    di
     push af
-
     ld (saved_stack), sp
     ld sp, supervisor_stack_end
     
@@ -79,7 +79,7 @@ BOOTE:
     out (PORT_BANK1), a
     inc a
     out (PORT_BANK2), a
-    ld sp, CBASE            ; ephemeral startup stack
+    ld sp, 0x100            ; ephemeral startup stack
     ei
 
     ld a, (CDISK)
