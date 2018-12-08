@@ -5,6 +5,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
+#define LINEHEIGHT 7
+
 static void fatal(const char* msg, ...)
 {
     va_list ap;
@@ -30,9 +32,9 @@ int main(int argc, const char* argv[])
     if ((widthpixels % 6) != 0)
         fatal("image must be a multiple of 6 pixels across");
     int charswidth = widthpixels / 6;
-    if ((heightpixels % 8) != 0)
-        fatal("image must be a multiple of 8 pixels high");
-    int charsheight = heightpixels / 8;
+    if ((heightpixels % LINEHEIGHT) != 0)
+        fatal("image must be a multiple of %d pixels high", LINEHEIGHT);
+    int charsheight = heightpixels / LINEHEIGHT;
     printf("; font is %dx%d pixels, containing %d characters\n",
         widthpixels, heightpixels, charswidth*charsheight);
 
@@ -41,18 +43,27 @@ int main(int argc, const char* argv[])
     {
         for (int x=0; x<charswidth; x++)
         {
-            unsigned char* p = data + x*6 + y*widthpixels*8;
+            unsigned char* p = data + x*6 + y*widthpixels*LINEHEIGHT;
 
             /* We assume the left column is blank, and so only store five bits. */
             p++;
 
             uint64_t mask = 0;
 
-            for (int yy=0; yy<8; yy++)
+            int yy = 0;
+            while (yy < LINEHEIGHT)
             {
                 for (int xx=0; xx<5; xx++)
                     mask = (mask << 1) | (p[xx] == 0);
                 p += widthpixels;
+                yy++;
+            }
+
+            /* The encoding expects 8 5-bit values in five bytes, *left* justified. */
+            while (yy < 8)
+            {
+                mask <<= 5;
+                yy++;
             }
 
             printf("db 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x ; char %d\n",

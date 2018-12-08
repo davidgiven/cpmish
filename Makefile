@@ -36,9 +36,13 @@ $(OBJ)/%: utils/%.c
 	@mkdir -p $(dir $@)
 	gcc -g $< -o $@ -lm
 
-$(OBJ)/font.inc: $(OBJ)/fontconvert 6x8font.png
+$(OBJ)/6x7font.png: 6x7font.bdf utils/bdftofont.sh
 	@mkdir -p $(dir $@)
-	$(OBJ)/fontconvert 6x8font.png > $@
+	./utils/bdftofont.sh 6x7font.bdf $@
+
+$(OBJ)/font.inc: $(OBJ)/fontconvert $(OBJ)/6x7font.png
+	@mkdir -p $(dir $@)
+	$(OBJ)/fontconvert $(OBJ)/6x7font.png > $@
 
 $(OBJ)/keyboard.inc: $(OBJ)/mkkeytab
 	@mkdir -p $(dir $@)

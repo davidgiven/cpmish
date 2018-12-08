@@ -1,8 +1,12 @@
 VIDEORAM_BASE  = 0x2000
 VIDEORAM_SIZE  = 0x2000
-FONT_HEIGHT    = 8
+FONT_HEIGHT    = 7
 SCREEN_WIDTH   = 480 / 6
 SCREEN_HEIGHT  = 128 / FONT_HEIGHT
+BYTES_PER_SCANLINE = 64
+BYTES_PER_LINE = BYTES_PER_SCANLINE * FONT_HEIGHT
+LAST_LINE      = VIDEORAM_BASE + (SCREEN_HEIGHT-1) * BYTES_PER_LINE
+VIDEORAM_END   = LAST_LINE + BYTES_PER_LINE
 
 cursorx:       db 0
 cursory:       db 0
@@ -65,8 +69,15 @@ tty_puthex8_conv:
 
 tty_calculate_screen_address:
     ld a, (cursory)
-    add a, a            ; a = cursory*2
-    ld h, a             ; address will be cursory*512
+    add a, a
+    ld de, line_address_table
+    ld h, 0
+    ld l, a
+    add hl, de
+    ld a, (hl)
+    inc hl
+    ld h, (hl)
+    ld l, a
 
     ; We want to calculate (cursorx*6/8) to find which horizontal byte our
     ; character is at; this is the same as cursorx*3/4, which will also
@@ -80,9 +91,9 @@ tty_calculate_screen_address:
     rra
     rra
     and 0x3f            ; divide by 8
-    ld l, a             ; lower byte of address
+    ld e, a             ; lower byte of address
+    ld d, 0
 
-    ld de, VIDEORAM_BASE
     add hl, de
     ld (L_cursor_address), hl
 
@@ -118,6 +129,13 @@ char_mask_table:
     dw 0xf03f           ; 1111.0000 0011.1111
     dw 0xfc0f           ; 1111.1100.0000.1111
 
+line_address_table:
+    _y = 0
+    .rept SCREEN_HEIGHT
+        dw VIDEORAM_BASE + _y
+        _y = _y + BYTES_PER_LINE
+    .endr
+
 ; As above, but calculates the address of the beginning of the current line.
 ; Returns the address in HL (as well as updating L_cursor_address).
 tty_calculate_screen_address_of_line:
@@ -137,7 +155,7 @@ tty_calculate_screen_address_of_next_line:
     ld bc, 64
     add hl, bc                  ; get address of start of *next* line
     ld (L_cursor_address), hl
-    ld bc, VIDEORAM_BASE + VIDEORAM_SIZE
+    ld bc, VIDEORAM_END
     or a
     sbc hl, bc
     add hl, bc
@@ -182,8 +200,8 @@ tty_xor_draw_cursor:
     xor 0xff
     ld (hl), a
 
-    ld b, 8
-    ld de, 63
+    ld b, FONT_HEIGHT
+    ld de, BYTES_PER_SCANLINE - 1
     ld hl, (L_cursor_address)
 tty_draw_cursor_loop:
 	ld a, (L_char_mask+1)
@@ -241,7 +259,7 @@ tty_clear_to_eos:
     ; Compute the *size* of the area to clear.
 
     ex de, hl                   ; stash start address in DE
-    ld hl, VIDEORAM_BASE + VIDEORAM_SIZE
+    ld hl, VIDEORAM_BASE + SCREEN_HEIGHT*BYTES_PER_LINE
     and a                       ; clear carry flag
     sbc hl, de                  ; HL is amount to clear
     dec hl                      ; need one *fewer* than the size to clear
@@ -324,8 +342,8 @@ tty_insert_line:
 
     ; We want to copy in reverse, which means HL and BC are fixed.
     
-    ld hl, VIDEORAM_BASE + VIDEORAM_SIZE - (64*FONT_HEIGHT) - 1 ; source
-    ld de, VIDEORAM_BASE + VIDEORAM_SIZE - 1 ; dest
+    ld hl, LAST_LINE - 1        ; source
+    ld de, VIDEORAM_END - 1     ; dest
     ; BC is size-1
     lddr
 
@@ -336,7 +354,7 @@ tty_insert_line:
     ld d, h
     ld e, l
     inc de
-    ld bc, FONT_HEIGHT*64 - 1
+    ld bc, BYTES_PER_LINE - 1
     ld (hl), 0
     ldir
     ret
@@ -351,7 +369,7 @@ tty_delete_line:
     ; We want to copy forwards.
 
     push hl
-    ld de, -(64*FONT_HEIGHT)
+    ld de, -BYTES_PER_LINE
     add hl, de                  ; Start of *current* line, source
     pop de                      ; Start of *next* line, dest
     ex de, hl                   ; Copy from next line to current line
@@ -359,9 +377,9 @@ tty_delete_line:
 
     ; Clear the last line.
 
-    ld hl, VIDEORAM_BASE + VIDEORAM_SIZE - (64*FONT_HEIGHT)
-    ld de, VIDEORAM_BASE + VIDEORAM_SIZE - (64*FONT_HEIGHT) + 1
-    ld bc, (64*FONT_HEIGHT) - 1
+    ld hl, LAST_LINE
+    ld de, LAST_LINE + 1
+    ld bc, BYTES_PER_LINE - 1
     ld (hl), 0
     ldir
     ret
@@ -370,7 +388,7 @@ tty_delete_line:
 ; On exit: HL is preserved; BC contains the amount to move.
 calculate_insert_delete_size:
     ex de, hl                   ; stash start address in DE
-    ld hl, VIDEORAM_BASE + VIDEORAM_SIZE - 1
+    ld hl, VIDEORAM_END - 1
     and a                       ; clear carry flag
     sbc hl, de                  ; HL is amount to clear
     ld b, h
@@ -587,12 +605,6 @@ tty_rawwrite:
     rra
     srl b
     rra
-    call draw_single_scanline
-
-    ld a, (hl)              ; ???XXXXX
-    add a, a
-    add a, a
-    add a, a
     ; fall through
 
 ; On entry, the font data is in A, left justified.
@@ -648,13 +660,13 @@ scanline_shift_amount = . + 1
 
 tty_scroll:
     ld de, VIDEORAM_BASE
-    ld hl, VIDEORAM_BASE + 512
-    ld bc, VIDEORAM_SIZE - 511
+    ld hl, VIDEORAM_BASE + BYTES_PER_LINE
+    ld bc, LAST_LINE - VIDEORAM_BASE
     ldir
     ld h, d
     ld l, e
     inc de
-    ld bc, 511
+    ld bc, BYTES_PER_LINE - 1
     ld (hl), 0
     ldir
     ret
