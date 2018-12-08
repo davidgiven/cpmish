@@ -40,7 +40,7 @@ warmboot:
     ld (0x4000 + 0x0001), hl
 
     ld (0x4000 + BDOSCALL+0), a ; BDOS entrypoint
-    ld hl, FBASE
+    ld hl, FBASE + 6
     ld (0x4000 + BDOSCALL+1), hl
 
     ld (0x4000 + 0x0038), a     ; Interrupt handler

@@ -62,7 +62,9 @@ SECTRN:	EQU BIOS + 16*3
 ;*
 ;**************************************************************
 ;
-FBASE:	JP	FBASE1
+FBASE:
+PATTRN2: DB 0,22,0,0,0,0
+	JP	FBASE1
 ;
 ;   Bdos error table.
 ;
