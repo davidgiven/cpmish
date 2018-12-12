@@ -123,7 +123,7 @@ CPRLOC	EQU	0	;MOVCPM IMAGE
 ; CPR using BDSLOC or its equivalent, then merely set CPRLOC
 ; to that value as as in the following line:
 ;
-CPRLOC	EQU	0BD00H	;FILL IN WITH BDOSLOC SUPPLIED VALUE
+CPRLOC	EQU	0e800H	;FILL IN WITH BDOSLOC SUPPLIED VALUE
 ;
 ; Note that you should only use one method or the other.
 ; Do NOT define CPRLOC twice!
@@ -243,8 +243,6 @@ TPA	EQU	BASE+0100H		;BASE OF TPA
 ;
 ; MACROS TO PROVIDE Z80 EXTENSIONS
 ;   MACROS INCLUDE:
-;
-$-MACRO 		;FIRST TURN OFF THE EXPANSIONS
 ;
 ;	JR	- JUMP RELATIVE
 ;	JRC	- JUMP RELATIVE IF CARRY
