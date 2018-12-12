@@ -1,0 +1,145 @@
+zmac 1.4, a Z80 macro cross-assembler.
+Public domain by Bruce Norskog, John Providenza and Colin Kelley.
+Cleaned up somewhat and documented by Russell Marks.
+Tweaked by Mark RISON, Chris Smith, Matthew Phillips, Tim Mann and Thierry Jouin.
+
+
+Description
+-----------
+
+zmac is a rather good Z80 macro cross-assembler which hardly anyone
+seems to know about, but which I've used for about four or five years
+now for various things.
+
+I'd taken to, whenever I uploaded any of my Z80 sources, including a
+diff to get zmac minimally working (being a relatively old program, it
+made some assumptions which were a little odd in a modern context) and
+a pointer to where the shar archives could be found. (FWIW, that's
+comp.sources.unix volume 9.) But eventually, I decided it'd be a Good
+Thing if I got a more reasonable zmac package together, especially
+since I couldn't ever remember seeing a Z80 cross-assembler on
+sunsite. Honestly, why bother wasting space on junk like the kernel
+and gcc when you could be using it for *useful* stuff like Z80
+assemblers? :-)
+
+So I made the code ANSI C and got it through gcc's `-Wall', fixed a
+couple of obscure bugs I'd found in it, wrote a man page, and added
+the option of only accepting 8080-compatible instructions so you can
+write programs in Z80 which will also run on the 8080 and 8085 (see
+the man page for details), and a couple of other minor features. And
+that's essentially what's here.
+
+The documentation is in the file zmac.doc (derived from the Un*x
+man page in the file zmac.1 ).
+
+
+Installation on Un*x
+--------------------
+
+You'll need an ANSI C compiler.  gcc is fine - so should most other
+compilers be, these days. (You'll also need bison or yacc, if you
+want to build from scratch, but that shouldn't be a problem.)
+
+Check/edit the Makefile first. (It should be fine, though.) Then do
+`make', then (as root) `make install'.  This installs the man page
+as well as the executable.
+
+
+Installation on BeOS
+--------------------
+
+You'll need an ANSI C compiler.  gcc is fine.
+
+You should be able to use the Makefile provided, otherwise just
+do whatever you need to do to compile zmac.c, mio.c and getoptn.c
+together.
+
+Then put the executable in /boot/home/config/bin/ or
+/boot/beos/bin/ .
+
+
+Installation on DOS
+-------------------
+
+You'll need an ANSI C compiler.
+
+You may be able to use the Makefile provided, if you're using
+djgpp, otherwise just do whatever you need to do to compile
+zmac.c, mio.c and getoptn.c together; in both cases make sure
+the preprocessor token MSDOS is defined.
+
+Then put the executable somewhere in your PATH.
+
+
+Installation on RISC OS
+-----------------------
+
+You'll need an ANSI C compiler.  Acorn C/C++ is fine, and
+so should gcc and lcc be.
+
+You may be able to use the Makefile provided, otherwise just
+do whatever you need to do to compile zmac.c, mio.c and getoptn.c
+together; in both cases make sure the preprocessor token __riscos
+or __riscos__ is defined (this is the case for Acorn C/C++,
+gcc and lcc).
+
+Then put the executable somewhere in your Run$Path.
+
+[Also see the file RISCOS.]
+
+
+Installation on other OSes
+--------------------------
+
+You'll need an ANSI C compiler.
+
+You'll probably need to add filename-handling support for
+your OS.  This involves adding appropriate definitions
+of OS_DIR_SEP and OS_EXT_SEP and adding appropriate code
+to decanonicalise ().  In those cases where directories in
+pathnames are syntactically distinct to leafnames (e.g. VMS)
+changes will also be needed in suffix () and suffix_if_none ().
+
+You may be able to use the Makefile provided, otherwise just
+do whatever you need to do to compile zmac.c, mio.c and getoptn.c
+together.
+
+Then put the executable somewhere appropriate, and feed your
+changes back to <mrison@hotmail.com> so they can become part
+of the source source!
+
+
+History
+-------
+
+Bruce Norskog wrote zmac in 1978, "modeled after the ... macro
+cross-assembler for the Intel 8080 by Ken Borgendale."
+
+John Providenza made some changes and bugfixes in the early 80s.
+
+Colin Kelley did much the same in the mid-80s.
+
+And of course, I've just messed about with it in the late 90s,
+together with Mark RISON, Chris Smith, Matthew Phillips
+and Tim Mann. :-)
+
+I assigned the first version I hacked on the version number 1.0 just
+for the sake of argument (previous versions didn't have a version
+number). A version number of about 4.0 or 5.0 would probably be a
+better reflection of what the code's been through over the years...
+
+
+Contacting me
+-------------
+
+You can email me at <russell.marks@ntlworld.com>.  However,
+Mark RISON now maintains zmac, so you should generally
+email him instead at <mrison@hotmail.com>.
+
+The latest version of zmac is currently available from
+
+   http://www.nenie.org/cpcip/index.html#zmac
+
+Share and enjoy!
+
+-Rus (with a few tweaks by Mark).

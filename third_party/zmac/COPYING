@@ -1,0 +1,76 @@
+The copyright situation regarding zmac is not totally clear.
+This is what Russell Marks had to say when I asked him:
+
+"
+> [...] I would
+> like to make double sure that zmac is indeed public domain and so
+> freely distributable and modifyable.  Can you confirm this?  Have the
+> various authors of zmac over the years agreed to give away their
+> copyright?
+
+This is a difficult area, partly because I'm not a lawyer. :-) None of
+them seemed to explicitly give away their copyright, but equally, none
+of them asserted it either. If you really want to be sure that it's
+all entirely public domain, the sort of thing that would definitely
+stand up in court, you'll have to try and contact all three previous
+contributors (my changes are definitely PD, you wouldn't have to worry
+about that). I have vague memories of seeing both Colin Kelley and
+John Providenza's names mentioned in more recent things than zmac, but
+I don't know any contact addresses for them (nor for Bruce Norskog).
+
+OTOH, if you're just after some general reassurance that it's ok to
+distribute a hacked version, I'd say it's fine - if nothing else,
+Colin Kelley posted it to comp.sources.unix in 1987, so he must have
+thought it freely distributable and modifiable (the latter because he
+made changes himself). I think an earlier version had featured in
+simtel's "UNIX-C" directory too.
+
+Also, this point from the copyright FAQ may be relevant:
+
+> 2.2) What is "public domain?"
+>
+> In contrast to copyright is "public domain."  A work in the public domain
+> is one that can be freely used by anyone for any purpose.
+>
+> It used to be that if a work was published without notice, it lost all
+> copyright, and entered the public domain.  That's no longer true, and now
+> public domain is more the exception than the rule.
+>
+> There are still a number of ways that a work may be public domain.
+[...]
+>  - The copyright might have been forfeited.  For example, the work
+>    may have been published without notice prior to the change in
+>    the law that eliminated the notice requirement (March 1, 1988,
+>    the effective date of the Berne Convention Implementation Act,
+>    PL 100-568, 102 Stat. 2853).
+
+zmac was published without a copyright notice in 1987 (and, one
+assumes, long before then as well). This is the main reason I describe
+zmac as public domain - the 1987 posting was published source with no
+copyright notice and no license being distributed for free by one of
+the authors. That smells of PD to me, even without the above. :-) I
+just don't see what else it could really be. But getting real,
+legally-sound confirmation of this would be a challenge.
+
+I know this isn't the "yep, no problem, and here are all the authors'
+current addresses so you can check for yourself" you may have been
+looking for, but there it is.
+
+FWIW, I distribute zmac with ZCN (my GPL'd CP/M-like OS for the
+Amstrad NC100). In case that contributes anything to this. :-)
+"
+
+[Needless to say, I too forfeit any copyright claim on my changes!]
+
+I am therefore assuming that zmac is public domain (note, however,
+that the Act above is probably an American one and different
+conditions may apply in e.g. the European Union).  I am not a
+lawyer, though, and I would strongly suggest you don't abuse this.
+In particular, I wouldn't use zmac or portions thereof in any
+commercial product.
+
+If any of the authors of zmac requests so, I will immediately
+withdraw this release.
+
+
+Mark RISON, <mrison@hotmail.com>, 1999-07-19

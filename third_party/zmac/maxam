@@ -1,0 +1,43 @@
+Notes on MAXAM compatibility
+============================
+
+MAXAM is an assembler for Amstrad CPC machines
+(a CP/M version also exists).
+
+zmac tries to be MAXAM-compatible.
+
+Note the following major differences with MAXAM 1.14, though:
+
+- zmac allows ' and " strings to be specified using '''' and """".
+MAXAM only allows '"' and "'", which zmac also allows.
+
+- zmac will truncate symbols to 40 characters.
+MAXAM has no such restriction.
+
+- MAXAM allows strings to be terminated by end-of-line.
+zmac does not.
+
+- When using the READ directive, MAXAM will take the first
+non-whitespace character as the filename delimiter.  zmac only
+allows ' or " as a filename delimiter.
+
+- AMSDOS restrictions prevent MAXAM from supporting nested
+READs, which zmac allows.  AMSDOS restrictions also prevent
+MAXAM from supporting directories.
+
+- zmac has a pretty decent expression parser.
+MAXAM does not (no parentheses, no precedence).
+
+- zmac handles multiple ORGs by inserting padding bytes in
+the .bin file, but of course this means retrograde ORGs are
+not possible.
+
+- MAXAM allows multiple statements on the same line, separated
+by colons.  zmac does not.
+
+- zmac has many synonyms for operators, directives, labels, hex
+constants, etc., which MAXAM does not support.  The easiest
+thing is not to find out about them!
+
+
+Mark RISON, <mrison@hotmail.com>, 2000-05-25

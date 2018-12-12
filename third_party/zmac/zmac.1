@@ -1,0 +1,412 @@
+.\" -*- nroff -*-
+.\"
+.\" zmac - Z80 macro cross-assembler
+.\" Public domain by Bruce Norskog and others.
+.\"
+.\" zmac.1 - man page
+.\"
+.\" (version number below is purely for the sake of argument;
+.\" it's probably about the millionth version IRL :-))
+.\"
+.TH zmac 1 "2000-07-02" "Version 1.3" "Development Tools"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH NAME
+zmac \- Z80 macro cross-assembler
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH SYNOPSIS
+.PD 0
+.B zmac
+.RB [ --help ]
+.RB [ --version ]
+.RB [ -AbcdefghilLmnOpsStTz ]
+.RB [ -o
+.IR outfile ]
+.RB [ -x
+.IR listfile ]
+.RI [ filename ]
+.PD 1
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH DESCRIPTION
+zmac is a Z80 macro cross-assembler. It has all the features you'd
+expect. It assembles the specified input file (with a `.z' extension
+if there is no pre-existing extension and the file as given doesn't
+exist) and produces raw binary output
+in a `.bin' file. (It can optionally produce CP/M-style Intel hex
+format - see below.) By default it also produces a nicely-formatted
+listing of the m/c alongside the source, in a `.lst' file.
+.PP
+As well as normal Z80 programs, zmac lets you write 8080 programs in
+Z80 assembly. (See the `-z' option below.)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH OPTIONS
+Most of the options control aspects of the listing.
+.TP
+.I --help
+Display a list of options and a terse description of what the options
+do.
+.TP
+.I --version
+Print version number.
+.TP
+.I -A
+Add an AMSDOS header to the generated binary file (this option
+automatically disables generation of hex output).
+.TP
+.I -b
+Don't generate the m/c output at all.
+.TP
+.I -c
+Make the listing continuous, i.e. don't generate any page breaks or
+page headers. Can make things less confusing if you're going to
+consult the listing online rather than printing it.  This is the default.
+.TP
+.I -d
+Make the listing discontinuous.
+.TP
+.I -e
+Omit the `error report' section in the listing.
+.TP
+.I -f
+List instructions not assembled due to `if' expressions being
+false. (Normally these are not shown in the listing.)
+.TP
+.I -g
+List only the first line of equivalent hex for a source line.
+.TP
+.I -h
+Output CP/M-ish Intel hex format (using extension `.hex') rather than
+the default of a simple binary file (extension `.bin').
+.TP
+.I -i
+Don't list files included with `include'.
+.TP
+.I -l
+Don't generate a listing at all.
+.TP
+.I -L
+Generate listing no matter what. Overrides any conflicting options.
+.TP
+.I -m
+List macro expansions.
+.TP
+.I -n
+Omit line numbers from listing.
+.TP
+.I -o
+Output assembled code to
+.IR outfile .
+.TP
+.I -O
+Suggest possible optimisations. (These are shown as warnings.)
+.TP
+.I -p
+Use a few linefeeds for page break in listing rather than ^L.
+.TP
+.I -s
+Omit the symbol table from the listing.
+.TP
+.I -S
+When reporting an error, show the line which caused it. Without this
+option zmac reports errors in the canonical format, one-per-line (but
+see the first item in the
+.B BUGS
+section).
+.TP
+.I -t
+Give terse (single-letter) error codes in listing (with a key at the
+end). (Normally the full error message is given.)
+.TP
+.I -T
+Enable DDE throwback for reporting warnings and errors.  This option
+only exists for RISC OS builds.
+.TP
+.I -x
+Output listing to
+.IR listfile .
+(It outputs to stdout if you specify the file as `-'.)
+This has no effect if used with
+.IR -l .
+.TP
+.I -z
+Accept 8080-compatible instructions only; flag any Z80-specific ones
+as errors. This lets you write 8080 programs in Z80 assembly, without
+having to worry about the deeply nasty 8080 assembly syntax. :-)
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH "INPUT FORMAT"
+zmac uses the standard Zilog mnemonics, and the pseudo-ops are also
+largely as you'd expect.
+.PP
+Input can be upper or lowercase.
+.PP
+Comments start with `;' and carry on
+to the end of the line.
+.PP
+Labels are declared with
+`label:', `.label', `:label' or just `label' -
+indentation is unimportant. (Labels can be up to 40 chars long.)
+.PP
+Number constants can take a trailing h or a leading &, $ or # for hex,
+a trailing b for binary, a trailing o or q for octal, or a trailing
+d for decimal.
+.PP
+Here is how other things work:
+.TP
+.B defb 42
+A byte.  `ascii', `byte', `db', `defm' and `text' are synonyms.
+.TP
+.B defb 'foobar'
+An ASCII character string (not NUL-terminated).
+Double quotes can also be used.
+.TP
+\fBdefb 'Who needs MS-DOG when you have *CP/M*?', 13, 10, '$'\fP
+Strings, bytes, and comp.os.msdos.programmer troll. :-)
+.TP
+.B defw 2112
+A word (16 bits).  `word' and `dw' are synonyms.
+.TP
+.B defs 500
+Insert 500 zero bytes.  `block', `ds' and `rmem' are synonyms.
+.TP
+.B org
+Set the address to assemble to.
+.TP
+.B equ
+Define a symbol to have a fixed value.  The symbol can be used before it
+is defined.  A symbol defined with `equ' or as a label can be defined only
+once, except that a symbol defined with `equ' may be redefined to the
+same value.
+.TP
+.B defl
+Define a symbol to have a changeable value.  The symbol cannot be used
+before it is defined, and it can be redefined to a different value later
+with another `defl'.
+.TP
+.B end 
+Ends the input.  Any lines after an `end' are silently ignored.
+If an arg is given, it declares the entry address for the program.
+This has no effect if zmac is writing a raw binary file.  In an Intel
+hex file, it generates an S-record directing 0 bytes of data to be loaded
+at the given address.
+.TP
+\fBif\fP ... [ \fBelse\fP ... ] \fBendif\fP
+For conditional assembly. If you do `if foo' and foo evaluates to
+zero, all the lines up until the next corresponding `else' or `endif'
+are completely ignored.  Conversely, if foo evaluates to non-zero, any
+lines from a corresponding `else' to the `endif' are ignored.  Ifs can
+be nested.  `cond'/`endc' are synonyms for `if'/`endif'.
+.TP
+\fBrsym\fP and \fBwsym\fP
+Read/write a symbol file. These simply load/save the currently defined
+symbols from/to the file specified (in a non-portable format). `rsym'
+takes place at the point it is encountered in the file (on the first
+pass); `wsym' is delayed until assembly has finished.
+.TP
+.B include
+Include a file. Like C's (well, cpp's) #include, but the filename arg
+lacks the angle brackets or quotes (though quotes may be used).
+`read' is a synonym.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH "ODDITIES"
+There are the following oddities:
+.TP
+.B cmp
+Same as `cp'.
+.TP
+.B jmp
+Same as `jp'.
+.TP
+.B jp hl
+Same as `jp (hl)'.  Ditto for ix and iy.
+.TP
+.B ld hl, 'LH'
+Oh, yes!  Ditto for bc, de, sp, ix and iy.
+.TP
+\fBmin\fP and \fBmax\fP
+Same as `defl' except that the symbol is defined as the
+smaller or bigger of two comma-separated expressions.
+.TP
+\fBv\fP and \fBnv\fP
+These are alternatives to `pe' and `po' respectively in `jp'
+and `call' instructions, meaning that tests on the Z80's
+(parity/)overflow flag can be written in the same
+format (`x'/`nx') as for those on the zero or carry flags.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH "LISTING PSEUDO-OPS"
+There are several pseudo-ops for controlling the listing. None of
+these ops appear in the listing themselves:
+.TP
+.B eject
+Start a new listing page.
+.TP
+.B nolist
+Do nothing. This can be used to have a comment in the source but not
+the listing, I suppose.
+.TP
+.B "elist, flist, glist, mlist"
+These have the same effect as the similarly-named command-line
+options, though possibly with the sense reversed depending on the
+default. Use an arg >0 (or no arg) to enable, and an arg <0 to
+disable.
+.TP
+.B list
+Sets whether to list or not. You can use this to avoid listing certain
+parts of the source. Takes same optional arg as `elist', etc..
+.TP
+.B title
+Set title (used in listing and symbol file).
+.TP
+.B space
+Output arg blank lines in the listing, or one line if no arg is given.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH "EXPRESSIONS"
+Expressions are reasonably full-featured; here is the complete
+list of operators, highest-precedence first.  Operators separated
+only by a space are synonyms; for example, `~' is the same as `not'.
+.IP
+! (logical), ~ not (bitwise), + (unary), - (unary)
+.IP
+*, /, % mod
+.IP
++, -
+.IP
+<< shl, >> shr
+.IP
+< lt, > gt, <= le, >= ge
+.IP
+== = eq, != <> ne
+.IP
+& and (bitwise)
+.IP
+^ xor (bitwise)
+.IP
+| or (bitwise)
+.PP
+You can use normal parentheses or square brackets to override
+the precedence rules; use square brackets where parentheses would
+conflict with Z80 mnemonic syntax.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH "MACROS"
+The following defines a macro named m with zero or more formal parameters
+p1, p2, ..., pn, zero or more local symbols ?s1, ?s2, ..., ?sm, and 
+body b1, b2, ...:
+.IP
+m macro p1, p2, ..., pn, ?s1, ?s2, ..., ?sm
+.IP
+  b1
+.IP
+  b2
+.IP
+  ...
+.IP
+  endm
+.PP
+The macro is called by writing:
+.IP
+m v1, v2, ..., vn
+.PP
+A macro call expands to the text of the macro's body, with each 
+occurrence of a formal parameter pk replaced by the corresponding 
+value vk, and with each local symbol ?sk replaced by a new, unique 
+symbol invented for this call.  Invented symbols begin with `?',
+so you should avoid using such symbols elsewhere in your program.
+.PP
+zmac currently does not check that you have provided the right number 
+of parameters when calling a macro.  If you provide too few, unmatched 
+formals are replaced with the empty string.  If you provide too 
+many, the additional values begin to replace local symbols as if 
+they were ordinary parameters.  (This could be considered a feature.)  
+After the local symbols are all replaced, additional parameters 
+are silently ignored.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH "FILENAMES"
+To allow source files to be portable, a canonical format should be
+used for filenames in source files (i.e. in include, rsym or wsym
+statements).  This canonical format is basically the Un*x
+format: `/' as the directory separator, `.' as the extension separator,
+".." as the parent directory, "." as the current directory,
+and a leading `/' as the root directory
+(this should be avoided as it makes moving the source non-trivial).
+.PP
+For maximum portability, no element of such a filename should have
+more than 10 characters, contain characters other than 0-9, a-z,
+underscore and `.', or contain more than one `.'.
+.PP
+Filenames passed as command-line arguments (i.e. for the source
+specification, or for the
+.IR -o
+or
+.IR -x
+options), however, are assumed to
+be in the local (non-canonical) format; this includes the
+extension separator (whether supplied or added) and any drive specifiers.
+.PP
+The OSes which are currently supported are Un*x, BeOS, DOS and RISC OS.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH "MISCELLANEOUS"
+In the symbol table listing, the `=' prefix is given for those symbols
+defined by `equ' or `defl', and the `+' suffix is given for those
+which were not used.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH "EXIT STATUS"
+.TP
+.B 0
+No errors.
+.TP
+.B 1
+One or more errors were found during assembly, or zmac exited with a
+fatal error.
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH BUGS
+zmac reports each error in a line separately. This is probably a good
+thing, but tends to effectively result in the same overall problem
+being reported twice (e.g. a reference to an undefined symbol causes
+both an undeclared error and a value error).
+.PP
+The man page isn't what you'd call extensive. This shouldn't be too
+surprising as I had to RTFS to WTFM. :-)
+.PP
+What do phase/dephase do (they seem to be some way of temporarily
+moving the program location -- for overlays?)?
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH "SEE ALSO"
+.IR as "(1)"
+.\"
+.\"------------------------------------------------------------------
+.\"
+.SH AUTHOR
+Bruce Norskog (in 1978!).
+.PP
+Updates and bugfixes over the years by John Providenza, Colin Kelley,
+and more recently by Russell Marks, Mark RISON, Chris Smith,
+Matthew Phillips and Tim Mann.
+.PP
+Russell Marks wrote most of the man page, with tweaks by Mark RISON
+and Tim Mann.

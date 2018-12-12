@@ -1,0 +1,81 @@
+* Changes between versions   -*- mode:indented-text; mode:outline-minor -*-
+
+This file (NEWS) documents the significant changes between all
+versions of zmac (since version 1.0), with the newest changes first.
+
+* Changes in zmac 1.4
+
+- Correct a bug in symbol table loading
+
+- Add VC6-Win32 project
+
+* Changes in zmac 1.3
+
+- Allow ':label' and 'label', and '$' and '#' for hex constants.
+
+- Add relationals.
+
+- Add more synonyms.
+
+- Fix logical operator bugs.
+
+- Fix error handling.
+
+- Make operator precedence C-like.
+
+- Allow normal parentheses in expressions.
+
+- Revamp man page and add plain text version.
+
+
+* Changes in zmac 1.2
+
+- Make filename handling more portable.
+
+- Introduce -x and new -o options (old -o is now '-x -').
+
+- Improve ANSI C-ness.
+
+- Add support for writing out files with AMSDOS headers.
+
+- Add support for RISC OS throwback.
+
+
+* Changes in zmac 1.1.1.2
+
+- Fix nested ELSE bug.
+
+- Pad .bin file when multiple ORGs used.
+
+- Add optimisation suggester.
+
+- Tweak list of valid 8080 opcodes.
+
+
+* Changes in zmac 1.1.1.1
+
+- Add ELSE, READ, DB, DS, DW, DEFM, TEXT and RMEM directives.
+
+- Allow & to introduce a hex constant, " as a string delimiter
+and . to introduce labels.
+
+- Allow AND, OR and XOR to be used as binary operators.
+
+- Warn for truncated symbols and non-standard syntax.
+
+
+* Changes in zmac 1.1
+
+- Fixed the nasty assumption that filenames were never more than 14
+  chars (which was *never* valid, as filenames can include the path to
+  the file).
+
+- Error reports now conform to the canonical format for compilers and
+  the like (as the GNU coding standards put it,
+  "SOURCE-FILE-NAME:LINENO: MESSAGE"). This is a lot more sensible
+  than the previous OVERALL-LINENO: MESSAGE\nERROR-LINE\n (and means
+  you can easily jump to errors when using Emacs' `M-x compile'), but
+  you can get SOURCE-FILE-NAME:LINENO: MESSAGE\nERROR-LINE\n if you
+  use the `-S' option.
+
+- Now supports GNU-ish `--help' and `--version' options.

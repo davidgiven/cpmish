@@ -1,0 +1,344 @@
+2004-11-07	Thierry JOUIN <ramlaid@ramlaid.com>
+	
+	* Version 1.4.
+	
+	* Debug symbol table loading (missing i++ !). Zmac wasn't able to reload a symbol file (freezing)
+
+	* Add VC6-Win32 project
+	
+2000-07-02  Mark RISON  <mrison@hotmail.com>
+
+	* Version 1.3.
+
+	* Improve man page (including portability fixes by Tim).
+
+	* From Matthew, Tim and Russell: compiler warning avoidance.
+
+2000-06-25  Mark RISON  <mrison@hotmail.com>
+
+	* Version 1.3b4.
+
+	* Allow benign EQU redefinition.
+
+	* Cut down on warnings in pass 1.
+
+	* Find and (hopefully!) fix nasty bug in error recovery in arglists.
+
+	* Allow JP HL/IX/IY syntax.  A warning is issued.
+
+	* Revamp man page.
+
+	* From Tim Mann: resolve r/r conflict for parentheses in expressions.
+
+2000-06-18  Mark RISON  <mrison@hotmail.com>
+
+	* Version 1.3b3.
+
+	* BeOS now supported (just treat as a Un*x variant!).
+
+	* Upgrade to bison 1.28 so alloca () no longer a problem.
+
+	* Document the operator zoo.
+
+	* Allow normal parentheses in expressions.
+	  (FIXME: is there a way to tell bison the r/r conflict is OK?)
+
+	* From Tim Mann: sort out operator precedence; make it C-like.
+
+2000-05-25  Mark RISON  <mrison@hotmail.com>
+
+	* Version 1.3b2.
+
+	* Fix error handling fix (with Tim's help!).
+
+	* From Tim Mann: add relationals and synonyms for NOT, MOD, SHL, SHR.
+
+2000-03-18  Mark RISON  <mrison@hotmail.com>
+
+	* Version 1.3b1.
+
+	* Fix error handling.
+
+	* Allow a leading colon or no special character at all
+	to introduce a label.
+
+	* Allow $ and # to introduce hex constants.
+
+	* Allow COND and ENDC as synoyms for IF and ENDIF.
+
+	* More ANSI C pedantry.
+
+	* From Tim Mann: remove the nasty and buggy hack to allow AND,
+	OR and XOR to be used as binary operators and do it properly.
+
+	* From Tim Mann: fix bug which prevented & from being used as
+	a binary operator when it was allowed to introduce a hex constant.
+
+	* From Matthew Phillips: try filename as given before trying
+	to add a '.z' extension.
+
+2000-02-27  Mark RISON  <mrison@hotmail.com>
+
+	* Version 1.2.
+
+	* Stop trying to add an extension to INCLUDEd files
+	(this stupid idea was a misfeature introduced in 1.1.1.1).
+	Instead, define canonical form, which is automatically
+	decanonicalised according to the local OS requirements
+	(see the man page for more details).
+
+	* Add support for RISC OS.
+
+	* Increase the maximum number of IFs to 1024.
+
+	* Issue warning when SLL is used.
+
+	* Further ANSI C-ify.
+	  (FIXME: anyone know how to convince bison not to use alloca ()?)
+
+	* Tweak command-line error reporting.
+
+	* Remove legacy non-ANSI C garbage.
+
+	* From Matthew Phillips: add support for outputting AMSDOS header.
+
+	* From Matthew Phillips: add support for RISC OS DDE throwback.
+
+2000-02-11  Russell Marks  <russell.marks@dtn.ntl.com>
+
+	* zmac.1: updated man page.
+
+	* zmac.y: changed `-O' warning output to look more like gcc
+	(`foo.z:N: warning: wibble' rather than `foo.z:N: wibble
+	warning').
+
+	* zmac.y: changed to use my old getoptn() getopt clone instead of
+	`real' getopt(), as I know Mark likes his portability :-) (and it
+	probably wouldn't work on DOS otherwise, which even I would like
+	it to...).
+
+	* zmac.y: merged in changes (relative to 1.1) from my current
+	zmac. These were:
+
+	* zmac.y: minor changes to avoid egcs/gcc `ambiguous else'
+	warnings.
+
+	* zmac.y: changes from Chris Smith [slightly changed to fit zmac
+	1.1.1.x]. `-o' now specifies output file; `-x' specifies listing
+	file (`-x -' does the same as the old `-o' option); the
+	undocumented `sll' opcode is now allowed; "Cannot open foo file"
+	errors now give the filename; a `.z' extension is only added to
+	source filename if it has no extension; args are now parsed with
+	getopt().
+
+	* Makefile: fix missing dependencies for zmac.
+
+1999-10-03  Mark RISON  <mrison@hotmail.com>
+
+	* Version 1.1.1.2.
+
+	* Fix bug in nested ELSEs.
+
+	* Pad .bin file when multiple ORGs are used.
+
+	* `-O' option invokes optimisation suggester
+	  for JP, RLC/RRC/RL/RR/SLA A and LD A, 0.
+
+	* Reinstate 0x02, 0x0a, 0x12 and 0x1a as valid 8080 opcodes.
+
+	* Add zmac.c to .zip file (for those who don't have yacc/bison).
+
+	* Make makefile no longer depend on GNU make implicit rules.
+
+1999-07-18  Mark RISON  <mrison@hotmail.com>
+
+	* Version 1.1.1.1 (nee 1.1.1).
+
+	* Extend symbol significance from 15 to 40 chars.
+	  A warning is issued regarding truncated symbols.
+
+	* Make continuous listing be the default.
+
+	* Add ELSE to IF/ENDIF construct.
+
+	* Allow INCLUDE filename to be delimited by " or '.
+
+	* Allow labels to be defined using .name (as well as name:).
+
+	* Allow ADD/SBC/ADD s syntax (implicit "A, ").
+	  A warning is issued.
+
+	* Issue warning for SUB/AND/XOR/OR/CP A, s syntax (explicit "A, ").
+
+	* Issue warning for CMP and JMP opcodes, and V and NV condition codes.
+
+	* Catch division by zero in expressions.
+
+	* Allow hex constants to be specified using a leading '&'.
+	  (FIXME: what's all this testing of nextchar () against '$' for?)
+
+	* Add DB, DEFM and TEXT as synonyms for DEFB.
+
+	* Add DS and RMEM as synonyms for DEFS.
+
+	* Add DW as synonym for DEFW.
+
+	* Add READ as synonym for INCLUDE.
+
+	* Allow strings to be specified using " too.
+
+	* Allow AND, OR and XOR to be used as binary operators.
+	  (FIXME: a bit of a nasty hack; can it be done more cleanly?)
+
+	* Make file handing consistent for source and INCLUDE:
+	  for both, try to open with ".z" first, then with no extension.
+
+1998-12-15  Russell Marks  <rus@lifeson>
+
+	* Version 1.1.
+
+	* Added support for --help and --version.
+
+	* zmac.1: mentioned `title' pseudo-op.
+
+	* Converted revision history from zmac.y into Emacs change log
+	format (roughly).
+
+	* Now outputs errors more like a C compiler (one per line,
+	prefixed with filename and line-in-file), useful for `M-x compile'
+	in Emacs. New `-S' option makes it show the error-causing line
+	like it used to.
+
+	* Made it output current file for error reports.
+
+	* Added `void' to prototypes for funcs with no args.
+
+	* Removed unnecessary `char *ctime()' and `fflush(stderr)'.
+
+	* Made it support filenames longer than 14 chars!
+
+1998-02-26  Russell Marks  <rus@lifeson>
+
+	* Version 1.0 (for the sake of argument).
+
+	* Made usage message say what the program is. :-)
+
+1998-02-12  Russell Marks  <rus@lifeson>
+
+	* Added verbose inline errors in listing and made the original
+	terse one-letter ones available via new `-t' option.
+
+	* Added `-c' option to produce continuous listing (no page breaks
+	or page headers).
+
+	* Corrected plurals in listing so you don't get things like "1
+	symbols" any more.
+
+	* Added `-z' option to output 8080-compatible code only - i.e., to
+	flag Z80-specific ops as errors.
+
+1998-02-11  Russell Marks  <rus@lifeson>
+
+	* Fixed LIST-without-args segfault.
+
+	* Allowed decimal constants to be up to 65535 (rather than up to
+	32767 before; I checked and there was no reason for the previous
+	exception for decimal even on systems with 16-bit ints).
+
+	* Removed the `-d' debug option.
+
+	* Removed the `-t' option. It did everything as normal *except*
+	for not reporting errors. I can't imagine any valid reason for
+	wanting that.
+
+	* Made exit status 1 if there were errors in the assembly.
+
+	* Fixed `equ' bug - it now detects forward refs to `equ's with
+	forward refs and flags them as errors (because of course you'd
+	need three passes to resolve them). The fix is pretty
+	nasty-looking but it was really the only way I could see to do it.
+	Some assemblers (e.g. Hisoft's GENS4) don't allow forward refs in
+	`equ's at all, so count yourselves lucky! :-)
+
+	* Changed symbol table listing so it fits in 80 columns.
+
+	* Fixed `if' to not depend on internals of yacc parser (which
+	appear to have changed, anyway).
+
+	* Added support for normal `rst' format (0, 8, 10h, 18h...; still
+	allows the previous 0, 1, 2, 3...).
+
+	* Made default output binary (as .bin), added `-h' to get .hex.
+
+	* ANSIfied the thing (painful!) and cleaned up a little.
+
+1987-02-05  Colin Kelley
+
+	* Added 'cmp' as a synonym for 'cp', 'jmp' as a synonym for 'jp',
+	and added tolerance of accumulator specification for arithmetic
+	and logical instructions. (For example, 'or a,12' is now accepted,
+	same as 'or 12'.)
+
+1987-01-18  Colin Kelley
+
+	* Added MIO code to emulate 'mfile' using malloc()'d memory. This
+	was needed to get the code to work when compiled under MSC 4.0 on
+	a PC, and it's probably faster anyway.
+
+1986-10-02  Colin Kelley
+
+	* Added some more typecasts to keep lint a little happier. Removed
+	several unused variables. Changed most vars declared as char to
+	int, since many of them were being compared with -1! I still don't
+	know what's going on with est[][] being malloc'd and free'd
+	everywhere...it looks pretty fishy...
+
+1986-09-20  Colin Kelley
+
+	* Converted to run on a Pyramid. This meant changing yylval to be
+	a %union, and then putting in the appropriate typecasts where ints
+	are pointers are used interchangeably. The current version still
+	probably won't run on machines where
+	sizeof(int) != sizeof(char *).
+	Also changed emit() to use varargs, and got rid of the old
+	style = in front of yacc action code.
+
+1984-08-27  John Providenza
+
+	* Added PHASE/DEPHASE commands.
+
+1984-05-22  John Providenza
+
+	* Added include files ala ormac.
+
+1984-05-11  John Providenza
+
+	* Added code to print unused labels out with the symbol table.
+	Also sped up the macro processor by using stdio.
+
+1983-06-07  John Providenza
+
+	* Fixed bug in the ADD IX,... instruction.
+
+1983-02-15  John Providenza
+
+	* Fixed 'getlocal' to return better local labels. It used to crash
+	after 6 invocations.
+
+1982-03-15  John Providenza
+
+	* Changed maximum number of characters in a label to 15 from 7.
+	Note that 'putsymtab' uses this value inside of a quoted string,
+	so we use 15.
+
+	* Added underscore as a character type in the lex table 'numpart'
+	(0x5F).
+
+1982-03-08  John Providenza
+
+	* Converted to run on Vax, updated syntax to conform better to the
+	Zilog standard.
+
+1978-04-??  Bruce Norskog
+
+	* Initial version.
