@@ -1,0 +1,197 @@
+<?xml version="1.0" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title></title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rev="made" href="mailto:root@localhost" />
+</head>
+
+<body style="background-color: white">
+
+
+
+<h1 id="NAME">NAME</h1>
+
+<p>ld80 - L80 replacement linker</p>
+
+<h1 id="SYNOPSYS">SYNOPSYS</h1>
+
+<p><b>ld80</b> <b>-o</b> <i>outfile</i> [<b>-O</b> <i>oformat</i>] [<b>-W</b> <i>warns</i>] [<b>-s</b> <i>symfile</i>] [<b>-S</b> <i>symsize</i>] [<b>-cmV</b>] [<b>-U</b> name] [<b>-l</b>] [<b>-P</b> <i>address</i>] [<b>-D</b> <i>address</i>] [<b>-E</b> <i>address</i> or <i>symbol</i>] [<b>-C</b> <i>name</i><b>,</b><i>address</i>] <i>objectfile</i> ...</p>
+
+<h1 id="DESCRIPTION">DESCRIPTION</h1>
+
+<p><b>ld80</b> is a replacement of the good old M$ L80 linker for CP/M and other 8 bit operating systems on Z80/i8080 processor. <b>ld80</b> incorporates almost all capabilities of almost L80 and has extra features. It is intended as part of your Z80 cross development toolbox.</p>
+
+<p><b>ld80</b> accepts object (.REL) files produced with M80 or compatible assembler (such as zmac) as well as library (.LIB) files made by LIB80.</p>
+
+<h1 id="OPTIONS">OPTIONS</h1>
+
+<p>Addresses below are within the 0000-FFFF range and are expressed in hexadecimal notation. Addresses prefixed by percent (%) character as %NNNN are not absolute but the linker is instructed to place following segments on NNNN-boundary. E.g. -D%10 causes the following data segments to be located on paragraph (16 byte) boundary.</p>
+
+<dl>
+
+<dt id="o-outfile"><b>-o</b> <i>outfile</i></dt>
+<dd>
+
+<p>Name of the output file. Output format will be set as if the file&#39;s suffix were passed to the <b>-O</b> option.</p>
+
+</dd>
+<dt id="P-address"><b>-P</b> <i>address</i></dt>
+<dd>
+
+<p><i>address</i> is the address where code segment of the following object files will be placed. If an object file specification is not preceded by <b>-P</b> option, code segment will be appended to the previous one. If no <b>-P</b> option specified before the first object file, its code segment will be placed to 0000.</p>
+
+</dd>
+<dt id="D-address"><b>-D</b> <i>address</i></dt>
+<dd>
+
+<p><i>address</i> is the address where data segment of the following object files will be placed. If an object file specification is not preceded by <b>-D</b> option, data segment will be appended to the previous one. If no <b>-D</b> option specified before the first object file, its data segment will be appended the last code segment.</p>
+
+</dd>
+<dt id="E-address-or-symbol"><b>-E</b> <i>address</i> or <i>symbol</i></dt>
+<dd>
+
+<p>Set the entry point of the output to the hexadecimal <i>address</i> or the symbol named <i>name</i>. Hexadecimal addresses starting with A .. F must have 0 put in front.</p>
+
+</dd>
+<dt id="C-name-address"><b>-C</b> <i>name</i>,<i>address</i></dt>
+<dd>
+
+<p><i>address</i> is the address where common block <i>name</i> will be placed. If block name <i>name</i> is empty string or it begins with space it will be treated as blank common block. However no extra whitespace character around of comma (,) allowed. <i>name</i> is case insensitive. Common blocks of unspecified location will be appended to the last data segment.</p>
+
+</dd>
+<dt id="U-name"><b>-U</b> <i>name</i></dt>
+<dd>
+
+<p>Common block named <i>name</i> will be &quot;uncommon&quot;. (This sounds funny, doesn&#39;t it? :-) Normally common blocks of the same name are to be located on the same address. However blocks marked as uncommon will be concatenated like code or data segments. This way you can spread your code/data over several region of physical memory easy. <i>name</i> is case insensitive.</p>
+
+</dd>
+<dt id="l"><b>-l</b></dt>
+<dd>
+
+<p>The following object file is a library. <b>ld80</b> will scan the file and loads modules only that satisfies unresolved external references. If a new reference to a modules passed earlier found the referenced module will not be loaded. However you can specify the same library more than one time in order to resolve backward references.</p>
+
+</dd>
+<dt id="c"><b>-c</b></dt>
+<dd>
+
+<p>Suppress data segments. The output file will contain the the code (and absolute) segments only.</p>
+
+</dd>
+<dt id="O-oformat"><b>-O</b> <i>oformat</i></dt>
+<dd>
+
+<p>Output format specification. Possible values of <i>oformat</i> are:</p>
+
+<p><b>ihex</b> or <b>hex</b>: Intel hex. This is the default format.</p>
+
+<p><b>bin</b>: Raw binary, gaps filled with X&#39;00&#39;.</p>
+
+<p><b>binff</b>: Raw binary, gaps filled with X&#39;ff&#39;.</p>
+
+<p><b>cmd</b>: TRS-80 /CMD file format.</p>
+
+</dd>
+<dt id="W-warns"><b>-W</b> <i>warns</i></dt>
+<dd>
+
+<p>Request for warning messages. Possible value of <i>warns</i> is:</p>
+
+<p><b>extchain</b>: Warn if ambigous external reference found. See <a href="#WARNINGS">&quot;WARNINGS&quot;</a>.</p>
+
+</dd>
+<dt id="s-symfile"><b>-s</b> <i>symfile</i></dt>
+<dd>
+
+<p>Name of symbol file. `-&#39; stands for the standard output.</p>
+
+</dd>
+<dt id="m"><b>-m</b></dt>
+<dd>
+
+<p>Generate map. List of segment mapping will be placed into symbol file if it is specified. Otherwise the segment list will printed on standard output.</p>
+
+</dd>
+<dt id="S-symsize"><b>-S</b> <i>symsize</i></dt>
+<dd>
+
+<p>Symbol table size. Use this option if the linker has to process more than 32768 symbols.</p>
+
+</dd>
+<dt id="V"><b>-V</b></dt>
+<dd>
+
+<p>Print version number and exit.</p>
+
+</dd>
+</dl>
+
+<h1 id="WARNINGS">WARNINGS</h1>
+
+<p>The object file format used by L80 is ambigous. References to the same external symbol are chained. The last element of the chain is absolute 0000. M80 pruduces the same object file from the following assembly sources:</p>
+
+<pre><code>        ;program A                      ;program B
+        EXTRN   foobar                  EXTRN   foobar
+        ASEG                            ASEG
+        ORG     0                       ORG     0
+        DW      foobar                  DW      0
+        END                             END</code></pre>
+
+<p>L80 and ld80 cannot figure out what was your intention therefore always assumes the B version. However ld80 can warn you if this ambiguity found. Use <b>-W extchain</b> option to achieve this.</p>
+
+<p>Placing external reference to location absolute 0000 is possible but a bit tricky:</p>
+
+<pre><code>        ;program C
+        EXTRN   foobar
+        ASEG
+        ORG     0
+        DW      foobar/1        ; forced arithmetic fixup
+        END</code></pre>
+
+<p>In this case M80 places a newer (and more complicated) item into the object that can be handle unambigously.</p>
+
+<h1 id="RESTRICTIONS">RESTRICTIONS</h1>
+
+<p><b>ld80</b> does not process special link item 13 (request library search). If the linker finds such an item, it prints a warning message and continues the work.</p>
+
+<p>Special link item 12 (chan address) is also unimplemented. This is because the author has never seen this kind of item. :-) <b>ld80</b> will abort if it finds one.</p>
+
+<p>Extension link item X&#39;35&#39; (COBOL overlay segment sentinel) is also unimplemented due to the same reason. However other extension link items (known as arithmetic fixups) are fully implemented.</p>
+
+<h1 id="PORTING">PORTING</h1>
+
+<p><b>ld80</b> is written for and developed on Intel-Linux platform. It requires some functions of glibc2. It probably could run on big endian machines without any change, but this was never tested.</p>
+
+<h1 id="BUGS">BUGS</h1>
+
+<p>This manual is written in Tarzan-English.</p>
+
+<h1 id="SEE-ALSO">SEE ALSO</h1>
+
+
+
+
+M$ Utility Software Manual. It can be found on the net as file 
+<a href="ftp://ftp.funet.fi/pub/msx/programming/asm/m80l80.txt">m80l80.txt</a>.
+
+<h1 id="AUTHOR">AUTHOR</h1>
+
+<p>Gábor Kiss &lt;kissg@sztaki.hu&gt;</p>
+
+<h1 id="COPYRIGHT">COPYRIGHT</h1>
+
+<p>This software is copylefted.</p>
+
+<h1 id="DISCLAIMER">DISCLAIMER</h1>
+
+<pre><code> This software is in the public domain.
+ This software is distributed with no warranty whatever.
+ The author takes no responsibility for the consequences of its use.</code></pre>
+
+
+</body>
+
+</html>
+
+
