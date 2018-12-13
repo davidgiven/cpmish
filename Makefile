@@ -102,7 +102,7 @@ $(OBJ)/%.img: $(OBJ)/%.o utils/z80.ld
 	@mkdir -p $(dir $@)
 	z80-unknown-coff-ld -T utils/z80.ld -o $@ $<
 
-$(OBJ)/%.img.inc: $(OBJ)/%.img $(OBJ)/objectify
+$(OBJ)/%.inc: $(OBJ)/% $(OBJ)/objectify
 	@mkdir -p $(dir $@)
 	$(OBJ)/objectify < $< > $@
 

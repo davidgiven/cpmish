@@ -2,12 +2,22 @@
 
 int main(int argc, const char* argv)
 {
+    int count = 0;
+
     for (;;)
     {
         int c = getchar();
         if (c == EOF)
             break;
-        printf("\t.db 0x%02x\n", c);
+
+        if (count == 0)
+            printf("\n\tdb ");
+        else
+            printf(", ");
+        printf("%02xH", c);
+
+        count = (count+1) & 7;
     }
+    printf("\n");
     return 0;
 }
