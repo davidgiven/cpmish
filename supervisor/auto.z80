@@ -1,6 +1,6 @@
-include "include/nc200.inc"
+    maclib nc200
 
-.section AUTOPRG
+    org 0x4000
 
 ; On entry, 0x0000 contains bank 0x40 and 0x4000 contains (usually) 0x47. This
 ; means we can write to 0x0000 without stepping on ourselves.

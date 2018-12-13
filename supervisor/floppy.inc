@@ -10,7 +10,6 @@ FD_DRIVE_READY_COUNTS: equ 100 ; very approximately 100 10ms ticks
 
 ; Called by the keyboard handler every approximately 10ms.
 fd765_motor_interrupt_handler:
-    call fd765_poll_for_disk_change
     ld hl, (.data.fd765_motor_on_time)
     ld a, h
     or l
@@ -37,54 +36,6 @@ fd765_motor_on:
     ei
     ret
 
-; --- Very dodgily detect if the disk's inserted ----------------------------
-
-fd765_poll_for_disk_change:
-    ; Finish early if polling is disabled.
-
-    ld a, (.data.fd765_dont_poll_for_disk_change)
-    or a
-    ret nz
-    
-    ; If the motor's turned on anyway, do the fast path.
-
-    ld hl, (.data.fd765_motor_on_time)
-    ld a, h
-    or l
-    jp nz, fd765_sense_drive_state
-
-    ; Turn the motor on, then check, then turn the motor off again.
-
-    ld a, 0x1f ; bit is active low
-    out (BAUDCONTROL_PORT), a       ; drive on
-    ld b, 255
-    djnz $                          ; short pause for the FDC to catch up
-    call fd765_sense_drive_state
-    ld a, 0x3f ; bit is active low
-    out (BAUDCONTROL_PORT), a       ; drive off again
-    ret
-
-.data.fd765_dont_poll_for_disk_change:
-    db 0
-
-fd765_stop_polling:
-    push af
-    push hl
-    ld hl, .data.fd765_dont_poll_for_disk_change
-    inc (hl)
-    pop hl
-    pop af
-    ret
-
-fd765_start_polling:
-    push af
-    push hl
-    ld hl, .data.fd765_dont_poll_for_disk_change
-    dec (hl)
-    pop hl
-    pop af
-    ret
-    
 ; --- Twiddle the Terminal Count line to the FDC ----------------------------
 
 fd765_nudge_tc:
@@ -151,34 +102,13 @@ fd765_wait_until_drive_ready_loop:
 ; Performs the SENSE DRIVE STATE command, returning S3 in A.
 
 fd765_sense_drive_state:
-    call fd765_stop_polling
     ld a, 4                         ; SENSE DRIVE STATE
     call fd765_tx
     xor a                           ; head 0, drive 0
     call fd765_tx
     call fd765_read_status
     ld a, (.data.fd765_status)
-    and 0x48                        ; mask out all but the WP and TS bits
-    ld hl, .data.fd765_old_state
-    cp (hl)
-    jr z, fd765_sense_drive_state_disk_not_changed
-
-    ; The Write Protect line has changed state since the last time we looked,
-    ; which means that the disk must have changed.
-
-    ld (hl), a                      ; update the stored value
-    ld a, 1
-    ld (.data.fd765_disk_changed), a ; ...and set the flag
-
-fd765_sense_drive_state_disk_not_changed:
-    ld a, (.data.fd765_status)
-    call fd765_start_polling
     ret
-
-.data.fd765_disk_changed:
-    db 0
-.data.fd765_old_state:
-    db 0
 
 ; --- Does RECALIBRATE ------------------------------------------------------
 
@@ -186,9 +116,7 @@ fd765_sense_drive_state_disk_not_changed:
 ; Note: only does a single recalibrate (more may be necessary).
 
 fd765_recalibrate:
-    call fd765_stop_polling
     call fd765_wait_until_drive_ready
-    jp z, fd765_start_polling
     ld a, 7                     ; RECALIBRATE
     call fd765_tx
     xor a                       ; head 0, drive 0
@@ -203,8 +131,7 @@ fd765_wait_for_seek_ending:
 	ld a, (.data.fd765_status)
 	bit 5, a					; SE, seek end
 	jr z, fd765_wait_for_seek_ending
-    ; returns nz
-    jp fd765_start_polling
+    ret
  
  ; Recalibrates twice (to get the entire 80 track range).
  ; Returns nz on success, z on failure.
@@ -219,11 +146,10 @@ fd765_wait_for_seek_ending:
  ; Returns nz on success, z on failure.
 
  fd765_seek:
-    call fd765_stop_polling
     push bc
     call fd765_wait_until_drive_ready
     pop bc
-    jp z, fd765_start_polling
+    ret z
 
     ld a, 15                    ; SEEK
     call fd765_tx
@@ -242,12 +168,11 @@ fd765_wait_for_seek_ending:
 fd765_read_complete_track:
     ld de, 9*1024
 fd765_read_track:
-    call fd765_stop_polling
     ld a, 9
     ld (.data.readwritecommand+6), a
     ld a, 0xc6 ; READ SECTORS MULTITRACK
     call fd765_setup_read_or_write
-    jp z, fd765_start_polling
+    ret z
     jr fd765_read_bytes_from_controller
 
 ; Read de bytes from the 765 into HL.
@@ -277,12 +202,11 @@ fd765_read_loop_finished:
 
 fd765_write_complete_track:
     ld de, 9*1024
-    call fd765_stop_polling
     ld a, 9
     ld (.data.readwritecommand+6), a
     ld a, 0xc5 ; WRITE SECTORS MULTITRACK
     call fd765_setup_read_or_write
-    jp z, fd765_start_polling
+    ret z
     jr fd765_write_bytes_to_controller
 
 ; Writes de bytes to the 765 from HL.
@@ -326,7 +250,7 @@ fd765_complete_transfer:
     add hl, bc
     ld a, (hl)
     or a
-    jp fd765_start_polling
+    ret
 
 .data.fd765_status_codes:
     ; EN, IC7, IC6

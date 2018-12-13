@@ -1,0 +1,22 @@
+; NC200 hardware stuff.
+
+PORT_DISPLAY_MEMORY_ADDR    equ 0x00
+PORT_BANK0                  equ 0x10
+PORT_BANK1                  equ 0x11
+PORT_BANK2                  equ 0x12
+PORT_BANK3                  equ 0x13
+PORT_WAIT_STATE_CONTROL     equ 0x20
+PORT_BAUDRATE               equ 0x30
+PORT_PRINTER_DATA           equ 0x40
+PORT_SPEAKER                equ 0x50
+PORT_IRQ_MASK               equ 0x60
+PORT_ONOFF_CONTROL          equ 0x70
+PORT_PRINTER_STATUS         equ 0x80
+PORT_IRQ_STATUS             equ 0x90
+PORT_BATTERY_STATUS         equ 0xa0
+PORT_KEYBOARD               equ 0xb0
+PORT_PD71051                equ 0xc0
+PORT_MC146818_ADDRESS       equ 0xd0
+PORT_MC146818_DATA          equ 0xd1
+PORT_NEC765_STATUS          equ 0xe0
+PORT_NEC765_DATA            equ 0xe1
