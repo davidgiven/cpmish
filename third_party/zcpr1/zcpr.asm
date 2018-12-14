@@ -103,7 +103,7 @@ TRUE	EQU	NOT FALSE
 ;	   Access environment; use under Remote-Access Systems (RBBS) for
 ;	   security purposes
 ;
-REL	EQU	FALSE	;SET TO TRUE FOR MOVCPM INTEGRATION
+REL	EQU	TRUE	;SET TO TRUE FOR MOVCPM INTEGRATION
 ;
 BASE	EQU	0	;BASE OF CP/M SYSTEM (SET FOR STANDARD CP/M)
 ;
@@ -329,7 +329,7 @@ SBCD	MACRO	?N	;;STORE BC DIRECT
 ;
 ;**** Section 0 ****
 ;
-	ORG	CPRLOC
+	CSEG
 ;
 ;  ENTRY POINTS INTO ZCPR
 ;    If the ZCPR is entered at location CPRLOC (at the JMP to CPR), then
