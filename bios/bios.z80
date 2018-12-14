@@ -3,15 +3,19 @@
     maclib nc200
 
     extern CBASE
-    extern call_supervisor_from_bios
-    extern supervisor_interrupt_handler
-    extern supervisor_stack_end
-    extern sys_list
-    extern sys_listst
-    extern sys_punch
-    extern sys_read128
-    extern sys_reader
-    extern sys_write128
+    extern SCONIN
+    extern SCONOUT
+    extern SCONST
+    extern SLIST
+    extern SLISTST
+    extern SPUNCH
+    extern SREAD
+    extern SREADER
+    extern SWBOOT
+    extern SWRITE
+    extern SYSIN
+    extern SYSIRQ
+    extern SYSSTK
 
     cseg
 label BBASE
@@ -61,11 +65,11 @@ label bios_interrupt_handler
     di
     push af
     ld (saved_stack), sp
-    ld sp, supervisor_stack_end
+    ld sp, SYSSTK
     
     ld a, SUPERVISOR_BANK
     out (PORT_BANK0), a
-    call supervisor_interrupt_handler
+    call SYSIRQ
     ld a, USER0_BANK
     out (PORT_BANK0), a
     
@@ -99,38 +103,38 @@ BOOTE:
     jp CBASE                ; enter the CCP
     
 WBOOTE:
-    ld hl, sys_wboot
+    ld hl, WBOOT
     jr syscall
 
 CONSTE:
-    ld hl, sys_const
+    ld hl, SCONST
     jr syscall
 
 CONINE:
-    ld hl, sys_conin
+    ld hl, SCONIN
     jr syscall
 
 CONOUTE:
-    ld hl, sys_conout
+    ld hl, SCONOUT
     jr syscall
 
 LISTE:
-    ld hl, sys_list
+    ld hl, SLIST
     jr syscall
 
 PUNCHE:
-    ld hl, sys_punch
+    ld hl, SPUNCH
     jr syscall
     
 READERE:
-    ld hl, sys_reader
+    ld hl, SREADER
     jr syscall
 
 ; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
 ; error).
 SELDSKE:
     ld a, c
-    ld (bios_selected_disk), a
+    ld (BDISK), a
     or a
     jr z, select_drive_a
     ld hl, 0
@@ -144,31 +148,31 @@ HOMEE:
     ; fall through
 SETTRKE:
     ld a, c
-    ld (bios_selected_track), a
+    ld (BTRACK), a
     ret
 
 SETSECE:
     ld a, c
-    ld (bios_selected_sector), a
+    ld (BSECTOR), a
     ret
 
 SETDMAE:
-    ld hl, bios_selected_dma
+    ld hl, BDMA
     ld (hl), c
     inc hl
     ld (hl), b
     ret
 
 READE:
-    ld hl, sys_read128
+    ld hl, SREAD
     jr syscall
 
 WRITEE:
-    ld hl, sys_write128
+    ld hl, SWRITE
     jr syscall
 
 LISTSTE:
-    ld hl, sys_listst
+    ld hl, SLISTST
     jr syscall
 
 SECTRANE:
@@ -186,10 +190,10 @@ syscall:
 
     ld a, SUPERVISOR_BANK
     out (PORT_BANK0), a
-    jp call_supervisor_from_bios
+    jp SYSIN
 
 ; On entry, HL contains the result.
-label return_to_bios_from_supervisor
+label SYSOUT
     ; Map user space back in.
 
     ld a, USER0_BANK
@@ -237,12 +241,12 @@ drive_a_check_vector:
 dirbuf:
     ds 128
 
-label bios_selected_disk
+label BDISK
     db 0
-label bios_selected_track
+label BTRACK
     db 0
-label bios_selected_sector
+label BSECTOR
     db 0
-label bios_selected_dma
+label BDMA
     dw 0
     
