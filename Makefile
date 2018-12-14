@@ -1,6 +1,8 @@
 OBJ = .obj
 CPMTOOLS = $(wildcard cpmtools/*)
 
+ZMACINCLUDES = $(wildcard include/*.lib)
+
 all: bootdisk.img
 
 bootdisk.img: \
@@ -16,11 +18,13 @@ bootdisk.img: \
 	dd if=$< of=$@ bs=1K count=9
 	dd if=$< of=$@ bs=1K seek=9 skip=58 count=6
 
-$(OBJ)/supervisor.img: \
-		utils/mammoth.ld \
-		$(OBJ)/supervisor/supervisor.o
+$(OBJ)/supervisor.cim: \
+		$(OBJ)/ld80 \
+		$(OBJ)/bios/bios.rel
 	@mkdir -p $(dir $@)
-	z80-unknown-coff-ld -T utils/mammoth.ld -o $@ $(filter %.o, $^)
+	$(OBJ)/ld80 \
+		-o $@ \
+		-P fd00 $(OBJ)/bios/bios.rel
 
 $(OBJ)/supervisor/supervisor.o: \
 	$(OBJ)/font.inc \
@@ -54,11 +58,15 @@ $(OBJ)/%.com: $(OBJ)/%.cim
 
 $(OBJ)/%.rel: %.asm $(OBJ)/zmac
 	@mkdir -p $(dir $@)
-	$(OBJ)/zmac -8 $< -o $@ -Iinclude
+	$(OBJ)/zmac -m --rel7 -8 $< -o $@ -o $(patsubst %.rel,%.prn,$@) -Iinclude
 
-$(OBJ)/%.cim: %.z80 $(OBJ)/zmac
+$(OBJ)/%.cim: %.z80 $(OBJ)/zmac $(ZMACINCLUDES)
 	@mkdir -p $(dir $@)
-	$(OBJ)/zmac $< -o $@ -Iinclude
+	$(OBJ)/zmac -m --rel7 $< -o $@ -o $(patsubst %.rel,%.prn,$@) -Iinclude
+
+$(OBJ)/%.rel: %.z80 $(OBJ)/zmac $(ZMACINCLUDES)
+	@mkdir -p $(dir $@)
+	$(OBJ)/zmac -m --rel7 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
 
 ZMAC_OBJS = \
 	$(OBJ)/third_party/zmac/mio.o \

@@ -1,8 +1,20 @@
-include "include/cpm.inc"
-include "include/supervisor.inc"
-include "include/nc200.inc"
+    maclib cpm
+    maclib supervisor
+    maclib nc200
 
-.section BIOS
+    extern CBASE
+    extern call_supervisor_from_bios
+    extern supervisor_interrupt_handler
+    extern supervisor_stack_end
+    extern sys_list
+    extern sys_listst
+    extern sys_punch
+    extern sys_read128
+    extern sys_reader
+    extern sys_write128
+
+    cseg
+label BBASE
 
 ; BIOS jump table.
 
