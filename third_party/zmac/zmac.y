@@ -392,7 +392,8 @@ int	mras;		// MRAS semi-compatibility mode
 int	trueval = 1;	// Value returned for boolean true
 int	zcompat;	// Original zmac compatibility mode
 char	modstr[8];	// Replacement string for '?' in labels when MRAS compatible
-int	relopt;		// Only output .rel files and length of external symbols
+int	relopt;		// Only output .rel files
+int relsymlen = 6; // Length of external symbols
 char	progname[8];	// Program name for .rel output
 int	note_depend;	// Print names of files included
 int	firstcol;
@@ -1331,7 +1332,7 @@ void putrel(int byte)
 void putrelname(char *str)
 {
 	int len = strlen(str);
-	int maxlen = mras ? 7 : relopt;
+	int maxlen = mras ? 7 : relsymlen;
 
 	// .rel file format can do strings 7 long but for compatibility
 	// we restrict them to 6.  I believe this is important because
@@ -5872,12 +5873,12 @@ int main(int argc, char *argv[])
 		}
 
 		if (strcmp(argv[i], "--rel") == 0) {
-			relopt = 6;
+			relsymlen = 6;
 			continue;
 		}
 
 		if (strcmp(argv[i], "--rel7") == 0) {
-			relopt = 7;
+			relsymlen = 7;
 			continue;
 		}
 

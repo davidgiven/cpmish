@@ -457,7 +457,8 @@ int	mras;		// MRAS semi-compatibility mode
 int	trueval = 1;	// Value returned for boolean true
 int	zcompat;	// Original zmac compatibility mode
 char	modstr[8];	// Replacement string for '?' in labels when MRAS compatible
-int	relopt;		// Only output .rel files and length of external symbols
+int	relopt;		// Only output .rel files
+int relsymlen = 6; // Length of external symbols
 char	progname[8];	// Program name for .rel output
 int	note_depend;	// Print names of files included
 int	firstcol;
@@ -1396,7 +1397,7 @@ void putrel(int byte)
 void putrelname(char *str)
 {
 	int len = strlen(str);
-	int maxlen = mras ? 7 : relopt;
+	int maxlen = mras ? 7 : relsymlen;
 
 	// .rel file format can do strings 7 long but for compatibility
 	// we restrict them to 6.  I believe this is important because
@@ -1776,7 +1777,7 @@ void do_defl(struct item *sym, struct expr *val, int call_list);
 #define SPPRAGMA (4)	/* pragma */
 
 
-#line 1780 "y.tab.c" /* yacc.c:339  */
+#line 1781 "y.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -2123,7 +2124,7 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 1715 "third_party/zmac/zmac.y" /* yacc.c:355  */
+#line 1716 "third_party/zmac/zmac.y" /* yacc.c:355  */
 
 	struct expr *exprptr;
 	struct item *itemptr;
@@ -2131,7 +2132,7 @@ union YYSTYPE
 	char *cval;
 	
 
-#line 2135 "y.tab.c" /* yacc.c:355  */
+#line 2136 "y.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -2147,7 +2148,7 @@ int yyparse (void);
 
 
 /* Copy the second part of user declarations.  */
-#line 1857 "third_party/zmac/zmac.y" /* yacc.c:358  */
+#line 1858 "third_party/zmac/zmac.y" /* yacc.c:358  */
 
 char  *cp;
 int  i;
@@ -2299,7 +2300,7 @@ void common_block(char *unparsed_id)
 }
 
 
-#line 2303 "y.tab.c" /* yacc.c:358  */
+#line 2304 "y.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -2612,43 +2613,43 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,  2011,  2011,  2014,  2019,  2036,  2036,  2040,  2046,  2055,
-    2059,  2063,  2067,  2071,  2096,  2111,  2127,  2136,  2142,  2147,
-    2152,  2177,  2192,  2194,  2196,  2207,  2216,  2257,  2268,  2272,
-    2272,  2330,  2333,  2403,  2410,  2417,  2421,  2425,  2436,  2445,
-    2450,  2450,  2450,  2474,  2474,  2495,  2495,  2523,  2524,  2523,
-    2553,  2554,  2553,  2597,  2605,  2633,  2635,  2637,  2642,  2644,
-    2697,  2699,  2703,  2717,  2719,  2723,  2740,  2741,  2742,  2743,
-    2744,  2745,  2746,  2747,  2748,  2749,  2750,  2751,  2753,  2754,
-    2755,  2756,  2757,  2758,  2759,  2760,  2761,  2762,  2763,  2767,
-    2770,  2779,  2787,  2798,  2801,  2813,  2816,  2821,  2824,  2827,
-    2830,  2833,  2841,  2844,  2847,  2850,  2853,  2856,  2859,  2862,
-    2865,  2868,  2871,  2874,  2877,  2880,  2883,  2886,  2889,  2892,
-    2895,  2898,  2901,  2904,  2907,  2910,  2915,  2918,  2921,  2924,
-    2931,  2934,  2943,  2945,  2950,  2968,  2971,  2974,  2977,  2980,
-    2995,  3005,  3016,  3026,  3032,  3038,  3041,  3044,  3047,  3050,
-    3053,  3056,  3059,  3062,  3065,  3096,  3101,  3106,  3112,  3115,
-    3120,  3123,  3131,  3137,  3149,  3155,  3158,  3164,  3170,  3176,
-    3185,  3188,  3194,  3200,  3209,  3215,  3224,  3230,  3240,  3246,
-    3256,  3259,  3262,  3275,  3282,  3285,  3288,  3291,  3294,  3301,
-    3308,  3311,  3314,  3326,  3337,  3351,  3361,  3392,  3404,  3414,
-    3424,  3424,  3426,  3426,  3428,  3428,  3430,  3433,  3435,  3437,
-    3440,  3440,  3442,  3442,  3445,  3455,  3469,  3471,  3471,  3474,
-    3476,  3478,  3482,  3492,  3495,  3497,  3502,  3512,  3512,  3523,
-    3525,  3528,  3530,  3533,  3539,  3541,  3544,  3547,  3552,  3557,
-    3563,  3568,  3571,  3576,  3582,  3587,  3597,  3599,  3602,  3604,
-    3607,  3612,  3617,  3622,  3625,  3627,  3630,  3635,  3641,  3643,
-    3649,  3654,  3660,  3662,  3668,  3673,  3677,  3679,  3682,  3688,
-    3695,  3705,  3707,  3712,  3722,  3724,  3729,  3739,  3741,  3748,
-    3750,  3754,  3771,  3777,  3782,  3787,  3792,  3797,  3802,  3807,
-    3813,  3828,  3840,  3840,  3844,  3845,  3846,  3847,  3848,  3849,
-    3850,  3851,  3852,  3853,  3854,  3855,  3856,  3857,  3858,  3859,
-    3860,  3861,  3862,  3863,  3864,  3865,  3866,  3867,  3869,  3870,
-    3871,  3872,  3873,  3874,  3875,  3876,  3877,  3878,  3879,  3880,
-    3881,  3882,  3883,  3884,  3886,  3896,  3910,  3913,  3916,  3919,
-    3922,  3925,  3928,  3931,  3934,  3941,  3950,  3959,  3966,  3971,
-    3976,  3981,  3988,  3990,  3992,  3994,  3996,  3998,  4000,  4005,
-    4018,  4022,  4026,  4030
+       0,  2012,  2012,  2015,  2020,  2037,  2037,  2041,  2047,  2056,
+    2060,  2064,  2068,  2072,  2097,  2112,  2128,  2137,  2143,  2148,
+    2153,  2178,  2193,  2195,  2197,  2208,  2217,  2258,  2269,  2273,
+    2273,  2331,  2334,  2404,  2411,  2418,  2422,  2426,  2437,  2446,
+    2451,  2451,  2451,  2475,  2475,  2496,  2496,  2524,  2525,  2524,
+    2554,  2555,  2554,  2598,  2606,  2634,  2636,  2638,  2643,  2645,
+    2698,  2700,  2704,  2718,  2720,  2724,  2741,  2742,  2743,  2744,
+    2745,  2746,  2747,  2748,  2749,  2750,  2751,  2752,  2754,  2755,
+    2756,  2757,  2758,  2759,  2760,  2761,  2762,  2763,  2764,  2768,
+    2771,  2780,  2788,  2799,  2802,  2814,  2817,  2822,  2825,  2828,
+    2831,  2834,  2842,  2845,  2848,  2851,  2854,  2857,  2860,  2863,
+    2866,  2869,  2872,  2875,  2878,  2881,  2884,  2887,  2890,  2893,
+    2896,  2899,  2902,  2905,  2908,  2911,  2916,  2919,  2922,  2925,
+    2932,  2935,  2944,  2946,  2951,  2969,  2972,  2975,  2978,  2981,
+    2996,  3006,  3017,  3027,  3033,  3039,  3042,  3045,  3048,  3051,
+    3054,  3057,  3060,  3063,  3066,  3097,  3102,  3107,  3113,  3116,
+    3121,  3124,  3132,  3138,  3150,  3156,  3159,  3165,  3171,  3177,
+    3186,  3189,  3195,  3201,  3210,  3216,  3225,  3231,  3241,  3247,
+    3257,  3260,  3263,  3276,  3283,  3286,  3289,  3292,  3295,  3302,
+    3309,  3312,  3315,  3327,  3338,  3352,  3362,  3393,  3405,  3415,
+    3425,  3425,  3427,  3427,  3429,  3429,  3431,  3434,  3436,  3438,
+    3441,  3441,  3443,  3443,  3446,  3456,  3470,  3472,  3472,  3475,
+    3477,  3479,  3483,  3493,  3496,  3498,  3503,  3513,  3513,  3524,
+    3526,  3529,  3531,  3534,  3540,  3542,  3545,  3548,  3553,  3558,
+    3564,  3569,  3572,  3577,  3583,  3588,  3598,  3600,  3603,  3605,
+    3608,  3613,  3618,  3623,  3626,  3628,  3631,  3636,  3642,  3644,
+    3650,  3655,  3661,  3663,  3669,  3674,  3678,  3680,  3683,  3689,
+    3696,  3706,  3708,  3713,  3723,  3725,  3730,  3740,  3742,  3749,
+    3751,  3755,  3772,  3778,  3783,  3788,  3793,  3798,  3803,  3808,
+    3814,  3829,  3841,  3841,  3845,  3846,  3847,  3848,  3849,  3850,
+    3851,  3852,  3853,  3854,  3855,  3856,  3857,  3858,  3859,  3860,
+    3861,  3862,  3863,  3864,  3865,  3866,  3867,  3868,  3870,  3871,
+    3872,  3873,  3874,  3875,  3876,  3877,  3878,  3879,  3880,  3881,
+    3882,  3883,  3884,  3885,  3887,  3897,  3911,  3914,  3917,  3920,
+    3923,  3926,  3929,  3932,  3935,  3942,  3951,  3960,  3967,  3972,
+    3977,  3982,  3989,  3991,  3993,  3995,  3997,  3999,  4001,  4006,
+    4019,  4023,  4027,  4031
 };
 #endif
 
@@ -4693,7 +4694,7 @@ yyreduce:
   switch (yyn)
     {
         case 4:
-#line 2019 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2020 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { 
 		// An identfier without a colon all by itself on a line
 		// will be interpreted as a label.  But there's a very
@@ -4710,35 +4711,35 @@ yyreduce:
 		if ((yyvsp[-1].itemptr)) list(dollarsign);
 		else  list1();
 	}
-#line 4714 "y.tab.c" /* yacc.c:1646  */
+#line 4715 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 5:
-#line 2036 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2037 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { list_dollarsign = 1; }
-#line 4720 "y.tab.c" /* yacc.c:1646  */
+#line 4721 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 6:
-#line 2036 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2037 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		list(list_dollarsign ? dollarsign : list_addr);
 	}
-#line 4728 "y.tab.c" /* yacc.c:1646  */
+#line 4729 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 2040 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2041 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		do_equ((yyvsp[-4].itemptr), (yyvsp[-1].exprptr), 1);
 		if ((yyvsp[-3].ival) == 2)
 			(yyvsp[-4].itemptr)->i_scope |= SCOPE_PUBLIC;
 	}
-#line 4738 "y.tab.c" /* yacc.c:1646  */
+#line 4739 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 2046 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2047 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		do_defl((yyvsp[-4].itemptr), (yyvsp[-1].exprptr), 1); // TODO: is '=' equate or defl?
 		// I don't even recall what assembler I saw that allows '='
@@ -4747,43 +4748,43 @@ yyreduce:
 		if ((yyvsp[-3].ival) == 2)
 			(yyvsp[-4].itemptr)->i_scope |= SCOPE_PUBLIC;
 	}
-#line 4751 "y.tab.c" /* yacc.c:1646  */
+#line 4752 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 2055 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2056 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		do_defl((yyvsp[-3].itemptr), (yyvsp[-1].exprptr), 1);
 	}
-#line 4759 "y.tab.c" /* yacc.c:1646  */
+#line 4760 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 2059 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2060 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		do_defl((yyvsp[-4].itemptr), expr_mk(expr_var((yyvsp[-4].itemptr)), (yyvsp[-3].ival), (yyvsp[-1].exprptr)), 1);
 	}
-#line 4767 "y.tab.c" /* yacc.c:1646  */
+#line 4768 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 2063 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2064 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		do_defl((yyvsp[-3].itemptr), expr_mk(expr_var((yyvsp[-3].itemptr)), '+', expr_num(1)), 1);
 	}
-#line 4775 "y.tab.c" /* yacc.c:1646  */
+#line 4776 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 2067 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2068 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		do_defl((yyvsp[-3].itemptr), expr_mk(expr_var((yyvsp[-3].itemptr)), '-', expr_num(1)), 1);
 	}
-#line 4783 "y.tab.c" /* yacc.c:1646  */
+#line 4784 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 2071 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2072 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		int val3 = (yyvsp[-3].exprptr)->e_value;
 		int val5 = (yyvsp[-1].exprptr)->e_value;
@@ -4808,11 +4809,11 @@ yyreduce:
 		expr_free((yyvsp[-3].exprptr));
 		expr_free((yyvsp[-1].exprptr));
 	}
-#line 4812 "y.tab.c" /* yacc.c:1646  */
+#line 4813 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 2096 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2097 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		expr_number_check((yyvsp[-1].exprptr));
 		if (ifptr >= ifstmax)
@@ -4826,11 +4827,11 @@ yyreduce:
 		fopt = saveopt;
 		expr_free((yyvsp[-1].exprptr));
 	}
-#line 4830 "y.tab.c" /* yacc.c:1646  */
+#line 4831 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 2111 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2112 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		struct item *ip = locate(tempbuf);
 		int declared = ip && ip->i_pass == npass;
@@ -4846,11 +4847,11 @@ yyreduce:
 		list(value);
 		fopt = saveopt;
 	}
-#line 4850 "y.tab.c" /* yacc.c:1646  */
+#line 4851 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 2127 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2128 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		/* FIXME: it would be nice to spot repeated ELSEs, but how? */
 		*ifptr = !*ifptr;
@@ -4859,39 +4860,39 @@ yyreduce:
 		list1();
 		fopt = saveopt;
 	}
-#line 4863 "y.tab.c" /* yacc.c:1646  */
+#line 4864 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 2136 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2137 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		if (ifptr == ifstack) err[bflag]++;
 		else --ifptr;
 		list1();
 	}
-#line 4873 "y.tab.c" /* yacc.c:1646  */
+#line 4874 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 2142 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2143 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		list(dollarsign);
 		do_end(NULL);
 	}
-#line 4882 "y.tab.c" /* yacc.c:1646  */
+#line 4883 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 2147 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2148 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		list((yyvsp[-1].exprptr)->e_value);
 		do_end((yyvsp[-1].exprptr));
 	}
-#line 4891 "y.tab.c" /* yacc.c:1646  */
+#line 4892 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 2152 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2153 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		expr_number_check((yyvsp[-1].exprptr));
 		if ((yyvsp[-1].exprptr)->e_value < 0) err[vflag]++;
@@ -4916,11 +4917,11 @@ yyreduce:
 
 		expr_free((yyvsp[-1].exprptr));
 	}
-#line 4920 "y.tab.c" /* yacc.c:1646  */
+#line 4921 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 2177 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2178 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		expr_number_check((yyvsp[-3].exprptr));
 		expr_number_check((yyvsp[-1].exprptr));
@@ -4935,23 +4936,23 @@ yyreduce:
 		expr_free((yyvsp[-3].exprptr));
 		expr_free((yyvsp[-1].exprptr));
 	}
-#line 4939 "y.tab.c" /* yacc.c:1646  */
+#line 4940 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 2192 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2193 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(1, E_DATA, expr_num((yyvsp[-1].ival) | 0x80)); list(dollarsign); }
-#line 4945 "y.tab.c" /* yacc.c:1646  */
+#line 4946 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 2194 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2195 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(1, E_DATA, expr_num((yyvsp[-1].ival))); emit(1, E_DATA, expr_num(((yyvsp[-1].ival) >> 8) | 0x80)); list(dollarsign); }
-#line 4951 "y.tab.c" /* yacc.c:1646  */
+#line 4952 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 2197 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2198 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			for (cp = (yyvsp[-1].cval); *cp != '\0'; cp++)
 				if (!cp[1])
@@ -4961,11 +4962,11 @@ yyreduce:
 
 			list(dollarsign);
 		}
-#line 4965 "y.tab.c" /* yacc.c:1646  */
+#line 4966 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 2208 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2209 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_number_check((yyvsp[-3].exprptr));
 			expr_number_check((yyvsp[-1].exprptr));
@@ -4973,11 +4974,11 @@ yyreduce:
 			expr_free((yyvsp[-3].exprptr));
 			expr_free((yyvsp[-1].exprptr));
 		}
-#line 4977 "y.tab.c" /* yacc.c:1646  */
+#line 4978 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 2216 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2217 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		list1();
 		switch ((yyvsp[-4].itemptr)->i_value) {
@@ -5018,11 +5019,11 @@ yyreduce:
 			break;
 		}
 	}
-#line 5022 "y.tab.c" /* yacc.c:1646  */
+#line 5023 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 2257 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2258 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		if ((yyvsp[-3].itemptr)->i_value == PSCMN) {
 			common_block(" ");
@@ -5033,25 +5034,25 @@ yyreduce:
 		}
 		list1();
 	}
-#line 5037 "y.tab.c" /* yacc.c:1646  */
+#line 5038 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 28:
-#line 2268 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2269 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		incbin(tempbuf);
 	}
-#line 5045 "y.tab.c" /* yacc.c:1646  */
+#line 5046 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 29:
-#line 2272 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2273 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { raw = 1; }
-#line 5051 "y.tab.c" /* yacc.c:1646  */
+#line 5052 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 30:
-#line 2272 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2273 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		int quote = 0;
 		char *p, *q;
@@ -5109,18 +5110,18 @@ yyreduce:
 			break;
 		}
 	}
-#line 5113 "y.tab.c" /* yacc.c:1646  */
+#line 5114 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 2330 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2331 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		goto dolopt; }
-#line 5120 "y.tab.c" /* yacc.c:1646  */
+#line 5121 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 32:
-#line 2333 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2334 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		int enable = (yyvsp[-2].exprptr)->e_value;
 
@@ -5190,49 +5191,49 @@ yyreduce:
 		}
 	dolopt_done: ;
 	}
-#line 5194 "y.tab.c" /* yacc.c:1646  */
+#line 5195 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 2403 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2404 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		expr_number_check((yyvsp[-1].exprptr));
 		jopt = !!(yyvsp[-1].exprptr)->e_value;
 		list1();
 		expr_free((yyvsp[-1].exprptr));
 	}
-#line 5205 "y.tab.c" /* yacc.c:1646  */
+#line 5206 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 34:
-#line 2410 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2411 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		expr_number_check((yyvsp[-1].exprptr));
 		JPopt = !!(yyvsp[-1].exprptr)->e_value;
 		list1();
 		expr_free((yyvsp[-1].exprptr));
 	}
-#line 5216 "y.tab.c" /* yacc.c:1646  */
+#line 5217 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 35:
-#line 2417 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2418 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		list1();
 	}
-#line 5224 "y.tab.c" /* yacc.c:1646  */
+#line 5225 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 2421 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2422 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		list1();
 	}
-#line 5232 "y.tab.c" /* yacc.c:1646  */
+#line 5233 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 37:
-#line 2425 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2426 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		char *p = strchr(modstr, '\0') - 1;
 		for (; p >= modstr; p--) {
@@ -5243,11 +5244,11 @@ yyreduce:
 		}
 		list1();
 	}
-#line 5247 "y.tab.c" /* yacc.c:1646  */
+#line 5248 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 38:
-#line 2436 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2437 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		if (relopt && segment != (yyvsp[-1].itemptr)->i_value) {
 			segment = (yyvsp[-1].itemptr)->i_value;
@@ -5256,26 +5257,26 @@ yyreduce:
 		}
 		list1();
 	}
-#line 5260 "y.tab.c" /* yacc.c:1646  */
+#line 5261 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 39:
-#line 2445 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2446 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		z80 = (yyvsp[-1].itemptr)->i_value;
 		list1();
 	}
-#line 5269 "y.tab.c" /* yacc.c:1646  */
+#line 5270 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 40:
-#line 2450 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2451 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { param_parse = 1; }
-#line 5275 "y.tab.c" /* yacc.c:1646  */
+#line 5276 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 2450 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2451 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		param_parse = 0;
 		(yyvsp[-4].itemptr)->i_token = MNAME;
@@ -5292,11 +5293,11 @@ yyreduce:
 #endif
 		list1();
 	}
-#line 5296 "y.tab.c" /* yacc.c:1646  */
+#line 5297 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 42:
-#line 2466 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2467 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		mlex_list_on++;
 		mfseek(mfile, (long)mfptr, 0);
@@ -5304,17 +5305,17 @@ yyreduce:
 		mlex_list_on--;
 		parm_number = 0;
 	}
-#line 5308 "y.tab.c" /* yacc.c:1646  */
+#line 5309 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 2474 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2475 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { arg_state.macarg = 1; }
-#line 5314 "y.tab.c" /* yacc.c:1646  */
+#line 5315 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 2474 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2475 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 #ifdef M_DEBUG
 		fprintf (stderr, "%s(%d) [MNAME %s]\n",
@@ -5335,21 +5336,21 @@ yyreduce:
 		floc = (yyvsp[-4].itemptr)->i_value;
 		mfseek(mfile, (long)floc, 0);
 	}
-#line 5339 "y.tab.c" /* yacc.c:1646  */
+#line 5340 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 2495 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2496 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		expr_reloc_check((yyvsp[-2].exprptr));
 		list1();
 		arg_reset();
 	}
-#line 5349 "y.tab.c" /* yacc.c:1646  */
+#line 5350 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 2500 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2501 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		int pos = mfptr;
 		mfseek(mfile, (long)mfptr, 0);
@@ -5372,25 +5373,25 @@ yyreduce:
 			mfseek(mfile, (long)floc, 0);
 		}
 	}
-#line 5376 "y.tab.c" /* yacc.c:1646  */
+#line 5377 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 2523 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2524 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { parm_number = 0; }
-#line 5382 "y.tab.c" /* yacc.c:1646  */
+#line 5383 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 2524 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2525 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		list1();
 	}
-#line 5390 "y.tab.c" /* yacc.c:1646  */
+#line 5391 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 2527 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2528 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		int pos = mfptr;
 
@@ -5416,25 +5417,25 @@ yyreduce:
 			mfseek(mfile, (long)floc, 0);
 		}
 	}
-#line 5420 "y.tab.c" /* yacc.c:1646  */
+#line 5421 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 2553 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2554 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { parm_number = 0; }
-#line 5426 "y.tab.c" /* yacc.c:1646  */
+#line 5427 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 2554 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2555 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		list1();
 	}
-#line 5434 "y.tab.c" /* yacc.c:1646  */
+#line 5435 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 2557 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2558 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		int pos = mfptr;
 		mfseek(mfile, (long)mfptr, 0);
@@ -5474,11 +5475,11 @@ yyreduce:
 			mfseek(mfile, (long)floc, 0);
 		}
 	}
-#line 5478 "y.tab.c" /* yacc.c:1646  */
+#line 5479 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 2597 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2598 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		// XXX - popsi() is not safe, There is type-specific cleanup.
 		//  But for now...
@@ -5486,11 +5487,11 @@ yyreduce:
 		list1();
 		popsi();
 	}
-#line 5490 "y.tab.c" /* yacc.c:1646  */
+#line 5491 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 2605 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2606 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		err[fflag]++;
 		arg_reset();
@@ -5516,35 +5517,35 @@ yyreduce:
 		list(dollarsign);
 		yyclearin;yyerrok;
 	}
-#line 5520 "y.tab.c" /* yacc.c:1646  */
+#line 5521 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 2633 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2634 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = 0; }
-#line 5526 "y.tab.c" /* yacc.c:1646  */
+#line 5527 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 2635 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2636 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = 1; }
-#line 5532 "y.tab.c" /* yacc.c:1646  */
+#line 5533 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 2637 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2638 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = 2; }
-#line 5538 "y.tab.c" /* yacc.c:1646  */
+#line 5539 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 2642 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2643 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	label = (yyval.itemptr) = NULL;	}
-#line 5544 "y.tab.c" /* yacc.c:1646  */
+#line 5545 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 2644 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2645 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		coloncnt = (yyvsp[0].ival);
 		itemcpy(&pristine_label, (yyvsp[-1].itemptr));
@@ -5595,11 +5596,11 @@ yyreduce:
 			(yyvsp[-1].itemptr)->i_pass = npass;
 		}
 	}
-#line 5599 "y.tab.c" /* yacc.c:1646  */
+#line 5600 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 62:
-#line 2703 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2704 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		if (!((yyvsp[0].itemptr)->i_scope & SCOPE_COMBLOCK))
 			(yyvsp[0].itemptr)->i_scope |= SCOPE_PUBLIC;
@@ -5611,11 +5612,11 @@ yyreduce:
 			}
 		}
 	}
-#line 5615 "y.tab.c" /* yacc.c:1646  */
+#line 5616 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 2723 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2724 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		if (pass2 && (yyvsp[0].itemptr)->i_scope != SCOPE_NONE && !((yyvsp[0].itemptr)->i_scope & SCOPE_EXTERNAL)) {
 			fprintf(stderr, "Label scope change\n");
@@ -5630,155 +5631,155 @@ yyreduce:
 			}
 		}
 	}
-#line 5634 "y.tab.c" /* yacc.c:1646  */
+#line 5635 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 2740 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2741 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '+'; }
-#line 5640 "y.tab.c" /* yacc.c:1646  */
+#line 5641 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 2741 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2742 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '-'; }
-#line 5646 "y.tab.c" /* yacc.c:1646  */
+#line 5647 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 68:
-#line 2742 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2743 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '*'; }
-#line 5652 "y.tab.c" /* yacc.c:1646  */
+#line 5653 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 69:
-#line 2743 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2744 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '/'; }
-#line 5658 "y.tab.c" /* yacc.c:1646  */
+#line 5659 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 70:
-#line 2744 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2745 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '%'; }
-#line 5664 "y.tab.c" /* yacc.c:1646  */
+#line 5665 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 71:
-#line 2745 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2746 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '&'; }
-#line 5670 "y.tab.c" /* yacc.c:1646  */
+#line 5671 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 72:
-#line 2746 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2747 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '|'; }
-#line 5676 "y.tab.c" /* yacc.c:1646  */
+#line 5677 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 73:
-#line 2747 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2748 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '^'; }
-#line 5682 "y.tab.c" /* yacc.c:1646  */
+#line 5683 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 74:
-#line 2748 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2749 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = ANDAND; }
-#line 5688 "y.tab.c" /* yacc.c:1646  */
+#line 5689 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 75:
-#line 2749 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2750 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = OROR; }
-#line 5694 "y.tab.c" /* yacc.c:1646  */
+#line 5695 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 76:
-#line 2750 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2751 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = SHL; }
-#line 5700 "y.tab.c" /* yacc.c:1646  */
+#line 5701 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 77:
-#line 2751 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2752 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = SHR; }
-#line 5706 "y.tab.c" /* yacc.c:1646  */
+#line 5707 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 78:
-#line 2753 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2754 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '+'; }
-#line 5712 "y.tab.c" /* yacc.c:1646  */
+#line 5713 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 79:
-#line 2754 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2755 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '-'; }
-#line 5718 "y.tab.c" /* yacc.c:1646  */
+#line 5719 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 80:
-#line 2755 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2756 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '*'; }
-#line 5724 "y.tab.c" /* yacc.c:1646  */
+#line 5725 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 81:
-#line 2756 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2757 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '/'; }
-#line 5730 "y.tab.c" /* yacc.c:1646  */
+#line 5731 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 82:
-#line 2757 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2758 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '%'; }
-#line 5736 "y.tab.c" /* yacc.c:1646  */
+#line 5737 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 83:
-#line 2758 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2759 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '&'; }
-#line 5742 "y.tab.c" /* yacc.c:1646  */
+#line 5743 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 84:
-#line 2759 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2760 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '|'; }
-#line 5748 "y.tab.c" /* yacc.c:1646  */
+#line 5749 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 85:
-#line 2760 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2761 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = '^'; }
-#line 5754 "y.tab.c" /* yacc.c:1646  */
+#line 5755 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 86:
-#line 2761 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2762 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = MROP_SHL; }
-#line 5760 "y.tab.c" /* yacc.c:1646  */
+#line 5761 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 87:
-#line 2762 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2763 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = MROP_SHR; }
-#line 5766 "y.tab.c" /* yacc.c:1646  */
+#line 5767 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 88:
-#line 2763 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2764 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = MROP_SHIFT; }
-#line 5772 "y.tab.c" /* yacc.c:1646  */
+#line 5773 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 89:
-#line 2768 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2769 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1((yyvsp[0].itemptr)->i_value, 0, 0, ET_NOARG); }
-#line 5778 "y.tab.c" /* yacc.c:1646  */
+#line 5779 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 90:
-#line 2771 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2772 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			// XXX - maybe splitting out CPI is better?
 			if (!z80 && (yyvsp[-1].itemptr)->i_value == 0166641)
@@ -5786,22 +5787,22 @@ yyreduce:
 			else
 				err[fflag]++;
 		}
-#line 5790 "y.tab.c" /* yacc.c:1646  */
+#line 5791 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 91:
-#line 2780 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2781 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if (!z80 && (yyvsp[0].itemptr)->i_value < 2)
 				emit(1, E_CODE, 0, 007 | ((yyvsp[0].itemptr)->i_value << 3));
 			else
 				err[fflag]++;
 		}
-#line 5801 "y.tab.c" /* yacc.c:1646  */
+#line 5802 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 92:
-#line 2788 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2789 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		if (z80 || (yyvsp[-1].itemptr)->i_value == 0303) {
 			checkjp(0, (yyvsp[0].exprptr));
@@ -5811,17 +5812,17 @@ yyreduce:
 			// can't optimize jump on plus
 			emit(1, E_CODE16, (yyvsp[0].exprptr), 0362);
 	}
-#line 5815 "y.tab.c" /* yacc.c:1646  */
+#line 5816 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 93:
-#line 2799 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2800 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	emit(1, E_CODE16, (yyvsp[0].exprptr), 0315);	}
-#line 5821 "y.tab.c" /* yacc.c:1646  */
+#line 5822 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 94:
-#line 2802 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2803 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		// accepts rst 0-7 or rst 0,8,16,...,56
 		int vec = (yyvsp[0].exprptr)->e_value;
@@ -5832,240 +5833,240 @@ yyreduce:
 		emit(1, E_CODE, 0, (yyvsp[-1].itemptr)->i_value + ((vec & 7) << 3));
 		expr_free((yyvsp[0].exprptr));
 	}
-#line 5836 "y.tab.c" /* yacc.c:1646  */
+#line 5837 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 95:
-#line 2814 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2815 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1((yyvsp[-1].itemptr)->i_value, 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5842 "y.tab.c" /* yacc.c:1646  */
+#line 5843 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 96:
-#line 2817 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2818 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			emit(3, E_CODE, 0, (yyvsp[-1].itemptr)->i_value >> 8, (yyvsp[-1].itemptr)->i_value, disp);
 		}
-#line 5850 "y.tab.c" /* yacc.c:1646  */
+#line 5851 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 97:
-#line 2822 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2823 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306, 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5856 "y.tab.c" /* yacc.c:1646  */
+#line 5857 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 98:
-#line 2825 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2826 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306, 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5862 "y.tab.c" /* yacc.c:1646  */
+#line 5863 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 99:
-#line 2828 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2829 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306 + ((yyvsp[-1].itemptr)->i_value << 3), 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5868 "y.tab.c" /* yacc.c:1646  */
+#line 5869 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 100:
-#line 2831 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2832 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306 + ((yyvsp[-3].itemptr)->i_value << 3), 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5874 "y.tab.c" /* yacc.c:1646  */
+#line 5875 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 101:
-#line 2834 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2835 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if (!z80 && (yyvsp[-1].itemptr)->i_value == 7)
 				emit(1, E_CODE16, (yyvsp[0].exprptr), 0364);
 			else
 				emit1(0306 | ((yyvsp[-1].itemptr)->i_value << 3), 0, (yyvsp[0].exprptr), ET_BYTE);
 		}
-#line 5885 "y.tab.c" /* yacc.c:1646  */
+#line 5886 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 102:
-#line 2842 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2843 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306 | ((yyvsp[-1].itemptr)->i_value << 3), 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5891 "y.tab.c" /* yacc.c:1646  */
+#line 5892 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 103:
-#line 2845 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2846 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306 | ((yyvsp[-1].itemptr)->i_value << 3), 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5897 "y.tab.c" /* yacc.c:1646  */
+#line 5898 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 104:
-#line 2848 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2849 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306 | ((yyvsp[-1].itemptr)->i_value << 3), 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5903 "y.tab.c" /* yacc.c:1646  */
+#line 5904 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 105:
-#line 2851 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2852 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306 | ((yyvsp[-3].itemptr)->i_value << 3), 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5909 "y.tab.c" /* yacc.c:1646  */
+#line 5910 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 106:
-#line 2854 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2855 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306 | ((yyvsp[-3].itemptr)->i_value << 3), 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5915 "y.tab.c" /* yacc.c:1646  */
+#line 5916 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 107:
-#line 2857 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2858 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306 | ((yyvsp[-3].itemptr)->i_value << 3), 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5921 "y.tab.c" /* yacc.c:1646  */
+#line 5922 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 108:
-#line 2860 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2861 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0306 | ((yyvsp[-3].itemptr)->i_value << 3), 0, (yyvsp[0].exprptr), ET_BYTE); }
-#line 5927 "y.tab.c" /* yacc.c:1646  */
+#line 5928 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 109:
-#line 2863 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2864 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5933 "y.tab.c" /* yacc.c:1646  */
+#line 5934 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 110:
-#line 2866 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2867 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5939 "y.tab.c" /* yacc.c:1646  */
+#line 5940 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 111:
-#line 2869 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2870 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(1, E_CODE, 0, 0206); }
-#line 5945 "y.tab.c" /* yacc.c:1646  */
+#line 5946 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 112:
-#line 2872 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2873 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-1].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5951 "y.tab.c" /* yacc.c:1646  */
+#line 5952 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 113:
-#line 2875 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2876 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-3].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5957 "y.tab.c" /* yacc.c:1646  */
+#line 5958 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 114:
-#line 2878 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2879 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-1].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5963 "y.tab.c" /* yacc.c:1646  */
+#line 5964 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 115:
-#line 2881 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2882 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-1].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5969 "y.tab.c" /* yacc.c:1646  */
+#line 5970 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 116:
-#line 2884 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2885 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-1].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5975 "y.tab.c" /* yacc.c:1646  */
+#line 5976 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 117:
-#line 2887 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2888 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-1].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5981 "y.tab.c" /* yacc.c:1646  */
+#line 5982 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 118:
-#line 2890 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2891 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-1].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5987 "y.tab.c" /* yacc.c:1646  */
+#line 5988 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 119:
-#line 2893 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2894 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-1].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5993 "y.tab.c" /* yacc.c:1646  */
+#line 5994 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 120:
-#line 2896 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2897 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-3].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 5999 "y.tab.c" /* yacc.c:1646  */
+#line 6000 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 121:
-#line 2899 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2900 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-3].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 6005 "y.tab.c" /* yacc.c:1646  */
+#line 6006 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 122:
-#line 2902 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2903 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-3].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 6011 "y.tab.c" /* yacc.c:1646  */
+#line 6012 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 123:
-#line 2905 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2906 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0200 + ((yyvsp[-3].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 6017 "y.tab.c" /* yacc.c:1646  */
+#line 6018 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 124:
-#line 2908 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2909 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0145400 + ((yyvsp[-1].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 6023 "y.tab.c" /* yacc.c:1646  */
+#line 6024 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 125:
-#line 2911 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2912 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			emit(4, E_CODE, 0, (yyvsp[-1].itemptr)->i_value >> 8, 0xcb, disp, (yyvsp[-1].itemptr)->i_value);
 		}
-#line 6031 "y.tab.c" /* yacc.c:1646  */
+#line 6032 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 126:
-#line 2916 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2917 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0xCB00 + ((yyvsp[-3].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[-2].ival), 0, ET_NOARG_DISP); }
-#line 6037 "y.tab.c" /* yacc.c:1646  */
+#line 6038 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 127:
-#line 2919 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2920 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1((yyvsp[-1].itemptr)->i_value + (((yyvsp[0].ival) & 0377) << 3) + 4, (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 6043 "y.tab.c" /* yacc.c:1646  */
+#line 6044 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 128:
-#line 2922 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2923 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1((yyvsp[-1].itemptr)->i_value + (((yyvsp[0].ival) & 0377) << 3) + 4, (yyvsp[0].ival), 0, ET_NOARG_DISP); }
-#line 6049 "y.tab.c" /* yacc.c:1646  */
+#line 6050 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 129:
-#line 2925 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2926 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { if ((yyvsp[-3].itemptr)->i_value == 1)
 				emit(2,E_CODE,0,0355,0112+(yyvsp[0].ival));
 			else
 				emit(2,E_CODE,0,0355,0102+(yyvsp[0].ival));
 		}
-#line 6059 "y.tab.c" /* yacc.c:1646  */
+#line 6060 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 130:
-#line 2932 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2933 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emitdad((yyvsp[-2].ival),(yyvsp[0].ival)); }
-#line 6065 "y.tab.c" /* yacc.c:1646  */
+#line 6066 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 131:
-#line 2935 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2936 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[-2].ival) != (yyvsp[0].ival)) {
 				fprintf(stderr,"ADD mar, mar error\n");
@@ -6073,25 +6074,25 @@ yyreduce:
 			}
 			emitdad((yyvsp[-2].ival),(yyvsp[0].ival));
 		}
-#line 6077 "y.tab.c" /* yacc.c:1646  */
+#line 6078 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 132:
-#line 2943 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2944 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emitdad(040, (yyvsp[0].ival)); }
-#line 6083 "y.tab.c" /* yacc.c:1646  */
+#line 6084 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 133:
-#line 2946 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2947 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			emit(2, E_CODE, 0, (yyvsp[-1].itemptr)->i_value >> 8, (yyvsp[-1].itemptr)->i_value | (yyvsp[0].ival));
 		}
-#line 6091 "y.tab.c" /* yacc.c:1646  */
+#line 6092 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 134:
-#line 2951 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2952 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			int dst = (yyvsp[-1].itemptr)->i_value >> 8;
 			int reg = (yyvsp[0].ival) >> 8;
@@ -6108,35 +6109,35 @@ yyreduce:
 			}
 			emit(2, E_CODE, 0, (yyvsp[-1].itemptr)->i_value >> 8, (yyvsp[-1].itemptr)->i_value | (yyvsp[0].ival));
 		}
-#line 6112 "y.tab.c" /* yacc.c:1646  */
+#line 6113 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 135:
-#line 2969 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2970 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(((yyvsp[-1].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377) + 3, (yyvsp[0].ival), 0, ET_NOARG); }
-#line 6118 "y.tab.c" /* yacc.c:1646  */
+#line 6119 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 136:
-#line 2972 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2973 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(((yyvsp[-1].itemptr)->i_value << 3) + ((yyvsp[0].ival) & 0377) + 3, (yyvsp[0].ival), 0, ET_NOARG); }
-#line 6124 "y.tab.c" /* yacc.c:1646  */
+#line 6125 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 137:
-#line 2975 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2976 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1((yyvsp[-1].itemptr)->i_value + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG); }
-#line 6130 "y.tab.c" /* yacc.c:1646  */
+#line 6131 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 138:
-#line 2978 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2979 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1((yyvsp[-1].itemptr)->i_value + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG); }
-#line 6136 "y.tab.c" /* yacc.c:1646  */
+#line 6137 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 139:
-#line 2981 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2982 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if (strcmp((yyvsp[-1].itemptr)->i_string, "set") == 0 && label) {
 				// Clear error that label definition will have been set
@@ -6150,11 +6151,11 @@ yyreduce:
 				err[fflag]++;
 			}
 		}
-#line 6154 "y.tab.c" /* yacc.c:1646  */
+#line 6155 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 140:
-#line 2996 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 2997 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			int bit = (yyvsp[-2].exprptr)->e_value;
 			expr_number_check((yyvsp[-2].exprptr));
@@ -6163,11 +6164,11 @@ yyreduce:
 				err[vflag]++;
 			emit1((yyvsp[-3].itemptr)->i_value + ((bit & 7) << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[0].ival), 0, ET_NOARG_DISP);
 		}
-#line 6167 "y.tab.c" /* yacc.c:1646  */
+#line 6168 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 141:
-#line 3006 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3007 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			int bit = (yyvsp[-2].exprptr)->e_value;
 			expr_number_check((yyvsp[-2].exprptr));
@@ -6177,11 +6178,11 @@ yyreduce:
 			emit(4, E_CODE, 0, (yyvsp[-3].itemptr)->i_value >> 8, 0xcb, disp,
 				(yyvsp[-3].itemptr)->i_value | (bit << 3));
 		}
-#line 6181 "y.tab.c" /* yacc.c:1646  */
+#line 6182 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 142:
-#line 3017 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3018 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			int bit = (yyvsp[-4].exprptr)->e_value;
 			expr_number_check((yyvsp[-4].exprptr));
@@ -6190,83 +6191,83 @@ yyreduce:
 				err[vflag]++;
 			emit1((yyvsp[-5].itemptr)->i_value + ((bit & 7) << 3) + ((yyvsp[0].ival) & 0377), (yyvsp[-2].ival), 0, ET_NOARG_DISP);
 		}
-#line 6194 "y.tab.c" /* yacc.c:1646  */
+#line 6195 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 143:
-#line 3027 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3028 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		checkjp((yyvsp[-2].ival), (yyvsp[0].exprptr));
 		emit(1, E_CODE16, (yyvsp[0].exprptr), 0302 + (yyvsp[-2].ival));
 	}
-#line 6203 "y.tab.c" /* yacc.c:1646  */
+#line 6204 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 144:
-#line 3033 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3034 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		checkjp((yyvsp[-1].itemptr)->i_value, (yyvsp[0].exprptr));
 		emit(1, E_CODE16, (yyvsp[0].exprptr), (yyvsp[-1].itemptr)->i_value);
 	}
-#line 6212 "y.tab.c" /* yacc.c:1646  */
+#line 6213 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 145:
-#line 3039 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3040 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0351, (yyvsp[-1].ival), 0, ET_NOARG); }
-#line 6218 "y.tab.c" /* yacc.c:1646  */
+#line 6219 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 146:
-#line 3042 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3043 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(1, E_CODE16, (yyvsp[0].exprptr), 0304 + (yyvsp[-2].ival)); }
-#line 6224 "y.tab.c" /* yacc.c:1646  */
+#line 6225 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 147:
-#line 3045 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3046 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(1, E_CODE16, (yyvsp[0].exprptr), (yyvsp[-1].itemptr)->i_value); }
-#line 6230 "y.tab.c" /* yacc.c:1646  */
+#line 6231 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 148:
-#line 3048 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3049 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emitjr(030,(yyvsp[0].exprptr)); }
-#line 6236 "y.tab.c" /* yacc.c:1646  */
+#line 6237 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 149:
-#line 3051 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3052 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emitjr((yyvsp[-3].itemptr)->i_value + (yyvsp[-2].ival), (yyvsp[0].exprptr)); }
-#line 6242 "y.tab.c" /* yacc.c:1646  */
+#line 6243 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 150:
-#line 3054 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3055 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emitjr((yyvsp[-1].itemptr)->i_value, (yyvsp[0].exprptr)); }
-#line 6248 "y.tab.c" /* yacc.c:1646  */
+#line 6249 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 151:
-#line 3057 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3058 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emitjr((yyvsp[-1].itemptr)->i_value, (yyvsp[0].exprptr)); }
-#line 6254 "y.tab.c" /* yacc.c:1646  */
+#line 6255 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 152:
-#line 3060 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3061 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(1, E_CODE, 0, (yyvsp[0].itemptr)->i_value); }
-#line 6260 "y.tab.c" /* yacc.c:1646  */
+#line 6261 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 153:
-#line 3063 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3064 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(1, E_CODE, 0, 0300 + (yyvsp[0].ival)); }
-#line 6266 "y.tab.c" /* yacc.c:1646  */
+#line 6267 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 154:
-#line 3066 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3067 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			// Many constraints on byte access to IX/IY registers.
 			if (((yyvsp[-2].ival) | (yyvsp[0].ival)) >> 16) {
@@ -6296,76 +6297,76 @@ yyreduce:
 			}
 			emit1(0100 + (((yyvsp[-2].ival) & 7) << 3) + ((yyvsp[0].ival) & 7),(yyvsp[-2].ival) | (yyvsp[0].ival), 0, ET_NOARG_DISP);
 		}
-#line 6300 "y.tab.c" /* yacc.c:1646  */
+#line 6301 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 155:
-#line 3097 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3098 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			emit(3, E_CODE, 0, (yyvsp[-3].itemptr)->i_value >> 8, (yyvsp[-3].itemptr)->i_value | ((yyvsp[-2].ival) << 3), disp);
 		}
-#line 6308 "y.tab.c" /* yacc.c:1646  */
+#line 6309 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 156:
-#line 3102 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3103 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			emit(3, E_CODE, 0, (yyvsp[-3].itemptr)->i_value >> 8, (yyvsp[-3].itemptr)->i_value | (yyvsp[-2].ival), disp);
 		}
-#line 6316 "y.tab.c" /* yacc.c:1646  */
+#line 6317 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 157:
-#line 3107 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3108 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[-2].ival) == 6 && (yyvsp[0].ival) == 6) err[gflag]++;
 			emit1(0100 + (((yyvsp[-2].ival) & 7) << 3) + ((yyvsp[0].ival) & 7),(yyvsp[-2].ival) | (yyvsp[0].ival), 0, ET_NOARG_DISP);
 		}
-#line 6325 "y.tab.c" /* yacc.c:1646  */
+#line 6326 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 158:
-#line 3113 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3114 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(6 + (((yyvsp[-2].ival) & 0377) << 3), (yyvsp[-2].ival), (yyvsp[0].exprptr), ET_BYTE); }
-#line 6331 "y.tab.c" /* yacc.c:1646  */
+#line 6332 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 159:
-#line 3116 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3117 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			emit(3, E_CODE8, (yyvsp[-2].exprptr), (yyvsp[-3].itemptr)->i_value >> 8, (yyvsp[-3].itemptr)->i_value, disp);
 		}
-#line 6339 "y.tab.c" /* yacc.c:1646  */
+#line 6340 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 160:
-#line 3121 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3122 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(6 + (((yyvsp[-2].ival) & 0377) << 3), (yyvsp[-2].ival), (yyvsp[0].exprptr), ET_BYTE); }
-#line 6345 "y.tab.c" /* yacc.c:1646  */
+#line 6346 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 161:
-#line 3124 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3125 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	if ((yyvsp[-4].ival) != 7) {
 				fprintf(stderr,"LD reg, (RP) error\n");
 				err[gflag]++;
 			}
 			else emit(1, E_CODE, 0, 012 + (yyvsp[-1].itemptr)->i_value);
 		}
-#line 6356 "y.tab.c" /* yacc.c:1646  */
+#line 6357 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 162:
-#line 3132 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3133 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[0].ival) != 0 && (yyvsp[0].ival) != 2) err[gflag]++;
 			emit(1, E_CODE, 0, 012 + ((yyvsp[0].ival) << 3));
 		}
-#line 6365 "y.tab.c" /* yacc.c:1646  */
+#line 6366 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 163:
-#line 3138 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3139 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[-2].ival) != 7) {
 				fprintf(stderr,"LD reg, (expr) error: A only valid destination\n");
@@ -6376,53 +6377,53 @@ yyreduce:
 				emit(1, E_CODE16, (yyvsp[0].exprptr), 072);
 			}
 		}
-#line 6380 "y.tab.c" /* yacc.c:1646  */
+#line 6381 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 164:
-#line 3150 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3151 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_word_check((yyvsp[0].exprptr));
 			emit(1, E_CODE16, (yyvsp[0].exprptr), 072);
 		}
-#line 6389 "y.tab.c" /* yacc.c:1646  */
+#line 6390 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 165:
-#line 3156 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3157 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(1, E_CODE, 0, 2 + (yyvsp[-3].itemptr)->i_value); }
-#line 6395 "y.tab.c" /* yacc.c:1646  */
+#line 6396 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 166:
-#line 3159 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3160 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[0].ival) != 0 && (yyvsp[0].ival) != 2) err[gflag]++;
 			emit(1, E_CODE, 0, 2 + ((yyvsp[0].ival) << 3));
 		}
-#line 6404 "y.tab.c" /* yacc.c:1646  */
+#line 6405 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 167:
-#line 3165 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3166 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_word_check((yyvsp[-2].exprptr));
 			emit(1, E_CODE16, (yyvsp[-2].exprptr), 062);
 		}
-#line 6413 "y.tab.c" /* yacc.c:1646  */
+#line 6414 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 168:
-#line 3171 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3172 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_word_check((yyvsp[0].exprptr));
 			emit(1, E_CODE16, (yyvsp[0].exprptr), 062);
 		}
-#line 6422 "y.tab.c" /* yacc.c:1646  */
+#line 6423 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 169:
-#line 3177 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3178 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[-2].ival) != 7) {
 				fprintf(stderr,"LD reg, MISCREG error: A only valid destination\n");
@@ -6430,35 +6431,35 @@ yyreduce:
 			}
 			else emit(2, E_CODE, 0, 0355, 0127 + (yyvsp[0].itemptr)->i_value);
 		}
-#line 6434 "y.tab.c" /* yacc.c:1646  */
+#line 6435 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 170:
-#line 3186 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3187 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(2, E_CODE, 0, 0355, 0107 + (yyvsp[-2].itemptr)->i_value); }
-#line 6440 "y.tab.c" /* yacc.c:1646  */
+#line 6441 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 171:
-#line 3189 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3190 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_word_check((yyvsp[0].exprptr));
 			emit1(1 + ((yyvsp[-2].ival) & 060), (yyvsp[-2].ival), (yyvsp[0].exprptr), ET_WORD);
 		}
-#line 6449 "y.tab.c" /* yacc.c:1646  */
+#line 6450 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 172:
-#line 3195 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3196 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_word_check((yyvsp[0].exprptr));
 			emit1(1 + ((yyvsp[-2].ival) & 060), (yyvsp[-2].ival), (yyvsp[0].exprptr), ET_WORD);
 		}
-#line 6458 "y.tab.c" /* yacc.c:1646  */
+#line 6459 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 173:
-#line 3201 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3202 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_word_check((yyvsp[0].exprptr));
 			if (((yyvsp[-2].ival) & 060) == 040)
@@ -6466,20 +6467,20 @@ yyreduce:
 			else
 				emit(2, E_CODE16, (yyvsp[0].exprptr), 0355, 0113 + (yyvsp[-2].ival));
 		}
-#line 6470 "y.tab.c" /* yacc.c:1646  */
+#line 6471 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 174:
-#line 3210 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3211 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_word_check((yyvsp[0].exprptr));
 			emit1(052, 040, (yyvsp[0].exprptr), ET_WORD);
 		}
-#line 6479 "y.tab.c" /* yacc.c:1646  */
+#line 6480 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 175:
-#line 3216 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3217 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_word_check((yyvsp[-2].exprptr));
 			if (((yyvsp[0].ival) & 060) == 040)
@@ -6487,20 +6488,20 @@ yyreduce:
 			else
 				emit(2, E_CODE16, (yyvsp[-2].exprptr), 0355, 0103 + (yyvsp[0].ival));
 		}
-#line 6491 "y.tab.c" /* yacc.c:1646  */
+#line 6492 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 176:
-#line 3225 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3226 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_word_check((yyvsp[0].exprptr));
 			emit1(042, 040, (yyvsp[0].exprptr), ET_WORD);
 		}
-#line 6500 "y.tab.c" /* yacc.c:1646  */
+#line 6501 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 177:
-#line 3231 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3232 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[-2].ival) != 060) {
 				fprintf(stderr,"LD evenreg error\n");
@@ -6509,20 +6510,20 @@ yyreduce:
 			else
 				emit1(0371, (yyvsp[0].ival), 0, ET_NOARG);
 		}
-#line 6513 "y.tab.c" /* yacc.c:1646  */
+#line 6514 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 178:
-#line 3241 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3242 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_word_check((yyvsp[0].exprptr));
 			emit(2, E_CODE16, (yyvsp[0].exprptr), (yyvsp[-1].itemptr)->i_value >> 8, (yyvsp[-1].itemptr)->i_value);
 		}
-#line 6522 "y.tab.c" /* yacc.c:1646  */
+#line 6523 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 179:
-#line 3247 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3248 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[-2].itemptr)->i_value != 020) {
 				fprintf(stderr,"EX RP, HL error\n");
@@ -6531,23 +6532,23 @@ yyreduce:
 			else
 				emit(1, E_CODE, 0, 0353);
 		}
-#line 6535 "y.tab.c" /* yacc.c:1646  */
+#line 6536 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 180:
-#line 3257 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3258 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(1, E_CODE, 0, 010); }
-#line 6541 "y.tab.c" /* yacc.c:1646  */
+#line 6542 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 181:
-#line 3260 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3261 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit1(0343, (yyvsp[0].ival), 0, ET_NOARG); }
-#line 6547 "y.tab.c" /* yacc.c:1646  */
+#line 6548 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 182:
-#line 3263 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3264 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[-2].ival) != 7) {
 				fprintf(stderr,"IN reg, (expr) error\n");
@@ -6559,77 +6560,77 @@ yyreduce:
 				emit(1, E_CODE8, (yyvsp[0].exprptr), (yyvsp[-3].itemptr)->i_value);
 			}
 		}
-#line 6563 "y.tab.c" /* yacc.c:1646  */
+#line 6564 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 183:
-#line 3276 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3277 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[0].exprptr)->e_value < 0 || (yyvsp[0].exprptr)->e_value > 255)
 				err[vflag]++;
 			emit(1, E_CODE8, (yyvsp[0].exprptr), (yyvsp[-1].itemptr)->i_value);
 		}
-#line 6573 "y.tab.c" /* yacc.c:1646  */
+#line 6574 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 184:
-#line 3283 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3284 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(2, E_CODE, 0, 0355, 0100 + ((yyvsp[-4].ival) << 3)); }
-#line 6579 "y.tab.c" /* yacc.c:1646  */
+#line 6580 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 185:
-#line 3286 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3287 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(2, E_CODE, 0, 0355, 0100 + ((yyvsp[0].ival) << 3)); }
-#line 6585 "y.tab.c" /* yacc.c:1646  */
+#line 6586 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 186:
-#line 3289 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3290 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(2, E_CODE, 0, 0355, 0160); }
-#line 6591 "y.tab.c" /* yacc.c:1646  */
+#line 6592 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 187:
-#line 3292 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3293 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(2, E_CODE, 0, 0355, 0160); }
-#line 6597 "y.tab.c" /* yacc.c:1646  */
+#line 6598 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 188:
-#line 3295 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3296 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[-2].exprptr)->e_value < 0 || (yyvsp[-2].exprptr)->e_value > 255)
 				err[vflag]++;
 			emit(1, E_CODE8, (yyvsp[-2].exprptr), (yyvsp[-3].itemptr)->i_value);
 		}
-#line 6607 "y.tab.c" /* yacc.c:1646  */
+#line 6608 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 189:
-#line 3302 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3303 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[0].exprptr)->e_value < 0 || (yyvsp[0].exprptr)->e_value > 255)
 				err[vflag]++;
 			emit(1, E_CODE8, (yyvsp[0].exprptr), (yyvsp[-1].itemptr)->i_value);
 		}
-#line 6617 "y.tab.c" /* yacc.c:1646  */
+#line 6618 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 190:
-#line 3309 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3310 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(2, E_CODE, 0, 0355, 0101 + ((yyvsp[0].ival) << 3)); }
-#line 6623 "y.tab.c" /* yacc.c:1646  */
+#line 6624 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 191:
-#line 3312 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3313 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { emit(2, E_CODE, 0, 0355, 0101 + ((yyvsp[0].ival) << 3)); }
-#line 6629 "y.tab.c" /* yacc.c:1646  */
+#line 6630 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 192:
-#line 3315 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3316 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_number_check((yyvsp[0].exprptr));
 			if ((yyvsp[0].exprptr)->e_value != 0) {
@@ -6640,11 +6641,11 @@ yyreduce:
 
 			emit(2, E_CODE8, 0, 0355, 0101 + (6 << 3));
 		}
-#line 6644 "y.tab.c" /* yacc.c:1646  */
+#line 6645 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 193:
-#line 3327 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3328 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			int im = (yyvsp[0].exprptr)->e_value;
 			expr_number_check((yyvsp[0].exprptr));
@@ -6654,11 +6655,11 @@ yyreduce:
 			else
 				emit(2, E_CODE, 0, (yyvsp[-1].itemptr)->i_value >> 8, (yyvsp[-1].itemptr)->i_value + ((im + (im > 0)) << 3));
 		}
-#line 6658 "y.tab.c" /* yacc.c:1646  */
+#line 6659 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 194:
-#line 3338 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3339 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_number_check((yyvsp[0].exprptr));
 			if (phaseflag) {
@@ -6671,11 +6672,11 @@ yyreduce:
 			}
 			expr_free((yyvsp[0].exprptr));
 		}
-#line 6675 "y.tab.c" /* yacc.c:1646  */
+#line 6676 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 195:
-#line 3352 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3353 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if (!phaseflag) {
 				err[oflag]++;
@@ -6684,11 +6685,11 @@ yyreduce:
 				dollarsign = phdollar + dollarsign - phbegin;
 			}
 		}
-#line 6688 "y.tab.c" /* yacc.c:1646  */
+#line 6689 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 196:
-#line 3362 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3363 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_reloc_check((yyvsp[0].exprptr));
 			// Cannot org to the other segment (but absolute values are OK)
@@ -6718,11 +6719,11 @@ yyreduce:
 			}
 			expr_free((yyvsp[0].exprptr));
 		}
-#line 6722 "y.tab.c" /* yacc.c:1646  */
+#line 6723 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 197:
-#line 3393 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3394 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			list_dollarsign = 0;
 			list_addr = (yyvsp[0].exprptr)->e_value;
@@ -6733,11 +6734,11 @@ yyreduce:
 			}
 			expr_free((yyvsp[0].exprptr));
 		}
-#line 6737 "y.tab.c" /* yacc.c:1646  */
+#line 6738 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 198:
-#line 3405 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3406 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			list_dollarsign = 0;
 			list_addr = (yyvsp[0].exprptr)->e_value;
@@ -6746,11 +6747,11 @@ yyreduce:
 			tstatesum[emit_addr] = tstates;
 			expr_free((yyvsp[0].exprptr));
 		}
-#line 6750 "y.tab.c" /* yacc.c:1646  */
+#line 6751 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 199:
-#line 3415 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3416 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			list_dollarsign = 0;
 			list_addr = (yyvsp[0].exprptr)->e_value;
@@ -6759,71 +6760,71 @@ yyreduce:
 			ocfsum[emit_addr] = ocf;
 			expr_free((yyvsp[0].exprptr));
 		}
-#line 6763 "y.tab.c" /* yacc.c:1646  */
+#line 6764 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 200:
-#line 3424 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3425 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { full_exprs = 1; }
-#line 6769 "y.tab.c" /* yacc.c:1646  */
+#line 6770 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 201:
-#line 3424 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3425 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { full_exprs = 0; }
-#line 6775 "y.tab.c" /* yacc.c:1646  */
+#line 6776 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 202:
-#line 3426 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3427 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { full_exprs = 1; }
-#line 6781 "y.tab.c" /* yacc.c:1646  */
+#line 6782 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 203:
-#line 3426 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3427 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { full_exprs = 0; }
-#line 6787 "y.tab.c" /* yacc.c:1646  */
+#line 6788 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 204:
-#line 3428 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3429 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { full_exprs = 1; }
-#line 6793 "y.tab.c" /* yacc.c:1646  */
+#line 6794 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 205:
-#line 3428 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3429 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { full_exprs = 0; }
-#line 6799 "y.tab.c" /* yacc.c:1646  */
+#line 6800 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 210:
-#line 3440 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3441 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { param_parse = 1; }
-#line 6805 "y.tab.c" /* yacc.c:1646  */
+#line 6806 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 211:
-#line 3440 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3441 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { param_parse = 0; }
-#line 6811 "y.tab.c" /* yacc.c:1646  */
+#line 6812 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 212:
-#line 3442 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3443 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = 0; }
-#line 6817 "y.tab.c" /* yacc.c:1646  */
+#line 6818 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 213:
-#line 3442 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3443 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = 1; }
-#line 6823 "y.tab.c" /* yacc.c:1646  */
+#line 6824 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 214:
-#line 3446 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3447 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if (parm_number >= PARMMAX)
 				error("Too many parameters");
@@ -6831,11 +6832,11 @@ yyreduce:
 			(yyvsp[0].itemptr)->i_scope = (yyvsp[-1].ival);
 			(yyvsp[0].itemptr)->i_chain = 0;
 		}
-#line 6835 "y.tab.c" /* yacc.c:1646  */
+#line 6836 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 215:
-#line 3455 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3456 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 		static char macpush[LINEBUFFERSIZE];
 		// Because of locals the parser has to look ahead.
@@ -6848,23 +6849,23 @@ yyreduce:
 		yychar = YYEMPTY;
 		(yyval.cval) = macpush;
 	}
-#line 6852 "y.tab.c" /* yacc.c:1646  */
+#line 6853 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 217:
-#line 3471 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3472 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { param_parse = 1; }
-#line 6858 "y.tab.c" /* yacc.c:1646  */
+#line 6859 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 218:
-#line 3471 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3472 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { param_parse = 0; list1(); }
-#line 6864 "y.tab.c" /* yacc.c:1646  */
+#line 6865 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 222:
-#line 3483 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3484 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if (parm_number >= PARMMAX)
 				error("Too many parameters");
@@ -6872,11 +6873,11 @@ yyreduce:
 			(yyvsp[0].itemptr)->i_scope = 0;
 			(yyvsp[0].itemptr)->i_chain = 1;
 		}
-#line 6876 "y.tab.c" /* yacc.c:1646  */
+#line 6877 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 226:
-#line 3503 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3504 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			cp = malloc(strlen(tempbuf)+1);
 #ifdef M_DEBUG
@@ -6885,17 +6886,17 @@ yyreduce:
 			est2[parm_number++].param = cp;
 			strcpy(cp, tempbuf);
 		}
-#line 6889 "y.tab.c" /* yacc.c:1646  */
+#line 6890 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 227:
-#line 3512 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3513 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { arg_flag = 0; }
-#line 6895 "y.tab.c" /* yacc.c:1646  */
+#line 6896 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 228:
-#line 3513 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3514 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			arg_flag = 1;
 			expr_reloc_check((yyvsp[0].exprptr));
@@ -6903,82 +6904,82 @@ yyreduce:
 			est2[parm_number++].param = strdup(tempbuf);
 			expr_free((yyvsp[0].exprptr));
 		}
-#line 6907 "y.tab.c" /* yacc.c:1646  */
+#line 6908 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 233:
-#line 3534 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3535 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 6915 "y.tab.c" /* yacc.c:1646  */
+#line 6916 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 236:
-#line 3544 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3545 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { if ((yyvsp[0].itemptr)->i_value != 070) err[gflag]++; (yyval.ival) = 6; }
-#line 6921 "y.tab.c" /* yacc.c:1646  */
+#line 6922 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 237:
-#line 3548 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3549 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 6929 "y.tab.c" /* yacc.c:1646  */
+#line 6930 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 238:
-#line 3553 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3554 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 6937 "y.tab.c" /* yacc.c:1646  */
+#line 6938 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 239:
-#line 3558 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3559 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 6945 "y.tab.c" /* yacc.c:1646  */
+#line 6946 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 240:
-#line 3564 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3565 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = 6;
 		}
-#line 6953 "y.tab.c" /* yacc.c:1646  */
+#line 6954 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 242:
-#line 3572 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3573 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = ((yyvsp[-2].itemptr)->i_value & 0177400) | 6;
 		}
-#line 6961 "y.tab.c" /* yacc.c:1646  */
+#line 6962 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 243:
-#line 3577 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3578 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			disp = 0;
 			(yyval.ival) = ((yyvsp[-1].itemptr)->i_value & 0177400) | 6;
 		}
-#line 6970 "y.tab.c" /* yacc.c:1646  */
+#line 6971 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 244:
-#line 3583 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3584 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = ((yyvsp[-1].itemptr)->i_value & 0177400) | 6;
 		}
-#line 6978 "y.tab.c" /* yacc.c:1646  */
+#line 6979 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 245:
-#line 3588 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3589 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_number_check((yyvsp[0].exprptr));
 			disp = (yyvsp[0].exprptr)->e_value;
@@ -6986,250 +6987,250 @@ yyreduce:
 			if (disp > 127 || disp < -128)
 				err[vflag]++;
 		}
-#line 6990 "y.tab.c" /* yacc.c:1646  */
+#line 6991 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 248:
-#line 3602 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3603 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { if ((yyvsp[0].ival) & 1) err[gflag]++; (yyval.ival) = (yyvsp[0].ival) << 3; }
-#line 6996 "y.tab.c" /* yacc.c:1646  */
+#line 6997 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 249:
-#line 3604 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3605 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = (yyvsp[0].itemptr)->i_value; }
-#line 7002 "y.tab.c" /* yacc.c:1646  */
+#line 7003 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 250:
-#line 3608 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3609 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 7010 "y.tab.c" /* yacc.c:1646  */
+#line 7011 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 251:
-#line 3613 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3614 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 7018 "y.tab.c" /* yacc.c:1646  */
+#line 7019 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 252:
-#line 3618 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3619 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = 060;
 		}
-#line 7026 "y.tab.c" /* yacc.c:1646  */
+#line 7027 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 254:
-#line 3625 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3626 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { if ((yyvsp[0].ival) & 1) err[gflag]++; (yyval.ival) = (yyvsp[0].ival) << 3; }
-#line 7032 "y.tab.c" /* yacc.c:1646  */
+#line 7033 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 255:
-#line 3627 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3628 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.ival) = (yyvsp[0].itemptr)->i_value; }
-#line 7038 "y.tab.c" /* yacc.c:1646  */
+#line 7039 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 256:
-#line 3631 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3632 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 7046 "y.tab.c" /* yacc.c:1646  */
+#line 7047 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 257:
-#line 3636 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3637 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 7054 "y.tab.c" /* yacc.c:1646  */
+#line 7055 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 259:
-#line 3644 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3645 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 7062 "y.tab.c" /* yacc.c:1646  */
+#line 7063 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 260:
-#line 3650 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3651 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 7070 "y.tab.c" /* yacc.c:1646  */
+#line 7071 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 261:
-#line 3655 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3656 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 7078 "y.tab.c" /* yacc.c:1646  */
+#line 7079 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 263:
-#line 3663 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3664 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 7086 "y.tab.c" /* yacc.c:1646  */
+#line 7087 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 264:
-#line 3669 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3670 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.ival) = (yyvsp[0].itemptr)->i_value;
 		}
-#line 7094 "y.tab.c" /* yacc.c:1646  */
+#line 7095 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 265:
-#line 3674 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3675 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	(yyval.ival) = 030;	}
-#line 7100 "y.tab.c" /* yacc.c:1646  */
+#line 7101 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 268:
-#line 3683 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3684 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			emit(1, E_DATA, expr_num((yyvsp[0].ival)));
 			emit(1, E_DATA, expr_num((yyvsp[0].ival)>>8));
 		}
-#line 7109 "y.tab.c" /* yacc.c:1646  */
+#line 7110 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 269:
-#line 3689 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3690 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			cp = (yyvsp[0].cval);
 			while (*cp != '\0')
 				emit(1,E_DATA,expr_num(*cp++));
 		}
-#line 7119 "y.tab.c" /* yacc.c:1646  */
+#line 7120 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 270:
-#line 3696 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3697 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if (is_number((yyvsp[0].exprptr)) && ((yyvsp[0].exprptr)->e_value < -128 || (yyvsp[0].exprptr)->e_value > 255))
 				err[vflag]++;
 			emit(1, E_DATA, (yyvsp[0].exprptr));
 		}
-#line 7129 "y.tab.c" /* yacc.c:1646  */
+#line 7130 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 273:
-#line 3713 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3714 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[0].exprptr)->e_value < -32768 || (yyvsp[0].exprptr)->e_value > 65535) {
 				err[vflag]++;
 			}
 			emit(2, E_DATA, (yyvsp[0].exprptr));
 		}
-#line 7140 "y.tab.c" /* yacc.c:1646  */
+#line 7141 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 276:
-#line 3730 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3731 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			// Can't check overflow as I only have 32 bit ints.
 			emit(4, E_DATA, (yyvsp[0].exprptr));
 		}
-#line 7149 "y.tab.c" /* yacc.c:1646  */
+#line 7150 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 278:
-#line 3742 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3743 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_num((yyvsp[0].ival));
 		}
-#line 7157 "y.tab.c" /* yacc.c:1646  */
+#line 7158 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 281:
-#line 3755 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3756 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	(yyval.exprptr) = (yyvsp[-1].exprptr);	}
-#line 7163 "y.tab.c" /* yacc.c:1646  */
+#line 7164 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 282:
-#line 3772 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3773 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_var((yyvsp[0].itemptr));
 			(yyvsp[0].itemptr)->i_uses++;
 		}
-#line 7172 "y.tab.c" /* yacc.c:1646  */
+#line 7173 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 283:
-#line 3778 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3779 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_num((yyvsp[0].ival));
 		}
-#line 7180 "y.tab.c" /* yacc.c:1646  */
+#line 7181 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 284:
-#line 3783 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3784 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_num((yyvsp[0].ival));
 		}
-#line 7188 "y.tab.c" /* yacc.c:1646  */
+#line 7189 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 285:
-#line 3788 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3789 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_var((yyvsp[0].itemptr));
 		}
-#line 7196 "y.tab.c" /* yacc.c:1646  */
+#line 7197 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 286:
-#line 3793 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3794 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_var((yyvsp[0].itemptr));
 		}
-#line 7204 "y.tab.c" /* yacc.c:1646  */
+#line 7205 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 287:
-#line 3798 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3799 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_var((yyvsp[0].itemptr));
 		}
-#line 7212 "y.tab.c" /* yacc.c:1646  */
+#line 7213 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 288:
-#line 3803 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3804 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_var((yyvsp[0].itemptr));
 		}
-#line 7220 "y.tab.c" /* yacc.c:1646  */
+#line 7221 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 289:
-#line 3808 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3809 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_num(dollarsign + emitptr - emitbuf);
 			(yyval.exprptr)->e_scope = segment;
 		}
-#line 7229 "y.tab.c" /* yacc.c:1646  */
+#line 7230 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 290:
-#line 3814 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3815 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_alloc();
 			(yyval.exprptr)->e_token = 'u';
@@ -7243,11 +7244,11 @@ yyreduce:
 				errwarn(uflag, detail);
 			}
 		}
-#line 7247 "y.tab.c" /* yacc.c:1646  */
+#line 7248 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 291:
-#line 3829 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3830 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_alloc();
 			(yyval.exprptr)->e_token = 'm';
@@ -7258,265 +7259,265 @@ yyreduce:
 			// "var set var+1" to function.
 			(yyval.exprptr)->e_value = (yyvsp[0].itemptr)->i_value;
 		}
-#line 7262 "y.tab.c" /* yacc.c:1646  */
+#line 7263 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 292:
-#line 3840 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3841 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { raw = 2; }
-#line 7268 "y.tab.c" /* yacc.c:1646  */
+#line 7269 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 293:
-#line 3841 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3842 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_num(tempbuf[0] ? -1 : 0);
 		}
-#line 7276 "y.tab.c" /* yacc.c:1646  */
+#line 7277 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 294:
-#line 3844 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3845 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '+', (yyvsp[0].exprptr)); }
-#line 7282 "y.tab.c" /* yacc.c:1646  */
+#line 7283 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 295:
-#line 3845 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3846 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '-', (yyvsp[0].exprptr)); }
-#line 7288 "y.tab.c" /* yacc.c:1646  */
+#line 7289 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 296:
-#line 3846 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3847 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '/', (yyvsp[0].exprptr)); }
-#line 7294 "y.tab.c" /* yacc.c:1646  */
+#line 7295 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 297:
-#line 3847 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3848 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '*', (yyvsp[0].exprptr)); }
-#line 7300 "y.tab.c" /* yacc.c:1646  */
+#line 7301 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 298:
-#line 3848 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3849 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '%', (yyvsp[0].exprptr)); }
-#line 7306 "y.tab.c" /* yacc.c:1646  */
+#line 7307 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 299:
-#line 3849 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3850 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '&', (yyvsp[0].exprptr)); }
-#line 7312 "y.tab.c" /* yacc.c:1646  */
+#line 7313 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 300:
-#line 3850 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3851 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '&', (yyvsp[0].exprptr)); }
-#line 7318 "y.tab.c" /* yacc.c:1646  */
+#line 7319 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 301:
-#line 3851 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3852 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '|', (yyvsp[0].exprptr)); }
-#line 7324 "y.tab.c" /* yacc.c:1646  */
+#line 7325 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 302:
-#line 3852 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3853 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '|', (yyvsp[0].exprptr)); }
-#line 7330 "y.tab.c" /* yacc.c:1646  */
+#line 7331 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 303:
-#line 3853 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3854 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '^', (yyvsp[0].exprptr)); }
-#line 7336 "y.tab.c" /* yacc.c:1646  */
+#line 7337 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 304:
-#line 3854 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3855 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '^', (yyvsp[0].exprptr)); }
-#line 7342 "y.tab.c" /* yacc.c:1646  */
+#line 7343 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 305:
-#line 3855 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3856 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), SHL, (yyvsp[0].exprptr)); }
-#line 7348 "y.tab.c" /* yacc.c:1646  */
+#line 7349 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 306:
-#line 3856 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3857 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), SHR, (yyvsp[0].exprptr)); }
-#line 7354 "y.tab.c" /* yacc.c:1646  */
+#line 7355 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 307:
-#line 3857 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3858 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '<', (yyvsp[0].exprptr)); }
-#line 7360 "y.tab.c" /* yacc.c:1646  */
+#line 7361 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 308:
-#line 3858 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3859 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '<', (yyvsp[0].exprptr)); }
-#line 7366 "y.tab.c" /* yacc.c:1646  */
+#line 7367 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 309:
-#line 3859 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3860 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '=', (yyvsp[0].exprptr)); }
-#line 7372 "y.tab.c" /* yacc.c:1646  */
+#line 7373 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 310:
-#line 3860 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3861 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '=', (yyvsp[0].exprptr)); }
-#line 7378 "y.tab.c" /* yacc.c:1646  */
+#line 7379 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 311:
-#line 3861 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3862 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '>', (yyvsp[0].exprptr)); }
-#line 7384 "y.tab.c" /* yacc.c:1646  */
+#line 7385 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 312:
-#line 3862 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3863 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '>', (yyvsp[0].exprptr)); }
-#line 7390 "y.tab.c" /* yacc.c:1646  */
+#line 7391 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 313:
-#line 3863 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3864 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), LE, (yyvsp[0].exprptr)); }
-#line 7396 "y.tab.c" /* yacc.c:1646  */
+#line 7397 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 314:
-#line 3864 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3865 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), NE, (yyvsp[0].exprptr)); }
-#line 7402 "y.tab.c" /* yacc.c:1646  */
+#line 7403 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 315:
-#line 3865 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3866 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), GE, (yyvsp[0].exprptr)); }
-#line 7408 "y.tab.c" /* yacc.c:1646  */
+#line 7409 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 316:
-#line 3866 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3867 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), ANDAND, (yyvsp[0].exprptr)); }
-#line 7414 "y.tab.c" /* yacc.c:1646  */
+#line 7415 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 317:
-#line 3867 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3868 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), OROR, (yyvsp[0].exprptr)); }
-#line 7420 "y.tab.c" /* yacc.c:1646  */
+#line 7421 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 318:
-#line 3869 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3870 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '+', (yyvsp[0].exprptr)); }
-#line 7426 "y.tab.c" /* yacc.c:1646  */
+#line 7427 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 319:
-#line 3870 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3871 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '-', (yyvsp[0].exprptr)); }
-#line 7432 "y.tab.c" /* yacc.c:1646  */
+#line 7433 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 320:
-#line 3871 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3872 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '/', (yyvsp[0].exprptr)); }
-#line 7438 "y.tab.c" /* yacc.c:1646  */
+#line 7439 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 321:
-#line 3872 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3873 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '*', (yyvsp[0].exprptr)); }
-#line 7444 "y.tab.c" /* yacc.c:1646  */
+#line 7445 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 322:
-#line 3873 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3874 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '%', (yyvsp[0].exprptr)); }
-#line 7450 "y.tab.c" /* yacc.c:1646  */
+#line 7451 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 323:
-#line 3874 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3875 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '&', (yyvsp[0].exprptr)); }
-#line 7456 "y.tab.c" /* yacc.c:1646  */
+#line 7457 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 324:
-#line 3875 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3876 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '|', (yyvsp[0].exprptr)); }
-#line 7462 "y.tab.c" /* yacc.c:1646  */
+#line 7463 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 325:
-#line 3876 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3877 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '^', (yyvsp[0].exprptr)); }
-#line 7468 "y.tab.c" /* yacc.c:1646  */
+#line 7469 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 326:
-#line 3877 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3878 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), SHL, (yyvsp[0].exprptr)); }
-#line 7474 "y.tab.c" /* yacc.c:1646  */
+#line 7475 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 327:
-#line 3878 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3879 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), SHR, (yyvsp[0].exprptr)); }
-#line 7480 "y.tab.c" /* yacc.c:1646  */
+#line 7481 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 328:
-#line 3879 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3880 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '<', (yyvsp[0].exprptr)); }
-#line 7486 "y.tab.c" /* yacc.c:1646  */
+#line 7487 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 329:
-#line 3880 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3881 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '=', (yyvsp[0].exprptr)); }
-#line 7492 "y.tab.c" /* yacc.c:1646  */
+#line 7493 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 330:
-#line 3881 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3882 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), '>', (yyvsp[0].exprptr)); }
-#line 7498 "y.tab.c" /* yacc.c:1646  */
+#line 7499 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 331:
-#line 3882 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3883 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), LE, (yyvsp[0].exprptr)); }
-#line 7504 "y.tab.c" /* yacc.c:1646  */
+#line 7505 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 332:
-#line 3883 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3884 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), NE, (yyvsp[0].exprptr)); }
-#line 7510 "y.tab.c" /* yacc.c:1646  */
+#line 7511 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 333:
-#line 3884 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3885 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { (yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), GE, (yyvsp[0].exprptr)); }
-#line 7516 "y.tab.c" /* yacc.c:1646  */
+#line 7517 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 334:
-#line 3887 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3888 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			if ((yyvsp[0].exprptr)->e_value < 0) {
 				(yyvsp[0].exprptr)->e_value = -(yyvsp[0].exprptr)->e_value;
@@ -7525,11 +7526,11 @@ yyreduce:
 			else
 				(yyval.exprptr) = expr_mk((yyvsp[-2].exprptr), SHL, (yyvsp[0].exprptr));
 		}
-#line 7529 "y.tab.c" /* yacc.c:1646  */
+#line 7530 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 335:
-#line 3897 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3898 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_number_check((yyvsp[-4].exprptr));
 			if ((yyvsp[-4].exprptr)->e_value) {
@@ -7542,69 +7543,69 @@ yyreduce:
 			}
 			expr_free((yyvsp[-4].exprptr));
 		}
-#line 7546 "y.tab.c" /* yacc.c:1646  */
+#line 7547 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 336:
-#line 3911 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3912 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	(yyval.exprptr) = (yyvsp[-1].exprptr);	}
-#line 7552 "y.tab.c" /* yacc.c:1646  */
+#line 7553 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 337:
-#line 3914 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3915 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	(yyval.exprptr) = expr_op((yyvsp[0].exprptr), '~', 0, ~(yyvsp[0].exprptr)->e_value);	}
-#line 7558 "y.tab.c" /* yacc.c:1646  */
+#line 7559 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 338:
-#line 3917 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3918 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	(yyval.exprptr) = expr_op((yyvsp[0].exprptr), '~', 0, ~(yyvsp[0].exprptr)->e_value);	}
-#line 7564 "y.tab.c" /* yacc.c:1646  */
+#line 7565 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 339:
-#line 3920 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3921 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	(yyval.exprptr) = expr_op((yyvsp[0].exprptr), '!', 0, !(yyvsp[0].exprptr)->e_value * trueval);	}
-#line 7570 "y.tab.c" /* yacc.c:1646  */
+#line 7571 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 340:
-#line 3923 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3924 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	(yyval.exprptr) = (yyvsp[0].exprptr); /* no effect */	}
-#line 7576 "y.tab.c" /* yacc.c:1646  */
+#line 7577 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 341:
-#line 3926 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3927 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	(yyval.exprptr) = (yyvsp[0].exprptr); /* no effect */	}
-#line 7582 "y.tab.c" /* yacc.c:1646  */
+#line 7583 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 342:
-#line 3929 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3930 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	(yyval.exprptr) = expr_op((yyvsp[0].exprptr), '-', 0, -(yyvsp[0].exprptr)->e_value);	}
-#line 7588 "y.tab.c" /* yacc.c:1646  */
+#line 7589 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 343:
-#line 3932 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3933 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	(yyval.exprptr) = expr_op((yyvsp[0].exprptr), '-', 0, -(yyvsp[0].exprptr)->e_value);	}
-#line 7594 "y.tab.c" /* yacc.c:1646  */
+#line 7595 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 344:
-#line 3935 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3936 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_reloc_check((yyvsp[0].exprptr));
 			(yyval.exprptr) = expr_num(tstatesum[phaseaddr((yyvsp[0].exprptr)->e_value)]);
 			expr_free((yyvsp[0].exprptr));
 		}
-#line 7604 "y.tab.c" /* yacc.c:1646  */
+#line 7605 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 345:
-#line 3942 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3943 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			int low;
 			expr_reloc_check((yyvsp[0].exprptr));
@@ -7612,11 +7613,11 @@ yyreduce:
 			(yyval.exprptr) = expr_num(low);
 			expr_free((yyvsp[0].exprptr));
 		}
-#line 7616 "y.tab.c" /* yacc.c:1646  */
+#line 7617 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 346:
-#line 3951 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3952 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			int high;
 			expr_reloc_check((yyvsp[0].exprptr));
@@ -7624,53 +7625,53 @@ yyreduce:
 			(yyval.exprptr) = expr_num(high);
 			expr_free((yyvsp[0].exprptr));
 		}
-#line 7628 "y.tab.c" /* yacc.c:1646  */
+#line 7629 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 347:
-#line 3960 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3961 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			expr_reloc_check((yyvsp[0].exprptr));
 			(yyval.exprptr) = expr_num(ocfsum[phaseaddr((yyvsp[0].exprptr)->e_value)]);
 			expr_free((yyvsp[0].exprptr));
 		}
-#line 7638 "y.tab.c" /* yacc.c:1646  */
+#line 7639 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 348:
-#line 3967 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3968 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_op((yyvsp[0].exprptr), LOW, 0, (yyvsp[0].exprptr)->e_value & 0xff);
 		}
-#line 7646 "y.tab.c" /* yacc.c:1646  */
+#line 7647 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 349:
-#line 3972 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3973 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_op((yyvsp[0].exprptr), LOW, 0, (yyvsp[0].exprptr)->e_value & 0xff);
 		}
-#line 7654 "y.tab.c" /* yacc.c:1646  */
+#line 7655 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 350:
-#line 3977 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3978 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_op((yyvsp[0].exprptr), HIGH, 0, ((yyvsp[0].exprptr)->e_value >> 8) & 0xff);
 		}
-#line 7662 "y.tab.c" /* yacc.c:1646  */
+#line 7663 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 351:
-#line 3982 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 3983 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {
 			(yyval.exprptr) = expr_op((yyvsp[0].exprptr), HIGH, 0, ((yyvsp[0].exprptr)->e_value >> 8) & 0xff);
 		}
-#line 7670 "y.tab.c" /* yacc.c:1646  */
+#line 7671 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 359:
-#line 4005 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 4006 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     { int i;
 		if (expptr >= MAXEXP)
 			error("Macro expansion level too deep");
@@ -7680,35 +7681,35 @@ yyreduce:
 			est2[i].param = 0;
 		arg_start();
 	}
-#line 7684 "y.tab.c" /* yacc.c:1646  */
+#line 7685 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 360:
-#line 4018 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 4019 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	arg_start();	}
-#line 7690 "y.tab.c" /* yacc.c:1646  */
+#line 7691 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 361:
-#line 4022 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 4023 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	arg_reset();	}
-#line 7696 "y.tab.c" /* yacc.c:1646  */
+#line 7697 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 362:
-#line 4026 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 4027 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	if (mras) mras_undecl_ok = 1; }
-#line 7702 "y.tab.c" /* yacc.c:1646  */
+#line 7703 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 363:
-#line 4030 "third_party/zmac/zmac.y" /* yacc.c:1646  */
+#line 4031 "third_party/zmac/zmac.y" /* yacc.c:1646  */
     {	if (mras) mras_undecl_ok = 0; }
-#line 7708 "y.tab.c" /* yacc.c:1646  */
+#line 7709 "y.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 7712 "y.tab.c" /* yacc.c:1646  */
+#line 7713 "y.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -7936,7 +7937,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 4033 "third_party/zmac/zmac.y" /* yacc.c:1906  */
+#line 4034 "third_party/zmac/zmac.y" /* yacc.c:1906  */
 
 /*extern int	yylval;*/
 
@@ -9779,12 +9780,12 @@ int main(int argc, char *argv[])
 		}
 
 		if (strcmp(argv[i], "--rel") == 0) {
-			relopt = 6;
+			relsymlen = 6;
 			continue;
 		}
 
 		if (strcmp(argv[i], "--rel7") == 0) {
-			relopt = 7;
+			relsymlen = 7;
 			continue;
 		}
 
