@@ -1,0 +1,8 @@
+; The supervisor's raw interrupt handler at 0x0038.
+
+	extern SIRQ
+
+	di
+	call SIRQ
+	ei
+	reti

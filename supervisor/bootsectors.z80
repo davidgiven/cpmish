@@ -1,0 +1,63 @@
+; The NC200 boots by looking at a warped FAT file system on the disk (mutated
+; in very specific ways; see;
+; http://cowlark.com/2017-12-04-nc200-reverse-engineering). If it finds an
+; AUTO.PRG file on it, it'll load it at 0x4000 and run it.
+;
+; However, because the file system image is mostly empty, we abuse it by
+; packing our supervisor into the cracks. So, once the boot block is loaded,
+; we then read the entire cylinder (both heads) into memory and that's our
+; supervisor. That will then cold-start CP/M by loading all of cylinder 1
+; into memory.
+
+fakeorg macro pos
+		ds pos - $
+	endm
+
+	extern STARTUP
+
+; The main startup vector.
+
+	fakeorg 0x000
+    jp STARTUP
+
+; Sector 0: the main FAT boot sector.
+
+	fakeorg 0x003
+	db "NCBOOT "
+
+    ; BIOS parameter block
+        fakeorg 0x00b
+        dw 512  ; bytes per sector
+        db 2    ; sectors per cluster
+        dw 2    ; reserved sectors
+        db 2    ; FAT count
+        dw 0x70 ; number of root directory entries
+        dw 18   ; filesystem size, in sectors, not including the first two
+        db 0xf9 ; media byte
+        dw 3    ; sectors per FAT
+        dw 9    ; number of sectors per track
+        dw 2    ; number of heads
+        dw 0    ; number of hidden sectors
+
+; Interrupt vector
+	fakeorg 0x038
+
+        ; Boot signature
+	fakeorg 0x1fe
+        db 0x55, 0xaa
+
+; Sector 1: the magic numbers needed to make the disk bootable.
+
+	fakeorg 0x20b
+        dw 512  ; bytes per sector
+        db 2    ; sectors per cluster
+        dw 0    ; reserved sectors
+        db 2    ; FAT count
+        dw 0x70 ; number of root directory entries
+        dw 18   ; filesystem size, in sectors, not including the first two
+        db 0xf9 ; media byte
+        dw 3    ; sectors per FAT
+        dw 9    ; number of sectors per track
+        dw 2    ; number of heads
+        dw 0    ; number of hidden sectors
+

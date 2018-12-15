@@ -10,8 +10,8 @@
 ;
 ; On exit, the system call jumps to syscall_exit with the result in HL.
 
-label call_supervisor_from_bios
-    ld sp, supervisor_stack_end
+label SYSIN
+    ld sp, SYSSTK
     ei
     jp (hl)
 
@@ -19,18 +19,18 @@ syscall_exit:
     di
     ld a, USER3_BANK
     out (PORT_BANK3), a
-    jp return_to_bios_from_supervisor
+    jp SYSOUT
 
 ; Warm boot: reload the CCP, BDOS and BIOS.
 
-label sys_wboot
+label SWBOOT
     call cache_evict_all
     jp warmboot
     ; does not return
 
 ; Read console: returns char in A.
 
-label sys_conin
+label SCONIN
     call cache_flush_unwritten
     ld hl, disk_activity_flag
     ld (hl), 0
@@ -43,7 +43,7 @@ label sys_conin
 
 ; Write console: writes char in A.
 
-label sys_conout
+label SCONOUT
     call tty_undraw_cursor
 
     ld a, c
@@ -51,13 +51,13 @@ label sys_conout
     jr syscall_exit
 
 ; Test console: returns 0xff in A if console has characters to read.
-label sys_const
+label SCONST
     ld hl, disk_activity_flag
     bit 0, (hl)
     ld (hl), 0
-    jr nz, 1f                   ; only flush buffers if there *hasn't* been activity
+    jr nz, .1                   ; only flush buffers if there *hasn't* been activity
     call cache_flush_unwritten
-1:
+.1:
     call tty_draw_cursor
     call kbd_test_pending_key
     ld l, 0
@@ -67,18 +67,18 @@ label sys_const
     jr syscall_exit
 
 ; Read 128-byte CP/M sector.
-label sys_read128
-    ld a, (bios_selected_disk)
+label SREAD
+    ld a, (BDISK)
     or a
     jr nz, general_purpose_failure
 
     ld hl, disk_activity_flag
     ld (hl), 1
-    ld hl, bios_selected_track
+    ld hl, BTRACK
     ld d, (hl)
-    ld hl, bios_selected_sector
+    ld hl, BSECTOR
     ld e, (hl)
-    ld hl, (bios_selected_dma)
+    ld hl, (BDMA)
     call cache_read128
     ld l, 0
     jr z, general_purpose_failure
@@ -89,28 +89,28 @@ general_purpose_failure:
     jr syscall_exit
     
 ; Write 128-byte CP/M sector.
-label sys_write128
-    ld a, (bios_selected_disk)
+label SWRITE
+    ld a, (BDISK)
     or a
     jr nz, general_purpose_failure
 
     ld hl, disk_activity_flag
     ld (hl), 1
-    ld hl, bios_selected_track
+    ld hl, BTRACK
     ld d, (hl)
-    ld hl, bios_selected_sector
+    ld hl, BSECTOR
     ld e, (hl)
-    ld hl, (bios_selected_dma)
+    ld hl, (BDMA)
     call cache_write128
     ld l, 0
     jr z, general_purpose_failure
     jp syscall_exit
 
 ; Miscellaneous unsupported system calls.
-label sys_list
-label sys_listst
-label sys_punch
-label sys_reader
+label SLIST
+label SLISTST
+label SPUNCH
+label SREADER
     ld l, 0
     jp syscall_exit
 

@@ -1,0 +1,13 @@
+; BIOS parameter block 1, appearing in the real boot sector at 0x00b.
+
+	dw 512  ; bytes per sector
+	db 2    ; sectors per cluster
+	dw 2    ; reserved sectors
+	db 2    ; FAT count
+	dw 0x70 ; number of root directory entries
+	dw 18   ; filesystem size, in sectors, not including the first two
+	db 0xf9 ; media byte
+	dw 3    ; sectors per FAT
+	dw 9    ; number of sectors per track
+	dw 2    ; number of heads
+	dw 0    ; number of hidden sectors

@@ -11,62 +11,54 @@ POWER_PORT:      equ 0x70
 IRQ_STATUS_PORT: equ 0x90
 KBD_SCAN_PORT:   equ 0xb0
 
-; WARNING: registers must be preserved!
-safeorg 0x0038
-raw_interrupt_handler:
-    di
-    call supervisor_interrupt_handler
-    ei
-    reti
-
 ; This routine actually does the work; it's called by the supervisor's own
 ; interrupt handler and also the one proxied through the BIOS.
 
-label supervisor_interrupt_handler
-    push af
-    push hl
-    push bc
-    push de
+label SIRQ
+		push af
+		push hl
+		push bc
+		push de
 
-    ; Status port bits are *zero* to indicate a pending interrupt.
+		; Status port bits are *zero* to indicate a pending interrupt.
 
-    in a, (IRQ_STATUS_PORT)
-    out (IRQ_STATUS_PORT), a        ; clear pending interrupts
+		in a, (IRQ_STATUS_PORT)
+		out (IRQ_STATUS_PORT), a        ; clear pending interrupts
 
-    bit IRQ_POWER, a
-    push af
-    call z, power_interrupt_handler
-    pop af
+		bit IRQ_POWER, a
+		push af
+		call z, power_interrupt_handler
+		pop af
 
-    bit IRQ_KEYBOARD, a
-    jr nz, 1f
-    call keyboard_interrupt_handler
-    call fd765_motor_interrupt_handler
-1:
-    pop de
-    pop bc
-    pop hl
-    pop af
-    ret
+		bit IRQ_KEYBOARD, a
+		jr nz, .1
+		call keyboard_interrupt_handler
+		call fd765_motor_interrupt_handler
+.1:
+		pop de
+		pop bc
+		pop hl
+		pop af
+		ret
     
 power_interrupt_handler:
-    xor a
-    out (0x70), a
-    ; does not return
+		xor a
+		out (0x70), a
+		; does not return
 
 keyboard_interrupt_handler:
-    ; The keyboard handler is also the timer interrupt, so increment that.
-    ld hl, (.data.approximate_time)
-    inc hl
-    ld (.data.approximate_time), hl
+		; The keyboard handler is also the timer interrupt, so increment that.
+		ld hl, (data.approximate_time)
+		inc hl
+		ld (data.approximate_time), hl
 
-    ld hl, .data.keyboard_bitmap
-    ld c, KBD_SCAN_PORT
-2:
-    in a, (c)
-    ld b, a
-    xor (hl)
-    jr z, 3f                ; skip loop if no bits changed state
+		ld hl, data.keyboard_bitmap
+		ld c, KBD_SCAN_PORT
+.2:
+		in a, (c)
+		ld b, a
+		xor (hl)
+		jr z, .3                ; skip loop if no bits changed state
 
         ; This byte has changed status. a tells us which.
         push hl
@@ -74,9 +66,9 @@ keyboard_interrupt_handler:
         ld h, a             ; h = change bitset
         ld l, b             ; l = pressed bitset
         ld b, 8
-        1:
+        .1:
             add hl, hl          ; shift h and l left one bit
-            jr nc, 4f
+            jr nc, .4
                 ; Compute the keycode.
 
                 ld a, c
@@ -88,33 +80,33 @@ keyboard_interrupt_handler:
                 dec a
 
                 bit 0, h            ; set z if key pressed
-                jr nz, 5f
+                jr nz, .5
                 or 0x80
-            5:
+            .5:
                 push bc
                 push hl
                 call process_keyboard_event
                 pop hl
                 pop bc
-            4:
-        djnz 1b
+            .4:
+        djnz .1
         pop hl
 
-3:
-    inc hl
-    inc c
-    ld a, KBD_SCAN_PORT+10
-    cp c
-    jr nz, 2b
-    ret
+.3:
+		inc hl
+		inc c
+		ld a, KBD_SCAN_PORT+10
+		cp c
+		jr nz, .2
+		ret
 
 init_interrupts:
-    ld a, 1<<IRQ_KEYBOARD | 1<<IRQ_POWER
-    out (IRQ_MASK_PORT), a
-    im 1
-    call keyboard_interrupt_handler ; scan the keyboard now
-    xor a
-    ld (.data.keyboard_rdptr), a ; flush the keyboard event buffer
-    ld (.data.keyboard_wrptr), a
-    ei
-    ret
+		ld a, 1<<IRQ_KEYBOARD | 1<<IRQ_POWER
+		out (IRQ_MASK_PORT), a
+		im 1
+		call keyboard_interrupt_handler ; scan the keyboard now
+		xor a
+		ld (data.keyboard_rdptr), a ; flush the keyboard event buffer
+		ld (data.keyboard_wrptr), a
+		ei
+		ret

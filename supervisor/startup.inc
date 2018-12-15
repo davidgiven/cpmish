@@ -1,11 +1,11 @@
 ; The bootstrap has just loaded us and run us. We're at 0x0000, interrupts are
 ; disabled, and the world is ours to play with.
 
-startup:
-    ld sp, supervisor_stack_end
+label STARTUP
+    ld sp, SYSSTK
     call init_interrupts
     call tty_init
-    ld hl, .str.banner
+    ld hl, str.banner
     call tty_puts
     ; fall through
 coldboot:
@@ -44,13 +44,13 @@ warmboot:
     ld (0x4000 + BDOSCALL+1), hl
 
     ld (0x4000 + 0x0038), a     ; Interrupt handler
-    ld hl, bios_interrupt_handler
+    ld hl, BIRQ
     ld (0x4000 + 0x0039), hl
 
     ; Initialise BIOS-y things.
 
     ld hl, 0x0080
-    ld (bios_selected_dma), hl
+    ld (BDMA), hl
     
     ; Now jump to the BIOS so it can page in the rest of userspace
     ; and start the CCP.
@@ -58,15 +58,17 @@ warmboot:
     jp BOOT
 
 bootfailure:
-    ld hl, .str.insert_disk
+    ld hl, str.insert_disk
     call tty_puts
     call kbd_get_next_key
     jr warmboot
     
-.str.insert_disk: db "[Cannot load CP/M, please insert a system disk]", 10, 0
+str.insert_disk:
+		db "[Cannot load CP/M, please insert a system disk]", 10, 0
 
-.str.banner: db "NC200 CP/M Supervisor (C) 2018 David Given", 10, 0
+str.banner:
+		db "NC200 CP/M Supervisor (C) 2018 David Given", 10, 0
 
 supervisor_stack:
-    ds 64
-label supervisor_stack_end
+		ds 64
+label SYSSTK

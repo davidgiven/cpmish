@@ -6,6 +6,7 @@
     extern SCONIN
     extern SCONOUT
     extern SCONST
+    extern SIRQ
     extern SLIST
     extern SLISTST
     extern SPUNCH
@@ -14,7 +15,6 @@
     extern SWBOOT
     extern SWRITE
     extern SYSIN
-    extern SYSIRQ
     extern SYSSTK
 
     cseg
@@ -61,7 +61,7 @@ label SECTRAN
 ; and we can assume the stack is valid (because interrupts won't work
 ; otherwise).
 
-label bios_interrupt_handler
+label BIRQ
     di
     push af
     ld (saved_stack), sp
@@ -69,7 +69,7 @@ label bios_interrupt_handler
     
     ld a, SUPERVISOR_BANK
     out (PORT_BANK0), a
-    call SYSIRQ
+    call SIRQ
     ld a, USER0_BANK
     out (PORT_BANK0), a
     

@@ -1,12 +1,12 @@
-VIDEORAM_BASE  = 0x2000
-VIDEORAM_SIZE  = 0x2000
-FONT_HEIGHT    = 7
-SCREEN_WIDTH   = 480 / 6
-SCREEN_HEIGHT  = 128 / FONT_HEIGHT
-BYTES_PER_SCANLINE = 64
-BYTES_PER_LINE = BYTES_PER_SCANLINE * FONT_HEIGHT
-LAST_LINE      = VIDEORAM_BASE + (SCREEN_HEIGHT-1) * BYTES_PER_LINE
-VIDEORAM_END   = LAST_LINE + BYTES_PER_LINE
+VIDEORAM_BASE      equ 0x2000
+VIDEORAM_SIZE      equ 0x2000
+FONT_HEIGHT        equ 7
+SCREEN_WIDTH       equ 480 / 6
+SCREEN_HEIGHT      equ 128 / FONT_HEIGHT
+BYTES_PER_SCANLINE equ 64
+BYTES_PER_LINE     equ BYTES_PER_SCANLINE * FONT_HEIGHT
+LAST_LINE          equ VIDEORAM_BASE + (SCREEN_HEIGHT-1) * BYTES_PER_LINE
+VIDEORAM_END       equ LAST_LINE + BYTES_PER_LINE
 
 cursorx:       db 0
 cursory:       db 0
@@ -130,11 +130,11 @@ char_mask_table:
     dw 0xfc0f           ; 1111.1100.0000.1111
 
 line_address_table:
-    _y = 0
-    .rept SCREEN_HEIGHT
-        dw VIDEORAM_BASE + _y
-        _y = _y + BYTES_PER_LINE
-    .endr
+	line_no = 0
+    rept SCREEN_HEIGHT
+        dw VIDEORAM_BASE + line_no
+        line_no = line_no + BYTES_PER_LINE
+    endm
 
 ; As above, but calculates the address of the beginning of the current line.
 ; Returns the address in HL (as well as updating L_cursor_address).
@@ -167,10 +167,10 @@ tty_draw_cursor:
     push hl
     ld hl, cursor_shown
     bit 0, (hl)
-    jr nz, 1f
+    jr nz, .1
     set 0, (hl)
     call tty_xor_draw_cursor
-1:
+.1:
     pop hl
     ret
 
@@ -178,10 +178,10 @@ tty_undraw_cursor:
     push hl
     ld hl, cursor_shown
     bit 0, (hl)
-    jr z, 1f
+    jr z, .1
     res 0, (hl)
     call tty_xor_draw_cursor
-1:
+.1:
     pop hl
     ret
 
@@ -236,16 +236,16 @@ tty_home_cursor:
 tty_clear_to_eol:
     ld a, (cursorx)
     push af
-1:
+.1:
     ld a, (cursorx)
     cp SCREEN_WIDTH
-    jr z, 2f
+    jr z, .2
     ld a, ' '
     call tty_rawwrite
     ld hl, cursorx
     inc (hl)
-    jr 1b
-2:
+    jr .1
+.2:
     pop af
     ld (cursorx), a
     ret
@@ -334,7 +334,7 @@ tty_goto_xy:
 
 tty_insert_line:
     call tty_calculate_screen_address_of_next_line
-    jr z, 1f                    ; skip the copy if we're on the last line.
+    jr z, _clear_current_line   ; skip the copy if we're on the last line.
     ; HL is address of the *next* line of text.
 
     ; Compute the size of the area to move
@@ -347,7 +347,7 @@ tty_insert_line:
     ; BC is size-1
     lddr
 
-1:
+_clear_current_line:
     ; Clear the current line.
 
     call tty_calculate_screen_address_of_line
@@ -361,7 +361,7 @@ tty_insert_line:
 
 tty_delete_line:
     call tty_calculate_screen_address_of_next_line
-    jr z, 1b                    ; if we're on the last line, just clear it
+    jr z, _clear_current_line   ; if we're on the last line, just clear it
 
     ; Compute the size of the area to move
     call calculate_insert_delete_size
@@ -471,11 +471,11 @@ queue_command_byte:
 setresetattr:
     ld a, (commandgot)  ; B, C takes parameters
     cp 2                ; do we have enough bytes?
-    jr z, 1f            ; yes, execute command
+    jr z, .1            ; yes, execute command
     ld a, 2             ; not enough bytes read yet
     ld (commandlen), a
     ret
-1:
+.1:
 ;    ld a, (commandbuf+1)
 ;    cp '0'              ; reverse intensity
 ;    ret nz              ; don't support anything else
@@ -491,11 +491,11 @@ setresetattr:
 gotoxy:
     ld a, (commandgot)  ; = takes parameters
     cp 3                ; do we have enough bytes?
-    jr z, 1f            ; yes, execute command
+    jr z, .1            ; yes, execute command
     ld a, 3             ; not enough bytes read yet
     ld (commandlen), a
     ret
-1:
+.1:
     ld hl, commandbuf+1 ; got enough bytes; process command
     ld a, (hl)
     sub 32
@@ -552,7 +552,7 @@ tty_rawwrite:
     ld e, a
     ld d, 0
     add hl, de          ; hl = a*4 + a = a*5
-    ld de, .data.font
+    ld de, font_data
     add hl, de
     ; hl points at font data
 
@@ -622,8 +622,12 @@ draw_single_scanline:
     ; left-justified, so it's already shifted left three bits, so we want
     ; to shift by 7, 5, 3 or 1 bits respectively.
     ld (scanline_shift_amount), a
-scanline_shift_amount = . + 1
-    jr .+2              ; offset based on start of *next* instruction
+
+	phase 1
+scanline_shift_amount:
+    jr $+2              ; offset based on start of *next* instruction
+	dephase
+
     add hl, hl
     add hl, hl
     add hl, hl
@@ -670,3 +674,9 @@ tty_scroll:
     ld (hl), 0
     ldir
     ret
+
+; The font.
+
+font_data:
+	include ".obj/font.inc"
+

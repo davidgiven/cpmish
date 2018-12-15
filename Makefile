@@ -18,20 +18,45 @@ bootdisk.img: \
 	dd if=$< of=$@ bs=1K count=9
 	dd if=$< of=$@ bs=1K seek=9 skip=58 count=6
 
-$(OBJ)/supervisor.cim: \
+$(OBJ)/mammoth.cim: \
 		$(OBJ)/ld80 \
-		$(OBJ)/bios/bios.rel
+		$(OBJ)/bios/bios.rel \
+		$(OBJ)/supervisor/rootdir.rel \
+		$(OBJ)/supervisor/relauto.rel \
+		$(OBJ)/supervisor/startup.rel \
+		$(OBJ)/supervisor/sirq.rel \
+		$(OBJ)/supervisor/bpb1.rel \
+		$(OBJ)/supervisor/bpb2.rel \
+		$(OBJ)/supervisor/bootsig.rel \
+		$(OBJ)/supervisor/fat.rel \
+		$(OBJ)/supervisor/supervisor.rel \
+		$(OBJ)/third_party/zcpr1/zcpr.rel \
+		$(OBJ)/third_party/zsdos/zsdos-gp.rel
 	@mkdir -p $(dir $@)
 	$(OBJ)/ld80 \
+		-O bin \
 		-o $@ \
-		-P fd00 $(OBJ)/bios/bios.rel
+		-P 0000 $(OBJ)/supervisor/startup.rel \
+		-P 000b $(OBJ)/supervisor/bpb1.rel \
+		-P 0038 $(OBJ)/supervisor/sirq.rel \
+		-P 01fe $(OBJ)/supervisor/bootsig.rel \
+		-P 020b $(OBJ)/supervisor/bpb2.rel \
+		-P 0400 $(OBJ)/supervisor/fat.rel \
+		$(OBJ)/supervisor/supervisor.rel \
+		-P 1000 $(OBJ)/supervisor/rootdir.rel \
+		-P 1e00 $(OBJ)/supervisor/relauto.rel \
+		-P e800 $(OBJ)/third_party/zcpr1/zcpr.rel \
+		-P f000 $(OBJ)/third_party/zsdos/zsdos-gp.rel \
+		-P fe00 $(OBJ)/bios/bios.rel
 
-$(OBJ)/supervisor/supervisor.o: \
+$(OBJ)/supervisor/supervisor.rel: \
 	$(OBJ)/font.inc \
 	$(OBJ)/keyboard.inc \
-	$(OBJ)/supervisor/auto.img \
 	$(wildcard supervisor/*.inc) \
 	$(wildcard include/*.inc)
+
+$(OBJ)/supervisor/relauto.rel: \
+	$(OBJ)/supervisor/auto.cim.inc
 
 $(OBJ)/%: utils/%.c
 	@mkdir -p $(dir $@)
@@ -58,15 +83,15 @@ $(OBJ)/%.com: $(OBJ)/%.cim
 
 $(OBJ)/%.rel: %.asm $(OBJ)/zmac
 	@mkdir -p $(dir $@)
-	$(OBJ)/zmac -m --rel7 -8 $< -o $@ -o $(patsubst %.rel,%.prn,$@) -Iinclude
+	$(OBJ)/zmac --zmac -m --rel7 -8 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
 
 $(OBJ)/%.cim: %.z80 $(OBJ)/zmac $(ZMACINCLUDES)
 	@mkdir -p $(dir $@)
-	$(OBJ)/zmac -m --rel7 $< -o $@ -o $(patsubst %.rel,%.prn,$@) -Iinclude
+	$(OBJ)/zmac --zmac -m --rel7 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
 
 $(OBJ)/%.rel: %.z80 $(OBJ)/zmac $(ZMACINCLUDES)
 	@mkdir -p $(dir $@)
-	$(OBJ)/zmac -m --rel7 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
+	$(OBJ)/zmac --zmac -m --rel7 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
 
 ZMAC_OBJS = \
 	$(OBJ)/third_party/zmac/mio.o \
