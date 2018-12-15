@@ -66,12 +66,12 @@ int main(int argc, const char* argv[])
                 yy++;
             }
 
-            printf("db 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x ; char %d\n",
-                (mask >> 32) & 0xff,
-                (mask >> 24) & 0xff,
-                (mask >> 16) & 0xff,
-                (mask >> 8) & 0xff,
-                mask & 0xff,
+            printf("\tdb 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x ; char %d\n",
+                (uint32_t)((mask >> 32) & 0xff),
+                (uint32_t)((mask >> 24) & 0xff),
+                (uint32_t)((mask >> 16) & 0xff),
+                (uint32_t)((mask >> 8) & 0xff),
+                (uint32_t)(mask & 0xff),
                 c);
             c++;
         }
