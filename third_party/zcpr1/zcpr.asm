@@ -351,6 +351,8 @@ SBCD	MACRO	?N	;;STORE BC DIRECT
 ; this is no longer necessary.  ZCPR Version 4.x automatically initializes
 ; this buffer pointer in all cases.
 ;
+	public CBASE
+CBASE:
 ENTRY:
 	JMP	CPR	; Process potential default command
 	JMP	CPR1	; Do NOT process potential default command

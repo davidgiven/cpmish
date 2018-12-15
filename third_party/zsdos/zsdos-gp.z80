@@ -164,6 +164,8 @@ NXTREC  EQU     32              ; Next record number
 ; WARNING!!  Do NOT change labels or sequences of ZSDOS through ZSDOS+25H
 ;   ID string added for easy identification in running system (hfb)
 
+	public FBASE
+FBASE:
           IF  ZS
         DEFB    'ZSDOS '        ; Used in CP/M for serial number. these bytes
           ELSE                  ; are patched by INSTALOS to contain the serial

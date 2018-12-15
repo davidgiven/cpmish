@@ -5,8 +5,6 @@
 FALSE   EQU     0
 TRUE    EQU     NOT FALSE
 
-        ORG 0f000H
-
 ; Set these conditionals before assembly
 
 ;****************************************************************************
