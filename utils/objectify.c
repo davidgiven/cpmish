@@ -14,7 +14,7 @@ int main(int argc, const char* argv)
             printf("\n\tdb ");
         else
             printf(", ");
-        printf("%02xH", c);
+        printf("0x%02x", c);
 
         count = (count+1) & 7;
     }
