@@ -13,7 +13,7 @@ bootdisk.img: \
 	cpmcp -f nc200cpm $@ $(CPMTOOLS) 0:
 
  $(OBJ)/boottracks.img: \
-		$(OBJ)/mammoth.img
+		$(OBJ)/mammoth.cim
 	rm -f $@
 	dd if=$< of=$@ bs=1K count=9
 	dd if=$< of=$@ bs=1K seek=9 skip=58 count=6
