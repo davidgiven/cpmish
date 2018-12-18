@@ -35,6 +35,7 @@ struct fcb
 };
 
 static void bios_getchar(void);
+static struct fcb* fcb_at(uint16_t address);
 
 static uint16_t get_de(void)
 {
@@ -120,7 +121,7 @@ static void bios_warmboot(void)
         int fd = open(user_command_line[0], O_RDONLY);
         if (fd == -1)
                 fatal("couldn't open program: %s", strerror(errno));
-        read(fd, &ram[0x0100], 0xFE00);
+        read(fd, &ram[0x0100], FBASE);
         close(fd);
 
 		int offset = 1;
@@ -143,6 +144,42 @@ static void bios_warmboot(void)
 		}
 		ram[0x0080] = offset;
 		ram[0x0080+offset] = 0;
+
+		const char* firstword = user_command_line[1];
+		if (firstword)
+		{
+			/* Parse the word into the primary FCB at 0x005c. */
+
+			struct fcb* fcb = fcb_at(0x005c);
+			memset(fcb, 0, sizeof(struct fcb));
+			memset(fcb->filename.bytes, ' ', 11);
+		
+			offset = 0;
+			while (offset < 8)
+			{
+				uint8_t c = toupper(*firstword++);
+				if (!c)
+					break;
+				if (c == '.')
+				{
+					offset = 8;
+					while (offset < 11)
+					{
+						c = toupper(*firstword++);
+						if (!c)
+							break;
+						fcb->filename.bytes[offset++] = c;
+					}
+					break;
+				}
+				fcb->filename.bytes[offset++] = c;
+			}
+
+			if (firstword[-1] == '.')
+			{
+				offset = 8;
+			}
+		}
 	}
 }
 
