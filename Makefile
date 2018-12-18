@@ -64,15 +64,15 @@ $(OBJ)/%: utils/%.c
 
 $(OBJ)/%.o: %.c
 	@mkdir -p $(dir $@)
-	gcc -g -c $< -o $@
+	gcc -g -c $< -o $@ -I.
 
 $(OBJ)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	gcc -g -c $< -o $@
+	gcc -g -c $< -o $@ -I.
 
 $(OBJ)/%.o: $(OBJ)/%.c
 	@mkdir -p $(dir $@)
-	gcc -g -c $< -o $@ -Izmac
+	gcc -g -c $< -o $@ -Izmac -I.
 
 $(OBJ)/%.c: %.y
 	@mkdir -p $(dir $@)
@@ -138,5 +138,33 @@ $(OBJ)/%.img: $(OBJ)/%.o utils/z80.ld
 $(OBJ)/%.inc: $(OBJ)/% $(OBJ)/objectify
 	@mkdir -p $(dir $@)
 	$(OBJ)/objectify < $< > $@
+
+$(OBJ)/%.h: $(OBJ)/% $(OBJ)/objectifyc
+	@mkdir -p $(dir $@)
+	$(OBJ)/objectifyc < $< > $@
+
+$(OBJ)/emucpm.cim: \
+		$(OBJ)/ld80 \
+		$(OBJ)/third_party/zcpr1/zcpr.rel \
+		$(OBJ)/utils/emu/biosbdos.rel
+	@mkdir -p $(dir $@)
+	$(OBJ)/ld80 \
+		-O bin \
+		-o $@.big \
+		-P f700 $(OBJ)/third_party/zcpr1/zcpr.rel \
+		-P ff00 $(OBJ)/utils/emu/biosbdos.rel
+	dd if=$@.big of=$@ bs=1 skip=63232
+
+EMU_OBJS = \
+	$(OBJ)/utils/emu/biosbdos.o \
+	$(OBJ)/utils/emu/emulator.o \
+	$(OBJ)/utils/emu/fileio.o \
+	$(OBJ)/utils/emu/main.o
+$(OBJ)/emu: $(EMU_OBJS)
+	@mkdir -p $(dir $@)
+	gcc -g -o $@ $^ -lz80ex -lz80ex_dasm -lreadline
+
+$(EMU_OBJS): utils/emu/globals.h
+$(OBJ)/utils/emu/biosbdos.o: .obj/emucpm.cim.h
 
 .SECONDARY:
