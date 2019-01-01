@@ -268,7 +268,7 @@ static void cmd_bdos(void)
 		printf("break on bdos entry: %s\n", bdosbreak ? "on" : "off");
 }
 
-static void cmd_tracing(void)
+static void cmd_trace(void)
 {
 	char* w1 = strtok(NULL, " ");
 	if (w1)
@@ -334,8 +334,8 @@ static void debug(void)
 			}
 			else if (strcmp(token, "bdos") == 0)
 				cmd_bdos();
-			else if (strcmp(token, "tracing") == 0)
-				cmd_tracing();
+			else if (strcmp(token, "trace") == 0)
+				cmd_trace();
 			else
 				printf("Bad command\n");
 		}
