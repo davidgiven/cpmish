@@ -154,6 +154,12 @@ static void bios_warmboot(void)
 			memset(fcb, 0, sizeof(struct fcb));
 			memset(fcb->filename.bytes, ' ', 11);
 		
+			if (firstword[0] && (firstword[1] == ':'))
+			{
+				fcb->filename.drive = toupper(firstword[0]) - '@';
+				firstword += 2;
+			}
+
 			offset = 0;
 			while (offset < 8)
 			{
@@ -161,23 +167,22 @@ static void bios_warmboot(void)
 				if (!c)
 					break;
 				if (c == '.')
-				{
-					offset = 8;
-					while (offset < 11)
-					{
-						c = toupper(*firstword++);
-						if (!c)
-							break;
-						fcb->filename.bytes[offset++] = c;
-					}
 					break;
-				}
 				fcb->filename.bytes[offset++] = c;
 			}
 
-			if (firstword[-1] == '.')
+			if (*firstword == '.')
+				firstword++;
+			if (offset && (firstword[-1] == '.'))
 			{
 				offset = 8;
+				while (offset < 11)
+				{
+					uint8_t c = toupper(*firstword++);
+					if (!c)
+						break;
+					fcb->filename.bytes[offset++] = c;
+				}
 			}
 		}
 	}
