@@ -14,6 +14,7 @@ addons:
         packages:
         - sdcc
         - netpbm
+        - cpmtools
 
 script:
     - make

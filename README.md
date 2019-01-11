@@ -70,7 +70,7 @@ into your NC200 and power on; then press Function+R to boot.
 The hard way:
 
 - type `make`, which will generate a bootable disk image; proceed as above.
-You'll need binutils-z80 and cpmtools (and, probably, a Linux system).
+You'll need sdcc, netpbm and cpmtools (and, probably, a Linux system).
 
 **Big warning:** CP/M uses _all_ the memory in your system; if you have files
 *stored in RAM, **you will lose them**. The entire state of the machine is
