@@ -13,6 +13,7 @@ addons:
     apt:
         packages:
         - sdcc
+        - libstb-dev
 
 script:
     - make
