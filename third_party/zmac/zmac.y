@@ -210,13 +210,13 @@
 #include <unistd.h>	// just for unlink
 #endif
 
-#include "zi80dis.h"
+#include "third_party/zmac/zi80dis.h"
 
 #ifdef vax11c
 #define unlink(filename) delete(filename)
 #endif
 
-#include "mio.h"
+#include "third_party/zmac/mio.h"
 
 /*
  * DEBUG turns on pass reporting.

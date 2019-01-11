@@ -62,15 +62,15 @@ $(OBJ)/%: utils/%.c
 	@mkdir -p $(dir $@)
 	gcc -g $< -o $@ -I. -lm
 
+$(OBJ)/%.o: $(OBJ)/%.c
+	@mkdir -p $(dir $@)
+	gcc -g -c $< -o $@ -I.
+
 $(OBJ)/%.o: %.c
 	@mkdir -p $(dir $@)
 	gcc -g -c $< -o $@ -I.
 
 $(OBJ)/%.o: %.cpp
-	@mkdir -p $(dir $@)
-	gcc -g -c $< -o $@ -I.
-
-$(OBJ)/%.o: $(OBJ)/%.c
 	@mkdir -p $(dir $@)
 	gcc -g -c $< -o $@ -I.
 
