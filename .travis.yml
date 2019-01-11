@@ -13,6 +13,7 @@ addons:
     apt:
         packages:
         - sdcc
+        - netpbm
 
 script:
     - make
