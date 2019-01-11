@@ -1,0 +1,19 @@
+language: generic
+
+compiler:
+    - gcc
+
+os:
+    - linux
+
+dist:
+    - xenial
+
+addons:
+    apt:
+        packages:
+        - sdcc
+
+script:
+    - make
+
