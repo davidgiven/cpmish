@@ -175,6 +175,11 @@ mainly Cameron W. Cotrill and Harold F. Bower. This is available under the
 terms of the General Public License version 1. See the
 [third_party/zsdos/COPYING](third_party/zsdos/COPYING) file for more details.
 
+Exception: the contents of the `third_party/libstb` directory contains a
+copy of the libstb utility lobrary, mostly written by Sean Barrett. This is
+available under a combination public domain/Expat license. See the
+[third_party/libstb/COPYING](third_party/libstb/COPYING) file for more details.
+
 **Important note:** Because of the presence of the GPLd ZSDOS, this
 distribution as a whole must be treated as if it's distributable under the
 terms of the GPL. If that's a problem, swap out ZSDOS with a different BDOS

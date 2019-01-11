@@ -12,7 +12,7 @@ bootdisk.img: \
 	mkfs.cpm -f nc200cpm -b $(OBJ)/boottracks.img $@
 	cpmcp -f nc200cpm $@ $(CPMTOOLS) 0:
 
- $(OBJ)/boottracks.img: \
+$(OBJ)/boottracks.img: \
 		$(OBJ)/mammoth.cim
 	rm -f $@
 	dd if=$< of=$@ bs=1K count=9
@@ -60,7 +60,7 @@ $(OBJ)/supervisor/relauto.rel: \
 
 $(OBJ)/%: utils/%.c
 	@mkdir -p $(dir $@)
-	gcc -g $< -o $@ -lm
+	gcc -g $< -o $@ -I. -lm
 
 $(OBJ)/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -72,7 +72,7 @@ $(OBJ)/%.o: %.cpp
 
 $(OBJ)/%.o: $(OBJ)/%.c
 	@mkdir -p $(dir $@)
-	gcc -g -c $< -o $@ -Izmac -I.
+	gcc -g -c $< -o $@ -I.
 
 $(OBJ)/%.c: %.y
 	@mkdir -p $(dir $@)
@@ -85,13 +85,17 @@ $(OBJ)/%.rel: %.asm $(OBJ)/zmac
 	@mkdir -p $(dir $@)
 	$(OBJ)/zmac --zmac -m --rel7 -8 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
 
+$(OBJ)/%.rel: %.z80 $(OBJ)/zmac $(ZMACINCLUDES)
+	@mkdir -p $(dir $@)
+	$(OBJ)/zmac --zmac -m --rel7 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
+
 $(OBJ)/%.cim: %.z80 $(OBJ)/zmac $(ZMACINCLUDES)
 	@mkdir -p $(dir $@)
 	$(OBJ)/zmac --zmac -m --rel7 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
 
-$(OBJ)/%.rel: %.z80 $(OBJ)/zmac $(ZMACINCLUDES)
+$(OBJ)/%.cim: %.asm $(OBJ)/zmac $(ZMACINCLUDES)
 	@mkdir -p $(dir $@)
-	$(OBJ)/zmac --zmac -m --rel7 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
+	$(OBJ)/zmac --zmac -m --rel7 -8 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
 
 ZMAC_OBJS = \
 	$(OBJ)/third_party/zmac/mio.o \
@@ -127,14 +131,6 @@ $(OBJ)/keyboard.inc: $(OBJ)/mkkeytab
 	@mkdir -p $(dir $@)
 	$(OBJ)/mkkeytab > $@
 
-$(OBJ)/%.o: %.asm $(wildcard include/*.inc)
-	@mkdir -p $(dir $@)
-	z80-unknown-coff-as -I$(OBJ) -g -o $@ $<
-
-$(OBJ)/%.img: $(OBJ)/%.o utils/z80.ld
-	@mkdir -p $(dir $@)
-	z80-unknown-coff-ld -T utils/z80.ld -o $@ $<
-
 $(OBJ)/%.inc: $(OBJ)/% $(OBJ)/objectify
 	@mkdir -p $(dir $@)
 	$(OBJ)/objectify < $< > $@
@@ -166,5 +162,71 @@ $(OBJ)/emu: $(EMU_OBJS)
 
 $(EMU_OBJS): utils/emu/globals.h
 $(OBJ)/utils/emu/biosbdos.o: .obj/emucpm.cim.h
+
+#$(OBJ)/cpmtools/%.crl: cpmtools/%.c \
+#	$(OBJ)/emu \
+#	$(OBJ)/third_party/bdsc/cc.com \
+#	$(OBJ)/third_party/bdsc/cc2.com
+#	@mkdir -p $(dir $@)
+#	cp $< $(dir $@)
+#	$(OBJ)/emu \
+#		-p B=$(OBJ)/third_party/bdsc \
+#		-p C=$(dir $@) \
+#		-- \
+#		$(OBJ)/third_party/bdsc/cc.com \
+#		c:$(notdir $<) \
+#		-ab -dc
+#	
+#$(OBJ)/cpmtools/%.com: $(OBJ)/cpmtools/%.crl \
+#	$(OBJ)/emu \
+#	$(OBJ)/third_party/bdsc/clink.com \
+#	$(OBJ)/third_party/bdsc/c.ccc
+#	@mkdir -p $(dir $@)
+#	$(OBJ)/emu \
+#		-p B=$(OBJ)/third_party/bdsc \
+#		-p C=$(dir $@) \
+#		-p D=$(dir $<) \
+#		-- \
+#		$(OBJ)/third_party/bdsc/clink.com \
+#		d:$(notdir $<) \
+#		-o c:$(notdir $@) \
+#		-cb
+#
+#$(OBJ)/third_party/bdsc/c.ccc: $(OBJ)/third_party/bdsc/c.cim
+#	@mkdir -p $(dir $@)
+#	cp $< $@
+
+$(OBJ)/cpmtools/%.o: cpmtools/%.asm
+	@mkdir -p $(dir $@)
+	sdasz80 -g -o $@ $<
+
+$(OBJ)/cpmtools/%.o: cpmtools/%.c cpmtools/libcpm.h
+	@mkdir -p $(dir $@)
+	sdcc -mz80 -c -o $@ $<
+
+LIBCPM_SRCS = $(wildcard cpmtools/libcpm/*.asm)
+LIBCPM_OBJS = $(patsubst %.asm,$(OBJ)/%.o,$(LIBCPM_SRCS))
+
+$(OBJ)/cpmtools/libcpm.lib: $(LIBCPM_OBJS)
+	@mkdir -p $(dir $@)
+	rm -f $@
+	sdcclib a $@ $^
+
+$(OBJ)/cpmtools/%.com: $(OBJ)/cpmtools/%.o $(OBJ)/cpmtools/cpmcrt.o $(OBJ)/cpmtools/libcpm.lib
+	@mkdir -p $(dir $@)
+	sdldz80 -nmjwz \
+		-i $@.ihx \
+		-b _CODE=0x0100 \
+		-k /usr/share/sdcc/lib/z80 \
+		-l z80 \
+		-k $(OBJ)/cpmtools \
+		-l libcpm \
+		$(OBJ)/cpmtools/cpmcrt.o \
+		$<
+	makebin -p $@.ihx - | dd of=$@ bs=128 skip=2
+
+clean:
+	rm -rf .obj
+	rm -f bootdisk.img
 
 .SECONDARY:

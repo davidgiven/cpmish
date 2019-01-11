@@ -3,7 +3,7 @@
 #include <stdarg.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
+#include "third_party/libstb/stb_image.h"
 
 #define LINEHEIGHT 7
 
