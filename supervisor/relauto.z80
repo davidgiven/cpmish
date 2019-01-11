@@ -1,0 +1,12 @@
+; The 1kB of code here gets loaded at 0x4000 as part of the boot process.
+; At this point we take over from the NC200 OS, disable interupts, reshuffle
+; the things, and load the supervisor proper.
+;
+; On entry, the OS puts bank 0x40 at 0x0000 and a different bank (we don't
+; care which one) at 0x4000. This means we can write to bank 0x40 without
+; stepping on our own toes.
+
+	public bootblock
+bootblock:
+        include ".obj/supervisor/auto.cim.inc"
+

@@ -1,0 +1,15 @@
+; The root directory; goes at 0x1000.
+
+        db "AUTO    PRG"
+        db 0x20    ; Archive bit
+        db 0x00    ; Unused flags
+        db 0x00    ; 10ms time unit creation time
+        dw 0x0000  ; Creation time
+        dw 0x0000  ; Creation date
+        dw 0x0000  ; Last access date
+        dw 0       ; High bytes of cluster number
+        dw 0x0000  ; Last modified time
+        dw 0x0000  ; Last modified date
+        dw 2       ; Low bytes of cluster number
+        dw 1024, 0 ; File size (one cluster)
+

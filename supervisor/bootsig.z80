@@ -1,0 +1,4 @@
+; The PC boot signature at 0x1fe.
+
+	db 0x55, 0xaa
+

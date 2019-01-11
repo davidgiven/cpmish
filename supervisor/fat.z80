@@ -1,0 +1,5 @@
+; The first FAT (the only one the NC200 looks at).
+
+        db 0xf9, 0xff, 0xff
+        db 0xff, 0x7f, 0xff ; One reserved cluster, one used cluster
+

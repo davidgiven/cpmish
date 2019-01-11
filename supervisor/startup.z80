@@ -1,0 +1,7 @@
+; The signature which appears at the very beginning of the boot disk.
+
+	extern STARTUP
+
+    jp STARTUP
+	db "NCBOOT "
+
