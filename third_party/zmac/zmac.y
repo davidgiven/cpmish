@@ -1,6 +1,6 @@
 %{
 // GWP - keep track of version via hand-maintained date stamp.
-#define VERSION "5dec2018"
+#define VERSION "5jan2019"
 
 /*
  *  zmac -- macro cross-assembler for the Zilog Z80 microprocessor
@@ -184,6 +184,14 @@
  * gwp 5-12-18	Peter Wilson ran into quoted include crash.  Also suggested
  *		import be allowed in column 0 and noted that keywords like
  *		IF and LIST could not be labels even if given colons.
+ *
+ * gwp 6-12-18	hex output does proper EOF record if no entry address given.
+ *		include and some other pseudo-opts can have a label.
+ *
+ * gwp 3-1-19	Improve jrpromote to handle some edges cases better where
+ *		promotion isn't needed as long as shortest code is tried first.
+ *
+ * gwp 5-1-19	Add cycle count and output bytes to macro invocations.
  */
 
 #if defined(__GNUC__)
@@ -392,8 +400,7 @@ int	mras;		// MRAS semi-compatibility mode
 int	trueval = 1;	// Value returned for boolean true
 int	zcompat;	// Original zmac compatibility mode
 char	modstr[8];	// Replacement string for '?' in labels when MRAS compatible
-int	relopt;		// Only output .rel files
-int relsymlen = 6; // Length of external symbols
+int	relopt;		// Only output .rel files and length of external symbols
 char	progname[8];	// Program name for .rel output
 int	note_depend;	// Print names of files included
 int	firstcol;
@@ -665,6 +672,8 @@ void putout(int value);
 int outrec;
 int outlen;
 unsigned char outbuf[1024 * 1024];
+void bookmark();
+void listfrombookmark();
 
 
 /*
@@ -1089,7 +1098,7 @@ void emitjr(int opcode, struct expr *dest)
 		(dest->e_scope & SCOPE_EXTERNAL) ||
 		disp > 127 || disp < -128) && z80)
 	{
-		if (jopt) {
+		if (npass > 1 && jopt) {
 			njrpromo++;
 			switch (opcode) {
 			case 0x10: // DJNZ
@@ -1332,7 +1341,7 @@ void putrel(int byte)
 void putrelname(char *str)
 {
 	int len = strlen(str);
-	int maxlen = mras ? 7 : relsymlen;
+	int maxlen = mras ? 7 : relopt;
 
 	// .rel file format can do strings 7 long but for compatibility
 	// we restrict them to 6.  I believe this is important because
@@ -1393,12 +1402,34 @@ void list(int optarg)
 	lineptr = linebuf;
 }
 
+void delayed_list(int optarg)
+{
+	int delay = iflist() && !mopt;
+	FILE *tmp = fout;
+
+	fout = delay ? NULL : tmp;
+	list(optarg);
+	fout = tmp;
+	bookmark(delay);
+}
+
+void list_optarg(int optarg, int seg, int type)
+{
+	if (seg < 0)
+		seg = relopt ? segment : SEG_ABS;
+
+	puthex(optarg >> 8, fout);
+	puthex(optarg, fout);
+	fputc(SEGCHAR(seg), fout);
+	if (type)
+		fputc(type, fout);
+}
+
 void list_out(int optarg, char *line_str, char type)
 {
 	unsigned char *	p;
 	int	i;
 	int  lst;
-	char seg = ' ';
 
 	if (outpass) {
 		lst = iflist();
@@ -1435,12 +1466,8 @@ void list_out(int optarg, char *line_str, char type)
 			if (nopt || copt)
 				fprintf(fout, "\t");
 
-			puthex(optarg >> 8, fout);
-			puthex(optarg, fout);
-			if (relopt)
-				seg = SEGCHAR(segment);
-			fputc(seg, fout);
-			fputc(type, fout);
+			list_optarg(optarg, -1, type);
+
 			for (p = emitbuf; (p < emitptr) && (p - emitbuf < 4); p++) {
 				puthex(*p, fout);
 			}
@@ -1464,12 +1491,12 @@ void list_out(int optarg, char *line_str, char type)
 		for (p = emitbuf; p < emitptr; p++)
 			putbin(*p);
 
-
 		p = emitbuf+4;
 		while (lst && gopt && p < emitptr) {
 			lineout();
 			if (nopt) putc('\t', fout);
 			fputs("      ", fout);
+			if (copt) fputs("        ", fout);
 			for (i = 0; (i < 4) && (p < emitptr);i++) {
 				puthex(*p, fout);
 				p++;
@@ -1655,13 +1682,24 @@ void list1()
 		lsterr1();
 }
 
+void delayed_list1()
+{
+	int delay = iflist() && !mopt;
+	FILE *tmp = fout;
+
+	fout = delay ? NULL : tmp;
+	list1();
+	fout = tmp;
+
+	bookmark(delay);
+}
 
 /*
  *  see if listing is desired
  */
 int iflist()
 {
-	int i, j;
+	int problem;
 
 	if (!fout)
 		return 0;
@@ -1675,13 +1713,10 @@ int iflist()
 		return(0);
 	if (!lstoff && !expptr)
 		return(1);
-	j = 0;
-	for (i=0; i<FLAGS; i++)
-		if (err[i])
-			j++;
+	problem = countwarn() + counterr();
 	if (expptr)
-		return(mopt || j);
-	if (eopt && j)
+		return(mopt || problem);
+	if (eopt && problem)
 		return(1);
 	return(0);
 }
@@ -2005,6 +2040,8 @@ void common_block(char *unparsed_id)
 	cur_common = it;
 }
 
+int at_least_once; // global to avoid repetition in macro repeat count processing
+
 %}
 
 %%
@@ -2214,9 +2251,9 @@ statement:
 			expr_free($5);
 		}
 |
-	ARGPSEUDO arg_on ARG arg_off '\n' {
+	label.part ARGPSEUDO arg_on ARG arg_off '\n' {
 		list1();
-		switch ($1->i_value) {
+		switch ($2->i_value) {
 
 		case PSTITL:	/* title */
 			lineptr = linebuf;
@@ -2255,12 +2292,12 @@ statement:
 		}
 	}
 |
-	ARGPSEUDO arg_on arg_off '\n' {
-		if ($1->i_value == PSCMN) {
+	label.part ARGPSEUDO arg_on arg_off '\n' {
+		if ($2->i_value == PSCMN) {
 			common_block(" ");
 		}
 		else {
-			fprintf(stderr, "Missing argument of '%s'\n", $1->i_string);
+			fprintf(stderr, "Missing argument of '%s'\n", $2->i_string);
 			err[fflag]++;
 		}
 		list1();
@@ -2480,7 +2517,7 @@ statement:
 		$2->i_uses++ ;
 		arg_reset();
 		parm_number = 0;
-		list(dollarsign);
+		delayed_list(dollarsign);
 		expptr++;
 		est = est2;
 		est2 = NULL; // GWP - this may leak, but it avoids double-free crashes
@@ -2495,7 +2532,15 @@ statement:
 |
 	label.part REPT expression al '\n' {
 		expr_reloc_check($3);
-		list1();
+		// MRAS compat would require treating the repeat count
+		// as a byte value with 0 == 256.
+		at_least_once = $3->e_value > 0;
+
+		if (at_least_once)
+			delayed_list1();
+		else
+			list1();
+
 		arg_reset();
 	}
 	locals {
@@ -2504,9 +2549,7 @@ statement:
 		mlex($7);
 		parm_number = 0;
 
-		// MRAS compat would require treating the repeat count
-		// as a byte value with 0 == 256.
-		if ($3->e_value > 0) {
+		if (at_least_once) {
 			expptr++;
 			est = est2;
 			est2 = NULL;
@@ -2523,7 +2566,12 @@ statement:
 |
 	label.part IRPC parm.single ',' { parm_number = 0; } al arg.element arg_off '\n'
 	{
-		list1();
+		at_least_once = est2[0].param[0];
+
+		if (at_least_once)
+			delayed_list1();
+		else
+			list1();
 	}
 	locals {
 		int pos = mfptr;
@@ -2533,7 +2581,7 @@ statement:
 
 		parm_number = 0;
 
-		if (est2[0].param[0]) {
+		if (at_least_once) {
 			expptr++;
 			est = est2;
 			est2 = NULL;
@@ -2553,7 +2601,14 @@ statement:
 |
 	label.part IRP parm.single ',' { parm_number = 0; } al arg.element arg_off '\n'
 	{
-		list1();
+		// if the sub list is not empty
+		at_least_once = est2[0].param[0] && est2[0].param[0] != ';'
+			&& est2[0].param[0] != '\n';
+
+		if (at_least_once)
+			delayed_list1();
+		else
+			list1();
 	}
 	locals {
 		int pos = mfptr;
@@ -2561,10 +2616,7 @@ statement:
 		mlex($11);
 
 		parm_number = 0;
-		// if the sub list is not empty
-		if (est2[0].param[0] && est2[0].param[0] != ';'
-			&& est2[0].param[0] != '\n')
-		{
+		if (at_least_once) {
 			expptr++;
 			est = est2;
 			est2 = NULL;
@@ -3091,7 +3143,7 @@ operation:
 				fprintf(stderr,"LD reg, reg error: can't do memory to memory\n");
 				err[gflag]++;
 			}
-			emit1(0100 + (($2 & 7) << 3) + ($4 & 7),$2 | $4, 0, ET_NOARG_DISP);
+			emit1(0100 + (($2 & 7) << 3) + ($4 & 7), $2 | $4, 0, ET_NOARG_DISP);
 		}
 |
 	LD_XY realreg ',' dxy
@@ -5809,7 +5861,7 @@ void help()
 
 	fprintf(stderr, "   --version\tshow version number\n");
 	fprintf(stderr, "   --help\tshow this help message\n");
-	fprintf(stderr, "   -8\t\tuse 8080 interpretation of mnemonics\n");
+	fprintf(stderr, "   -8\t\tuse 8080 timings and interpretation of mnemonics\n");
 	fprintf(stderr, "   -b\t\tno binary (.hex,.cmd,.cas, etc.) output\n");
 	fprintf(stderr, "   -c\t\tno cycle counts in listing\n");
 	fprintf(stderr, "   -e\t\terror list only\n");
@@ -5829,7 +5881,7 @@ void help()
 	fprintf(stderr, "   -P\t\tformat listing for a printer\n");
 	fprintf(stderr, "   -s\t\tdon't produce a symbol list\n");
 	fprintf(stderr, "   -t\t\toutput error count instead of list of errors\n");
-	fprintf(stderr, "   -z\t\tuse Z-80 interpretation of mnemonics\n");
+	fprintf(stderr, "   -z\t\tuse Z-80 timings and interpretation of mnemonics\n");
 	fprintf(stderr, "   -Pk=num\tset @@k to num before assembly (e.g., -P4=10)\n");
 	fprintf(stderr, "   --od\tdir\tdirectory unnamed output files (default \"zout\")\n");
 	fprintf(stderr, "   --oo\thex,cmd\toutput only listed file suffix types\n");
@@ -5873,12 +5925,12 @@ int main(int argc, char *argv[])
 		}
 
 		if (strcmp(argv[i], "--rel") == 0) {
-			relsymlen = 6;
+			relopt = 6;
 			continue;
 		}
 
 		if (strcmp(argv[i], "--rel7") == 0) {
-			relsymlen = 7;
+			relopt = 7;
 			continue;
 		}
 
@@ -5898,12 +5950,12 @@ int main(int argc, char *argv[])
 		}
 
 		if (strcmp(argv[i], "--doc") == 0) {
-			help();
-			#if 0 /* disabled by dg */
+			#if 0 /* disabled by dtrg */
 			extern void doc(void);
 			doc();
-			exit(0);
 			#endif
+			fprintf(stderr, "See doc.txt for the documentation\n");
+			exit(0);
 			continue; // not reached
 		}
 
@@ -6126,8 +6178,8 @@ int main(int argc, char *argv[])
 	for (j = 0; j < CNT_OUTF; j++) {
 		char *p;
 
-		if (strcmp(outf[j].suffix, "rel") == 0 && !outf[j].no_open)
-			relopt = 1;
+		if (strcmp(outf[j].suffix, "rel") == 0 && !outf[j].no_open && !relopt)
+			relopt = 6;
 
 		p = strchr(outf[j].suffix, '.');
 		// Only .wav file that open matter and only if .cas doesn't open.
@@ -6354,8 +6406,11 @@ int main(int argc, char *argv[])
 		}
 
 		if (fbuf) {
-			for (i = 0; i < 10; i++)
-				putc('0', fbuf);
+			puthex(0, fbuf);
+			puthex(0, fbuf);
+			puthex(0, fbuf);
+			puthex(1, fbuf);
+			puthex(255, fbuf);
 		}
 	}
 
@@ -6668,6 +6723,7 @@ void setvars()
 	segchange = 0;
 	z80 = default_z80;
 	outrec = 0;
+	outlen = 0;
 
 	param_parse = 0;
 	arg_reset();
@@ -7503,6 +7559,8 @@ void popsi()
 	est = expptr ? expstack[expptr-1] : 0;
 	mfseek(mfile, (long)floc, 0);
 	if (lineptr > linebuf) lineptr--;
+
+	listfrombookmark();
 }
 
 
@@ -7754,15 +7812,9 @@ void incbin(char *filename)
 		if (nopt || copt)
 			fprintf(fout, "\t");
 
-		puthex(start >> 8, fout);
-		puthex(start, fout);
-		if (relopt)
-			fputc(SEGCHAR(segment), fout);
-		fprintf(fout, " .. ");
-		puthex(last >> 8, fout);
-		puthex(last, fout);
-		if (relopt)
-			fputc(SEGCHAR(segment), fout);
+		list_optarg(start, -1, 0);
+		fprintf(fout, "..");
+		list_optarg(last, -1, 0);
 
 		putc('\t', fout);
 
@@ -7823,20 +7875,9 @@ void dc(int count, int value)
 		if (nopt || copt)
 			fprintf(fout, "\t");
 
-		puthex(start >> 8, fout);
-		puthex(start, fout);
-		if (relopt) {
-			fputc(SEGCHAR(segment), fout);
-			fprintf(fout, "..");
-		}
-		else
-			fprintf(fout, " .. ");
-
-		puthex((dollarsign - 1) >> 8, fout);
-		puthex((dollarsign - 1), fout);
-		if (relopt)
-			fputc(SEGCHAR(segment), fout);
-		putc(' ', fout);
+		list_optarg(start, -1, 0);
+		fprintf(fout, "..");
+		list_optarg(dollarsign - 1, -1, 0);
 		puthex(value, fout);
 		putc('\t', fout);
 		fputs(linebuf, fout);
@@ -7848,30 +7889,30 @@ void dc(int count, int value)
 		lsterr1();
 }
 
-#define OUTREC_SEG	outbuf[outrec]
-#define OUTREC_ADDR	((outbuf[outrec + 1] << 8) | outbuf[outrec + 2])
-#define OUTREC_LEN	outbuf[outrec + 3]
-#define OUTREC_DATA	outbuf[outrec + 4 + outlen]
+#define OUTREC_SEG(rec)		outbuf[rec]
+#define OUTREC_ADDR(rec)	((outbuf[rec + 1] << 8) | outbuf[rec + 2])
+#define OUTREC_LEN(rec)		outbuf[rec + 3]
+#define OUTREC_DATA(rec, len)	outbuf[rec + 4 + len]
 #define OUTREC_SIZEOF	5
 
 void new_outrec(void)
 {
-	OUTREC_LEN = outlen;
+	OUTREC_LEN(outrec) = outlen;
 	outrec += OUTREC_SIZEOF + outlen;
 
 	outlen = 0;
-	OUTREC_SEG = segment;
+	OUTREC_SEG(outrec) = segment;
 	outbuf[outrec + 1] = seg_pos[segment] >> 8;
 	outbuf[outrec + 2] = seg_pos[segment];
 }
 
 void putout(int value)
 {
-	int addr = (OUTREC_ADDR + outlen) & 0xffff;
-	if (OUTREC_SEG != segment || addr != seg_pos[segment])
+	int addr = (OUTREC_ADDR(outrec) + outlen) & 0xffff;
+	if (OUTREC_SEG(outrec) != segment || addr != seg_pos[segment])
 		new_outrec();
 
-	if (pass2 && OUTREC_DATA != value && !passfail) {
+	if (pass2 && OUTREC_DATA(outrec, outlen) != value && !passfail) {
 		char segname[2];
 		if (relopt)
 			sprintf(segname, "%c", SEGCHAR(segment));
@@ -7879,19 +7920,172 @@ void putout(int value)
 			segname[0] = '\0';
 
 		sprintf(detail, "%s error - $%04x%s changed from $%02x to $%02x",
-			errname[pflag], addr, segname, OUTREC_DATA, value);
+			errname[pflag], addr, segname, OUTREC_DATA(outrec, outlen), value);
 		errwarn(pflag, detail);
 
 		if (!outpass)
 			passretry = 1;
 	}
-	OUTREC_DATA = value;
+	OUTREC_DATA(outrec, outlen) = value;
 	outlen++;
 
 	if (outlen >= 256)
 		new_outrec();
 
 	advance_segment(1);
+}
+
+struct bookmark {
+	int len, rec, tstates, linenum, listed;
+	char *line;
+}
+bookstack[MAXEXP];
+
+int mark;
+
+void bookmark(int delay)
+{
+	struct bookmark *book;
+
+	if (!outpass)
+		return;
+
+	if (mark >= MAXEXP) {
+		error("Macro expansion level too deep");
+		return;
+	}
+
+	book = bookstack + mark++;
+
+	book->len = outlen;
+	book->rec = outrec;
+	book->tstates = tstates;
+	book->linenum = linein[now_in];
+	book->line = strdup(linebuf);
+	book->listed = !delay;
+}
+
+int book_row, book_col, book_addr, book_seg;
+
+void booklist(int seg, int addr, int data, struct bookmark *book)
+{
+	// Don't list beyond the first 4 bytes if told not to.
+	if (!gopt && book_row > 0)
+		return;
+
+	if (book_addr == -1) {
+		list_optarg(addr, seg, ' ');
+		book_seg = seg;
+		book_addr = addr;
+		book_col = 0;
+	}
+
+	if (seg != book_seg || addr != book_addr || book_col < 0 || book_col == 4) {
+		if (book_row == 0 && book->line) {
+			fprintf(fout, "\t%s", book->line);
+			free(book->line);
+			book->line = 0;
+		}
+		else
+			fputs("\n", fout);
+
+		lineout();
+		if (nopt) putc('\t', fout);
+		if (copt) fputs("        ", fout);
+
+		if (seg != book_seg || addr != book_addr)
+			list_optarg(addr, seg, ' ');
+		else
+			fputs("      ", fout);
+
+		book_seg = seg;
+		book_addr = addr;
+		book_row++;
+		book_col = 0;
+	}
+
+	if (!gopt && book_row > 0)
+		return;
+
+	puthex(data, fout);
+	book_addr++;
+	book_col++;
+}
+
+void listfrombookmark()
+{
+	int t, n;
+	struct bookmark *book;
+
+	if (!outpass)
+		return;
+
+	if (mark < 1) {
+		//error("Internal delayed listing underflow.");
+		fprintf(stderr, "Internal delayed listing underflow at %d.", mark);
+		return;
+	}
+
+	book = bookstack + --mark;
+
+	// No delayed listing required?  bookstack clean is all we need.
+	if (book->listed) {
+		if (book->line) {
+			free(book->line);
+			book->line = 0;
+		}
+		return;
+	}
+
+	book->listed = 1;
+
+	t = tstates - book->tstates;
+	lineout(); // call before every output line
+
+	if (nopt)
+		fprintf(fout, "%4d:", book->linenum);
+
+	if (copt) {
+		if (t) {
+			fprintf(fout, nopt ? "%5d+%d" : "%4d+%d", book->tstates, t);
+		}
+		else {
+			fprintf(fout, nopt ? "%5s-" : "%4s-", "");
+		}
+	}
+
+	if (nopt || copt)
+		fprintf(fout, "\t");
+
+	book_row = 0;
+	book_col = -1;
+	book_addr = -1;
+	n = 0;
+	while (book->rec <= outrec) {
+		int len = book->rec == outrec ? outlen : OUTREC_LEN(book->rec);
+		int addr = OUTREC_ADDR(book->rec) + book->len;
+		int seg = OUTREC_SEG(book->rec);
+
+		for (; book->len < len; book->len++) {
+			booklist(seg, addr++, OUTREC_DATA(book->rec, book->len), book);
+			n++;
+		}
+
+		book->len = 0;
+		book->rec += OUTREC_SIZEOF + len;
+	}
+
+	if (book->line) {
+		// pad with spaces up to 4 total hex bytes
+		for (; n < 4; n++)
+			fprintf(fout, "  ");
+
+		fprintf(fout, "\t%s", book->line);
+		free(book->line);
+		book->line = 0;
+	}
+	else
+		fputs("\n", fout);
 }
 
 void advance_segment(int step)

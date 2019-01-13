@@ -92,7 +92,8 @@ zmac
   first file.
  
  -8
-  Accept 8080 mnemonics preferentially.  Equivalent to _.8080_ pseudo-op.
+  Accept 8080 mnemonics preferentially and use 8080 instruction timings.
+  Equivalent to _.8080_ pseudo-op.
  
  -b
   Don't generate any machine code output at all.
@@ -155,7 +156,8 @@ zmac
   Only output number of errors instead list of each one.
  
  -z
-  Accept Z-80 mnemonics preferentially.  Equivalent to _.z80_ pseudo-op.
+  Accept Z-80 mnemonics preferentially and use Z-80 instruction timings.
+  Equivalent to _.z80_ pseudo-op.
 ---
 .Input Format
 
