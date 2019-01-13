@@ -91,7 +91,7 @@ $(OBJ)/%.rel: %.z80 $(OBJ)/zmac $(ZMACINCLUDES)
 
 $(OBJ)/%.cim: %.z80 $(OBJ)/zmac $(ZMACINCLUDES)
 	@mkdir -p $(dir $@)
-	$(OBJ)/zmac --zmac -m --rel7 $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
+	$(OBJ)/zmac --zmac -m $< -o $@ -o $(patsubst %.rel,%.lst,$@) -Iinclude
 
 $(OBJ)/%.cim: %.asm $(OBJ)/zmac $(ZMACINCLUDES)
 	@mkdir -p $(dir $@)
