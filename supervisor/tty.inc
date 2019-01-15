@@ -621,12 +621,10 @@ draw_single_scanline:
     ; Self modifying code ahoy! A can be 0, 2, 4 or 6. Our data is already
     ; left-justified, so it's already shifted left three bits, so we want
     ; to shift by 7, 5, 3 or 1 bits respectively.
-    ld (scanline_shift_amount), a
+    ld (scanline_shift_amount+1), a
 
-	phase 1
 scanline_shift_amount:
     jr $+2              ; offset based on start of *next* instruction
-	dephase
 
     add hl, hl
     add hl, hl
