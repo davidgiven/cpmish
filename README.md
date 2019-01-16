@@ -76,7 +76,7 @@ You'll need sdcc, netpbm and cpmtools (and, probably, a Linux system).
 *stored in RAM, **you will lose them**. The entire state of the machine is
 *destroyed. You have been warned!
 
-Things you need to know when running CP/M:
+Also, **read this before you start**:
 
 - because of the disk cache, it's only safe to change disks when you're
 looking at the command prompt. After changing disks, you _must_ do `^C` (even
