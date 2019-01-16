@@ -367,7 +367,7 @@ emit_buffer_descriptor macro n
 buffer_descriptors:
 	count = 0
 	rept BUFFER_COUNT
-		;emit_buffer_descriptor buffer_count
+		emit_buffer_descriptor count
 		dw count
 		count = count + 1
 	endm
