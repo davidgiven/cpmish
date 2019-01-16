@@ -1,3 +1,5 @@
+SREAD_DEBUG:    equ 0
+
 ; --- System call entry -----------------------------------------------------
 
 ; The BIOS calls here when it wants to execute a system call. Interrupts are
@@ -72,21 +74,63 @@ label SREAD
     or a
     jr nz, general_purpose_failure
 
+    if SREAD_DEBUG
+        ld a, '{'
+        call tty_putc
+    endif
+    
     ld hl, disk_activity_flag
     ld (hl), 1
     ld hl, BTRACK
     ld d, (hl)
+
+    if SREAD_DEBUG
+        ld a, d
+        push de
+        call tty_puthex8
+        ld a, ' '
+        call tty_putc
+        pop de
+    endif
+
     ld hl, BSECTOR
     ld e, (hl)
+
+    if SREAD_DEBUG
+        ld a, e
+        push de
+        call tty_puthex8
+        ld a, ' '
+        call tty_putc
+        pop de
+    endif
+
     ld hl, (BDMA)
+
+    if SREAD_DEBUG
+        push hl
+        push de
+        call tty_puthex16
+        pop de
+        pop hl
+    endif
+    
     call cache_read128
+
+    if SREAD_DEBUG
+        push af
+        ld a, '}'
+        call tty_putc
+        pop af
+    endif
+
     ld l, 0
     jr z, general_purpose_failure
-    jr syscall_exit
+    jp syscall_exit
 
 general_purpose_failure:
     ld l, 1
-    jr syscall_exit
+    jp syscall_exit
     
 ; Write 128-byte CP/M sector.
 label SWRITE

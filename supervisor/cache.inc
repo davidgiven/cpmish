@@ -10,7 +10,7 @@ RETRY_COUNT:	equ 10
 B_BANK:		equ 0 ; bank that the bottom of this buffer lives in
 B_ADDRESS:	equ 1 ; high byte of addess of the base of this buffer
 B_CONTENTS:	equ 2 ; track that this buffer holds, or -1 if empty
-B_LASTUSED:	equ 3 ; decrementing counter used for LRU cache
+B_LASTUSED:	equ 3 ; decrementing counter used for L1U cache
 B_FLAGS:	equ 4 ; generic flags byte
 B__SIZE:	equ 5
 
@@ -22,16 +22,14 @@ cache_flush_unwritten:
 		push ix
 		ld b, BUFFER_COUNT
 		ld ix, buffer_descriptors
-		ld de, B__SIZE
 .1:
 		bit FLAG_DIRTY, (ix+B_FLAGS)
 		jr z, .2
 		push bc
-		push de
 		call flush_buffer
-		pop de
 		pop bc
 .2:
+		ld de, B__SIZE
 		add ix, de
 		djnz .1
 		pop ix
@@ -43,13 +41,11 @@ cache_evict_all:
 		push ix
 		ld b, BUFFER_COUNT
 		ld ix, buffer_descriptors
-		ld de, B__SIZE
 .1:
 		push bc
-		push de
 		call evict_buffer
-		pop de
 		pop bc
+		ld de, B__SIZE
 		add ix, de
 		djnz .1
 		pop ix
@@ -350,6 +346,7 @@ map_userspace_dma:
 		and 0x3f                ; bottom six bits
 		add a, 0x80             ; adjust base
 		ld h, a
+
 		ret
 
 emit_buffer_descriptor macro n
@@ -368,7 +365,6 @@ buffer_descriptors:
 	count = 0
 	rept BUFFER_COUNT
 		emit_buffer_descriptor count
-		dw count
 		count = count + 1
 	endm
 
