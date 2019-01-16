@@ -103,7 +103,7 @@ BOOTE:
     jp CBASE                ; enter the CCP
     
 WBOOTE:
-    ld hl, WBOOT
+    ld hl, SWBOOT
     jr syscall
 
 CONSTE:

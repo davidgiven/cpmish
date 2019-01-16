@@ -1,3 +1,4 @@
+SWBOOT_DEBUG:   equ 0
 SREAD_DEBUG:    equ 0
 
 ; --- System call entry -----------------------------------------------------
@@ -26,9 +27,19 @@ syscall_exit:
 ; Warm boot: reload the CCP, BDOS and BIOS.
 
 label SWBOOT
+    if SWBOOT_DEBUG
+        ld hl, .1
+        call tty_puts
+    endif
+    
     call cache_evict_all
     jp warmboot
     ; does not return
+
+    if SWBOOT_DEBUG
+    .1:
+        db "[WBOOT]", 0
+    endif
 
 ; Read console: returns char in A.
 
