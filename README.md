@@ -10,8 +10,10 @@ as a single-disk workstation.
 
 What you get:
 
-- the standard CP/M 2.2 BDOS and CCP
-- standard PC 720kB floppy disks (with the CP/M file system, of course, but they're writeable from ordinary PC drives with normal sector skew)
+- ZSDOS and ZCPR1
+- standard PC 720kB floppy disks (with the CP/M file system, of course, but
+they're writeable from ordinary PC drives with normal sector skew)
+- a diskdefs file allowing you to use cpmtools with the same
 - most of an ADM-3a / Kaypro II terminal emulator supporting 80x18 text
 - a gigantic 60kB TPA
 - an interrupt-driven keyboard
@@ -24,18 +26,36 @@ What you don't get:
 - power management (if you turn the machine off, all state is lost)
 - memory card support (I'll get round to doing it... ~~once I find my SRAM card~~ eventually)
 - repeat key
+- blinking cursor
+- printer or serial port support
 - sysgen, format etc
+- no bugs
+
+Okay, disclosure time: this isn't really CP/M, as in Digital Research CP/M.
+While the Digital Research BDOS and CCP work perfectly well on the NC200,
+they're only legally distributable from one site, [The Unofficial CP/M
+Site](http://www.cpm.z80.de/), and so can't be included here. Instead, what
+you get are very slightly modified versions of the venerable ZSDOS and ZCPR1
+alternative BDOS and CCP, which are legally distributable. They're better,
+anyway. There is, in fact, no Digital Research code here at all.
+
+If you want the original experience, download the Digital Research BDOS and
+CCP, assemble them at 0xf000 and 0xe800 respectively, and use the
+instructions below to patch them into the boot image. They work fine!
 
 Why?
 ----
 
-CP/M is a great operating system: it's the smallest you can make a useful desktop disk-based operating system. And useful it was; it dominating the personal computer market until the PC came along.
+CP/M is a great operating system: it's the smallest you can make a useful
+desktop disk-based operating system. And useful it was; it dominated the
+personal computer market until the PC came along.
 
 In fact, watch this:
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/FGWshrMZcCc" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[![Video of me doing stuff on an NC200](http://img.youtube.com/vi/FGWshrMZcCc/0.jpg)](https://www.youtube.com/watch?v=FGWshrMZcCc)
 
-The NC200 is a great machine for CP/M, having a high-capacity (for the era) floppy disk drive, lots of RAM, and memory banking.
+The NC200 is a great machine for CP/M, having a high-capacity (for the era)
+floppy disk drive, lots of RAM, and memory banking.
 
 Where?
 ------
