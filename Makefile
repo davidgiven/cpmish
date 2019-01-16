@@ -15,8 +15,8 @@ bootdisk.img: \
 $(OBJ)/boottracks.img: \
 		$(OBJ)/mammoth.cim
 	rm -f $@
-	dd if=$< of=$@ bs=1K count=9
-	dd if=$< of=$@ bs=1K seek=9 skip=58 count=6
+	dd if=$< of=$@ bs=256 count=36
+	dd if=$< of=$@ bs=256 seek=36 skip=232 count=24
 
 $(OBJ)/mammoth.cim: \
 		$(OBJ)/ld80 \
@@ -36,6 +36,7 @@ $(OBJ)/mammoth.cim: \
 	$(OBJ)/ld80 \
 		-O bin \
 		-o $@ \
+		-s $(patsubst %.cim,%.sym,$@) \
 		-P 0000 $(OBJ)/supervisor/startup.rel \
 		-P 000b $(OBJ)/supervisor/bpb1.rel \
 		-P 0038 $(OBJ)/supervisor/sirq.rel \
