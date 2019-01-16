@@ -533,6 +533,12 @@ tty_putc:
     cp SCREEN_WIDTH
     ret nz
 
+    ; Reached the end of the line? Advance to the next one.
+
+    xor a
+    ld (hl), a
+    jp tty_cursor_down
+
 ; Writes A to the current cursor location, without advancing the cursor.
 
 tty_rawwrite:
