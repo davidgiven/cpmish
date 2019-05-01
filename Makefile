@@ -1,5 +1,7 @@
 OBJ = .obj
-CPMTOOLS = $(wildcard cpmtools/*)
+CPMTOOLS = \
+	$(wildcard cpmtools/*.com) \
+	$(patsubst %.c,$(OBJ)/%.com,$(wildcard cpmtools/*.c))
 
 ZMACINCLUDES = $(wildcard include/*.lib)
 
@@ -197,23 +199,23 @@ $(OBJ)/utils/emu/biosbdos.o: .obj/emucpm.cim.h
 #	@mkdir -p $(dir $@)
 #	cp $< $@
 
-$(OBJ)/cpmtools/%.o: cpmtools/%.asm
+$(OBJ)/cpmtools/%.obj: cpmtools/%.asm
 	@mkdir -p $(dir $@)
 	sdasz80 -g -o $@ $<
 
-$(OBJ)/cpmtools/%.o: cpmtools/%.c cpmtools/libcpm.h
+$(OBJ)/cpmtools/%.obj: cpmtools/%.c cpmtools/libcpm.h
 	@mkdir -p $(dir $@)
 	sdcc -mz80 -c -o $@ $<
 
 LIBCPM_SRCS = $(wildcard cpmtools/libcpm/*.asm)
-LIBCPM_OBJS = $(patsubst %.asm,$(OBJ)/%.o,$(LIBCPM_SRCS))
+LIBCPM_OBJS = $(patsubst %.asm,$(OBJ)/%.obj,$(LIBCPM_SRCS))
 
 $(OBJ)/cpmtools/libcpm.lib: $(LIBCPM_OBJS)
 	@mkdir -p $(dir $@)
 	rm -f $@
 	sdcclib a $@ $^
 
-$(OBJ)/cpmtools/%.com: $(OBJ)/cpmtools/%.o $(OBJ)/cpmtools/cpmcrt.o $(OBJ)/cpmtools/libcpm.lib
+$(OBJ)/cpmtools/%.com: $(OBJ)/cpmtools/%.obj $(OBJ)/cpmtools/cpmcrt.obj $(OBJ)/cpmtools/libcpm.lib
 	@mkdir -p $(dir $@)
 	sdldz80 -nmjwz \
 		-i $@.ihx \
@@ -222,7 +224,7 @@ $(OBJ)/cpmtools/%.com: $(OBJ)/cpmtools/%.o $(OBJ)/cpmtools/cpmcrt.o $(OBJ)/cpmto
 		-l z80 \
 		-k $(OBJ)/cpmtools \
 		-l libcpm \
-		$(OBJ)/cpmtools/cpmcrt.o \
+		$(OBJ)/cpmtools/cpmcrt.obj \
 		$<
 	makebin -p $@.ihx - | dd of=$@ bs=128 skip=2
 
