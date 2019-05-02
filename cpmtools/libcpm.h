@@ -31,10 +31,15 @@ DPB;
 extern FCB fcb;
 extern FCB fcb2;
 
+extern uint8_t cmdlinelen;
+extern uint8_t cmdline[127];
+
 extern uint16_t cpm_get_login_vector(void);
 extern uint16_t cpm_get_rodisk_vector(void);
 extern uint8_t* cpm_get_allocation_vector(void);
 extern DPB* cpm_get_dpb(void);
-extern uint8_t cpm_select_disk(uint8_t drive) __z88dk_fastcall;
+extern uint8_t cpm_select_drive(uint8_t drive) __z88dk_fastcall;
+extern uint8_t cpm_get_current_drive(void);
+extern uint8_t cpm_write_protect_drive(void);
 
 #endif
