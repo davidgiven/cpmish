@@ -142,8 +142,8 @@ static void bios_warmboot(void)
 				offset++;
 			}
 		}
-		ram[0x0080] = offset;
-		ram[0x0080+offset] = 0;
+		ram[0x0080] = offset - 1;
+		ram[0x0080+offset] = 0xe5; /* deliberately not nul-terminated */
 
 		const char* firstword = user_command_line[1];
 		if (firstword)
