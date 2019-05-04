@@ -27,7 +27,7 @@ gsinit_next:
 .area _BSS
 .area _HEAP
 
-.area _DATA
+.area _BSS
 oldstack: .ds 2
 stack: .ds 64
 stack_end:

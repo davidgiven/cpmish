@@ -4,14 +4,30 @@
 #include <string.h>
 #include "libcpm.h"
 
-static uint8_t accumulator[4];
-static uint8_t ibp = 0;
-static DPB* dpb;
-static uint16_t bpb; /* bytes per block */
+#define FCB_COUNT 256
 
-static const uint8_t devices[] = "CON:RDR:PUN:LST:DEV:VAL:USR:DSK:";
+uint8_t accumulator[4];
+uint8_t ibp = 0;
+DPB* dpb;
+uint16_t bpb; /* bytes per block */
+FCB fcb[FCB_COUNT];
 
-static void print(const char* s)
+const uint8_t logical_device_names[] = "CON:RDR:PUN:LST:DEV:VAL:USR:DSK:";
+enum { CON = 1, RDR, PUN, LST, DEV, VAL, USR, DSK };
+
+const char physical_device_names[] =
+    /* CON: */ "TTY:CRT:BAT:UC1:"
+    /* RDR: */ "TTY:PTR:UR1:UR2:"
+    /* PUN: */ "TTY:PTP:UP1:UP2:"
+    /* LST: */ "TTY:CRT:LPT:UL1:";
+
+const FCB wildcard_fcb_template =
+{
+    .dr = '?',
+    .f = "???????????"
+};
+
+void print(const char* s)
 {
     for (;;)
     {
@@ -22,18 +38,22 @@ static void print(const char* s)
     }
 }
 
-static void crlf(void)
+void crlf(void)
 {
     print("\r\n");
 }
 
-static void printx(const char* s)
+void printx(const char* s)
 {
     print(s);
     crlf();
 }
 
-static void printip(uint16_t v, bool pad, uint16_t precision)
+/* 
+ * Prints a 16-bit decimal number with optional left padding and configurable
+ * precision. *.
+ */
+void printip(uint16_t v, bool pad, uint16_t precision)
 {
     bool zerosup = true;
     while (precision)
@@ -54,23 +74,25 @@ static void printip(uint16_t v, bool pad, uint16_t precision)
     }
 }
 
-static void printi(uint16_t v)
+void printi(uint16_t v)
 {
     printip(v, false, 10000);
 }
 
 /* Compares the accumulator with an array of uint8_t[4] words. Returns the
  * matching index plus one or 0. */
-static uint8_t compare_accumulator(const uint8_t* list, uint8_t length)
+uint8_t compare_accumulator(const uint8_t* list, uint8_t length)
 {
     uint8_t match = 1;
     while (length--)
     {
-        uint8_t j;
-        for (j=0; j<4; j++)
+        bool m = true;
+        for (uint8_t j=0; j<4; j++)
+        {
             if (*list++ != accumulator[j])
-                break;
-        if (j == 4)
+                m = false;
+        }
+        if (m)
         {
             /* Matched! */
             return match;
@@ -80,20 +102,20 @@ static uint8_t compare_accumulator(const uint8_t* list, uint8_t length)
     return 0;
 }
 
-static void select_disk(uint8_t d)
+void select_disk(uint8_t d)
 {
     cpm_select_drive(d);
     dpb = cpm_get_dpb();
     bpb = 1<<(dpb->bsh+7);
 }
 
-static void select_fcb_disk(void)
+void select_fcb_disk(void)
 {
-    if (fcb.dr)
-        select_disk(fcb.dr-1);
+    uint8_t drive = cpm_fcb.dr ? (cpm_fcb.dr-1) : cpm_get_current_drive();
+    select_disk(drive);
 }
 
-static uint16_t count_space(bool all)
+uint16_t count_space(bool all)
 {
     uint8_t* alloca = cpm_get_allocation_vector();
     uint16_t blocks = 0;
@@ -108,7 +130,7 @@ static uint16_t count_space(bool all)
     return blocks;
 }
 
-static void print_free_space(void)
+void print_free_space(void)
 {
     uint16_t blocks = count_space(false);
     printi(blocks << (dpb->bsh - 3));
@@ -118,7 +140,7 @@ static void print_free_space(void)
 }
 
 /* Show status of all drives. */
-static void print_drive_status(void)
+void print_drive_status(void)
 {
     uint16_t login = cpm_get_login_vector();
     uint16_t rodisk = cpm_get_rodisk_vector();
@@ -144,22 +166,25 @@ static void print_drive_status(void)
 }
 
 /* Reads the next input token into the 4-byte accumulator. */
-static void scan(void)
+void scan(void)
 {
     /* Skip whitespace. */
 
-    while (cmdline[ibp] == ' ')
+    while ((ibp != cpm_cmdlinelen) && (cpm_cmdline[ibp] == ' '))
         ibp++;
 
     uint8_t obp = 0;
-    while (obp < 4)
+    memset(accumulator, ' ', sizeof(accumulator));
+    while (obp != 4)
     {
-        uint8_t b = cmdline[ibp];
-        accumulator[obp++] = (b>1) ? b : ' ';
+        if (ibp == cpm_cmdlinelen)
+            return;
+
+        uint8_t b = cpm_cmdline[ibp++];
+        accumulator[obp++] = b;
         switch (b)
         {
             case 0:
-            case 1:
             case ',':
             case ':':
             case '*':
@@ -167,25 +192,17 @@ static void scan(void)
             case '>':
             case '<':
             case '=':
-                /* Blanks the current char and does not advance,
-                 * so the rest of the accumulator is filled with
-                 * spaces. */
-                cmdline[ibp] = 1;
-                break;
-
-            default:
-                ibp++;
+                return;
         }
     }
-    ibp++;
 }
 
-static void printipadded(uint16_t value)
+void printipadded(uint16_t value)
 {
     printip(value, true, 10000);
 }
 
-static void get_detailed_drive_status(void)
+void get_detailed_drive_status(void)
 {
     print("    ");
     putchar(cpm_get_current_drive() + 'A');
@@ -219,12 +236,13 @@ static void get_detailed_drive_status(void)
     printx(": reserved tracks");
 }
 
-static void getfile(void)
+void getfile(void)
 {
     printx("unsupported getfile");
 }
 
-static void set_drive_status(void)
+/* Handles the A:=R/O and A: DSK: cases. */
+void set_drive_status(void)
 {
     scan(); /* drive is already in fcb.dr */
     scan(); /* read = */
@@ -244,26 +262,195 @@ static void set_drive_status(void)
         /* Not a disk assignment --- the user must be trying to stat a file. */
 
         select_fcb_disk();
-
-        if (compare_accumulator("DSK:", 1))
+        if (compare_accumulator(logical_device_names, 8) == DSK)
             get_detailed_drive_status();
         else
             getfile();
     }
 }
 
-static bool devreq(void)
+void print_device_name(const char* p)
 {
-    printx("unsupported devreq");
+    for (;;)
+    {
+        uint8_t c = *p++;
+        putchar(c);
+        if (c == ':')
+            break;
+    }
+}
+
+bool change_device_assignment(uint8_t logical)
+{
+    scan();
+    if (accumulator[0] != '=')
+    {
+        print("Bad delimiter");
+        return true;
+    }
+
+    scan();
+    uint8_t physical = compare_accumulator(&physical_device_names[logical*16], 4) - 1;
+    if (physical == 0xff)
+    {
+        printx("Invalid assignment");
+        return true;
+    }
+
+    uint8_t b = 3;
+    while (logical--)
+    {
+        b <<= 2;
+        physical <<= 2;
+    }
+    cpm_iobyte &= ~b;
+    cpm_iobyte |= physical;
     return false;
+}
+
+void show_device_assignments(void)
+{
+    uint8_t b = cpm_iobyte;
+    const char* lp = logical_device_names;
+    const char* pp = physical_device_names;
+
+    for (uint8_t i=0; i<4; i++)
+    {
+        print_device_name(lp);
+        print(" is ");
+        print_device_name(pp + (b & 3)*4);
+        crlf();
+        b >>= 2;
+        lp += 4;
+        pp += 16;
+    }
+}
+
+void show_help(void)
+{
+    printx(
+        "Set disk to read only:  stat d:=R/O\r\n"
+        "Set file attributes:    stat d:filename.typ $R/O $R/W $SYS $DIR\r\n"
+        "Show disk info:         stat DSK: / d: DSK:\r\n"
+        "Show user number usage: stat USR:\r\n"
+        "Show device mapping:    stat DEV:"
+    );
+
+    const char* lp = logical_device_names;
+    const char* pp = physical_device_names;
+    for (uint8_t i=0; i<4; i++)
+    {
+        print("Set device mapping:     stat ");
+        print_device_name(lp);
+        lp += 4;
+        putchar('=');
+
+        for (uint8_t j=0; j<4; j++)
+        {
+            if (j)
+                print(" / ");
+            print_device_name(pp);
+            pp += 4;
+        }
+        crlf();
+    }
+}
+
+void show_user_numbers(void)
+{
+    static FCB wildcard_fcb;
+    memcpy(&wildcard_fcb, &wildcard_fcb_template, sizeof(FCB));
+
+    print("Active user: ");
+    printi(cpm_get_current_user());
+    crlf();
+    print("Active files:");
+
+    DIRE* data = (DIRE*) &fcb[0];
+    cpm_set_dma(data);
+    static uint8_t users[32];
+    memset(users, 0, sizeof(users));
+
+    uint8_t r = cpm_findfirst(&wildcard_fcb);
+    while (r != 0xff)
+    {
+        DIRE* found = &data[r];
+        /* On disk, dr contains the user number */
+        if (found->us != 0xe5)
+            users[found->us & 0x1f] = 1;
+        r = cpm_findnext(&wildcard_fcb);
+    }
+
+    for (uint8_t i=0; i<32; i++)
+    {
+        if (users[i])
+        {
+            putchar(' ');
+            printi(i);
+        }
+    }
+
+    crlf();
+}
+
+/* Handle device assignment, querying, and miscellaneous other things */
+bool device_manipulation(void)
+{
+    uint8_t items = 0;
+    for (;;)
+    {
+        scan();
+        uint8_t i = compare_accumulator(logical_device_names, 8);
+        if (!i)
+            return items;
+        items++;
+
+        switch (i)
+        {
+            default:
+                if (change_device_assignment(i-1))
+                    return true;
+                break;
+
+            case DEV:
+                show_device_assignments();
+                break;
+
+            case VAL:
+                show_help();
+                break;
+
+            case USR: /* Show user number usage on the current disk */
+                select_fcb_disk();
+                show_user_numbers();
+                break;
+
+            case DSK:
+                select_fcb_disk();
+                get_detailed_drive_status();
+                break;
+        }
+
+        scan();
+        if (accumulator[0] == ' ')
+            return true;
+        if (accumulator[0] != ',')
+            goto bad_delimiter;
+    }
+
+bad_delimiter:
+    print("Bad delimiter '");
+    printi(accumulator[0]);
+    printx("'");
+    return true;
 }
 
 void main(void)
 {
-    if (!fcb.dr && (fcb.f[0] == ' '))
+    if (!cpm_fcb.dr && (cpm_fcb.f[0] == ' '))
         print_drive_status();
-    else if (fcb.dr)
+    else if (cpm_fcb.dr)
         set_drive_status();
-    else if (!devreq())
+    else if (!device_manipulation())
         getfile();
 }
