@@ -29,5 +29,5 @@ gsinit_next:
 
 .area _BSS
 oldstack: .ds 2
-stack: .ds 64
+stack: .ds 128
 stack_end:

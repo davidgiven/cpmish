@@ -1,5 +1,6 @@
-.globl _cpm_fcb
+.globl _cpm_fcb, _cpm_fcb2
 _cpm_fcb = 0x005c
+_cpm_fcb2 = 0x006c
 
 .globl _cpm_iobyte
 _cpm_iobyte = 0x0003

@@ -22,7 +22,12 @@ typedef struct
     uint8_t ex;
     uint8_t s[2];
     uint8_t rc;
-    uint8_t al[16];
+    union
+    {
+        uint8_t al8[16];
+        uint16_t al16[8];
+    }
+    al;
 }
 DIRE;
 
@@ -41,6 +46,7 @@ typedef struct
 DPB;
 
 extern FCB cpm_fcb;
+extern FCB cpm_fcb2;
 extern uint8_t cpm_iobyte;
 
 extern uint8_t cpm_cmdlinelen;
@@ -60,5 +66,7 @@ extern uint8_t cpm_findfirst(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_findnext(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_open_file(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_read_sequential(FCB* fcb) __z88dk_fastcall;
+extern uint8_t cpm_seek_to_end(FCB* fcb) __z88dk_fastcall;
+extern uint8_t cpm_set_file_attributes(FCB* fcb) __z88dk_fastcall;
 
 #endif

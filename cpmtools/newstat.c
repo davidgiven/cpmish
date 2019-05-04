@@ -1,16 +1,27 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include "libcpm.h"
 
-#define FCB_COUNT 256
+#define FCB_COUNT 512
 
 uint8_t accumulator[4];
 uint8_t ibp = 0;
 DPB* dpb;
 uint16_t bpb; /* bytes per block */
-FCB fcb[FCB_COUNT];
+
+struct fe
+{
+    uint8_t filename[11];
+    uint8_t extents;
+    uint16_t blocks;
+    uint16_t records;
+};
+
+struct fe files[FCB_COUNT];
+struct fe* findex[FCB_COUNT]; /* pointers to above (for sorting) */
 
 const uint8_t logical_device_names[] = "CON:RDR:PUN:LST:DEV:VAL:USR:DSK:";
 enum { CON = 1, RDR, PUN, LST, DEV, VAL, USR, DSK };
@@ -115,15 +126,13 @@ void select_fcb_disk(void)
     select_disk(drive);
 }
 
-uint16_t count_space(bool all)
+uint16_t count_space(void)
 {
     uint8_t* alloca = cpm_get_allocation_vector();
     uint16_t blocks = 0;
     for (uint16_t i=0; i<=dpb->dsm; i++)
     {
-        bool bit = false;
-        if (!all)
-            bit = alloca[i >> 3] & (0x80 >> (i & 7));
+        bool bit = alloca[i >> 3] & (0x80 >> (i & 7));
         if (!bit)
             blocks++;
     }
@@ -132,7 +141,7 @@ uint16_t count_space(bool all)
 
 void print_free_space(void)
 {
-    uint16_t blocks = count_space(false);
+    uint16_t blocks = count_space();
     printi(blocks << (dpb->bsh - 3));
     print("/");
     printi((dpb->dsm+1) << (dpb->bsh - 3));
@@ -217,7 +226,7 @@ void get_detailed_drive_status(void)
         printipadded(rpd);
     printx(": 128 byte record capacity");
 
-    printipadded(count_space(false));
+    printipadded(count_space());
     printx(": kilobyte drive capacity");
 
     printipadded(dpb->drm+1);
@@ -236,9 +245,181 @@ void get_detailed_drive_status(void)
     printx(": reserved tracks");
 }
 
-void getfile(void)
+int index_sort_cb(const void* left, const void* right)
 {
-    printx("unsupported getfile");
+    const struct fe** leftp = (const struct fe**) left;
+    const struct fe** rightp = (const struct fe**) right;
+    return memcmp((*leftp)->filename, (*rightp)->filename, 11);
+}
+
+void print_filename(uint8_t* filename)
+{
+    for (uint8_t i=0; i<11; i++)
+    {
+        uint8_t b = *filename++ & 0x7f;
+        if (b != ' ')
+        {
+            if (i == 8)
+                putchar('.');
+            putchar(b);
+        }
+    }
+}
+
+void file_manipulation(void)
+{
+    /* Options are passed as the second word on the command line, which the
+     * CPP parses as a filename and writes into cpm_fcb2. There will now be
+     * a short pause for me to be ill. */
+
+    const static uint8_t command_names[] = "$S  $R/O$R/W$SYS$DIR";
+    enum { LIST = 0, LIST_WITH_SIZE, SET_RO, SET_RW, SET_SYS, SET_DIR };
+    memcpy(accumulator, cpm_fcb2.f, 4);
+    uint8_t command = compare_accumulator(command_names, sizeof(command_names)/4);
+
+    select_fcb_disk();
+    cpm_fcb.ex = '?'; /* find all extents, not just the first */
+    uint16_t count = 0;
+    uint8_t r = cpm_findfirst(&cpm_fcb);
+    while (r != 0xff)
+    {
+        DIRE* de = (DIRE*)0x80 + r;
+        struct fe* fe = files;
+
+        /* Try to find the file in the array. */
+
+        uint16_t i = count;
+        while (i)
+        {
+            if (memcmp(fe->filename, de->f, 11) == 0)
+                break;
+            fe++;
+            i--;
+        }
+
+        if (!i)
+        {
+            /* Not found --- add it. */
+
+            memset(fe, 0, sizeof(*fe));
+            memcpy(fe->filename, de->f, 11);
+            findex[count] = fe;
+
+            count++;
+            if (count == FCB_COUNT)
+            {
+                printx("Too many files!");
+                return;
+            }
+        }
+
+        fe->extents++;
+        fe->records += de->rc + (de->ex & dpb->exm)*128;
+        if (dpb->dsm < 256)
+        {
+            /* 8-bit allocation map. */
+            for (uint8_t j=0; j<16; j++)
+            {
+                if (de->al.al8[j])
+                    fe->blocks++;
+            }
+        }
+        else
+        {
+            /* 16-bit allocation map. */
+            for (uint8_t j=0; j<8; j++)
+            {
+                if (de->al.al16[j])
+                    fe->blocks++;
+            }
+        }
+
+        r = cpm_findnext(&cpm_fcb);
+    }
+
+    switch (command)
+    {
+        case LIST:
+        case LIST_WITH_SIZE:
+        {
+            qsort(findex, count, sizeof(void*), index_sort_cb);
+
+            uint8_t current_drive = 'A' + cpm_get_current_drive();
+            if (command == LIST_WITH_SIZE)
+                print("  Size");
+            printx(" Recs   Bytes  Ext Acc");
+            struct fe** fep = findex;
+            while (count--)
+            {
+                struct fe* f = *fep++;
+                if (command == LIST_WITH_SIZE)
+                {
+                    memset(&cpm_fcb, 0, sizeof(FCB));
+                    memcpy(cpm_fcb.f, f->filename, 11);
+                    cpm_seek_to_end(&cpm_fcb);
+                    if (cpm_fcb.r2)
+                        print("65536");
+                    else
+                        printipadded(cpm_fcb.r);
+                    putchar(' ');
+                }
+                printipadded(f->records);
+                putchar(' ');
+                printipadded(f->blocks << (dpb->bsh - 3));
+                print("kB ");
+                printip(f->extents, true, 1000);
+                print((f->filename[8] & 0x80) ? " R/O " : " R/W ");
+                putchar(current_drive);
+                putchar(':');
+                if (f->filename[9] & 0x80)
+                    putchar('(');
+                print_filename(f->filename);
+                if (f->filename[9] & 0x80)
+                    putchar(')');
+                crlf();
+                if (cpm_get_console_status())
+                    return;
+            }
+            print("Bytes remaining on ");
+            putchar(current_drive);
+            print(": ");
+            print_free_space();
+            crlf();
+            break;
+        }
+
+        case SET_RO:
+        case SET_RW:
+        case SET_SYS:
+        case SET_DIR:
+        {
+            uint8_t attrbyte = ((command == SET_RO) || (command == SET_RW)) ? 8 : 9;
+            uint8_t attrflag = ((command == SET_RO) || (command == SET_SYS)) ? 0x80 : 0x00;
+
+            struct fe* fe = files;
+            while (count--)
+            {
+                print_filename(fe->filename);
+                memset(&cpm_fcb, 0, sizeof(FCB));
+                memcpy(cpm_fcb.f, fe->filename, 11);
+                cpm_fcb.f[attrbyte] = (cpm_fcb.f[attrbyte] & 0x7f) | attrflag;
+                cpm_set_file_attributes(&cpm_fcb);
+
+                print(" set to ");
+                const uint8_t* p = &command_names[(command-1)*4] + 1;
+                putchar(*p++);
+                putchar(*p++);
+                putchar(*p);
+                crlf();
+                if (cpm_get_console_status())
+                    return;
+
+                fe++;
+            }
+
+            break;
+        }
+    }
 }
 
 /* Handles the A:=R/O and A: DSK: cases. */
@@ -265,7 +446,7 @@ void set_drive_status(void)
         if (compare_accumulator(logical_device_names, 8) == DSK)
             get_detailed_drive_status();
         else
-            getfile();
+            file_manipulation();
     }
 }
 
@@ -330,7 +511,8 @@ void show_help(void)
 {
     printx(
         "Set disk to read only:  stat d:=R/O\r\n"
-        "Set file attributes:    stat d:filename.typ $R/O $R/W $SYS $DIR\r\n"
+        "Set file attributes:    stat d:filename.typ $R/O / $R/W / $SYS / $DIR\r\n"
+        "Get file attributes:    stat d:filename.typ [ $S ]\r\n"
         "Show disk info:         stat DSK: / d: DSK:\r\n"
         "Show user number usage: stat USR:\r\n"
         "Show device mapping:    stat DEV:"
@@ -366,7 +548,7 @@ void show_user_numbers(void)
     crlf();
     print("Active files:");
 
-    DIRE* data = (DIRE*) &fcb[0];
+    DIRE* data = (DIRE*) files; /* horrible, but it's unused and big enough */
     cpm_set_dma(data);
     static uint8_t users[32];
     memset(users, 0, sizeof(users));
@@ -452,5 +634,5 @@ void main(void)
     else if (cpm_fcb.dr)
         set_drive_status();
     else if (!device_manipulation())
-        getfile();
+        file_manipulation();
 }
