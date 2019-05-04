@@ -88,6 +88,8 @@ void main(void)
             }
 
             crlf();
+            if (cpm_get_console_status())
+                return;
         }
     }
 }

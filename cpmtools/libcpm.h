@@ -53,6 +53,7 @@ extern DPB* cpm_get_dpb(void);
 extern uint8_t cpm_select_drive(uint8_t drive) __z88dk_fastcall;
 extern uint8_t cpm_get_current_drive(void);
 extern uint8_t cpm_get_current_user(void);
+extern uint8_t cpm_get_console_status(void);
 extern uint8_t cpm_write_protect_drive(void);
 extern void cpm_set_dma(void* dma) __z88dk_fastcall;
 extern uint8_t cpm_findfirst(FCB* fcb) __z88dk_fastcall;
