@@ -224,6 +224,7 @@ $(OBJ)/cpmtools/%.com: $(OBJ)/cpmtools/%.obj $(OBJ)/cpmtools/cpmcrt.obj $(OBJ)/c
 		-l z80 \
 		-k $(OBJ)/cpmtools \
 		-l libcpm \
+		-m \
 		$(OBJ)/cpmtools/cpmcrt.obj \
 		$<
 	makebin -p $@.ihx - | dd of=$@ bs=128 skip=2
