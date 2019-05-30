@@ -26,6 +26,8 @@ gsinit_next:
 .area _BSEG
 .area _BSS
 .area _HEAP
+.globl _cpm_top
+_cpm_top = .
 
 .area _BSS
 oldstack: .ds 2

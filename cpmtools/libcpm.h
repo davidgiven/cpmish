@@ -49,9 +49,13 @@ extern FCB cpm_fcb;
 extern FCB cpm_fcb2;
 extern uint8_t cpm_iobyte;
 
+extern uint8_t cpm_default_dma[128];
 extern uint8_t cpm_cmdlinelen;
 extern uint8_t cpm_cmdline[127];
 
+extern uint8_t cpm_ram[];
+
+extern void cpm_exit(void);
 extern uint16_t cpm_get_login_vector(void);
 extern uint16_t cpm_get_rodisk_vector(void);
 extern uint8_t* cpm_get_allocation_vector(void);
@@ -64,7 +68,10 @@ extern uint8_t cpm_write_protect_drive(void);
 extern void cpm_set_dma(void* dma) __z88dk_fastcall;
 extern uint8_t cpm_findfirst(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_findnext(FCB* fcb) __z88dk_fastcall;
+extern uint8_t cpm_delete_file(FCB* fcb) __z88dk_fastcall;
+extern uint8_t cpm_make_file(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_open_file(FCB* fcb) __z88dk_fastcall;
+extern uint8_t cpm_close_file(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_read_sequential(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_seek_to_end(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_set_file_attributes(FCB* fcb) __z88dk_fastcall;
