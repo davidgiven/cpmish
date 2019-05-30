@@ -144,14 +144,14 @@ INSN(inr_symbol,   "INR",   0x04,   aludst_cb,   &inx_symbol);
 INSN(in_symbol,    "IN",    0xdb,   simple1b_cb, &inr_symbol);
 
 INSN(jmp_symbol,   "JMP",   0xc3,   simple3b_cb, NULL);
-INSN(jnz_symbol,   "JNZ",   0xc3,   simple3b_cb, &jmp_symbol);
-INSN(jz_symbol,    "JZ",    0xcb,   simple3b_cb, &jnz_symbol);
-INSN(jnc_symbol,   "JNC",   0xd3,   simple3b_cb, &jz_symbol);
-INSN(jc_symbol,    "JC",    0xdb,   simple3b_cb, &jnc_symbol);
-INSN(jpo_symbol,   "JPO",   0xe3,   simple3b_cb, &jc_symbol);
-INSN(jpe_symbol,   "JPE",   0xeb,   simple3b_cb, &jpo_symbol);
-INSN(jp_symbol,    "JP",    0xf3,   simple3b_cb, &jpe_symbol);
-INSN(jm_symbol,    "JM",    0xfb,   simple3b_cb, &jp_symbol);
+INSN(jnz_symbol,   "JNZ",   0xc2,   simple3b_cb, &jmp_symbol);
+INSN(jz_symbol,    "JZ",    0xca,   simple3b_cb, &jnz_symbol);
+INSN(jnc_symbol,   "JNC",   0xd2,   simple3b_cb, &jz_symbol);
+INSN(jc_symbol,    "JC",    0xda,   simple3b_cb, &jnc_symbol);
+INSN(jpo_symbol,   "JPO",   0xe2,   simple3b_cb, &jc_symbol);
+INSN(jpe_symbol,   "JPE",   0xea,   simple3b_cb, &jpo_symbol);
+INSN(jp_symbol,    "JP",    0xf2,   simple3b_cb, &jpe_symbol);
+INSN(jm_symbol,    "JM",    0xfa,   simple3b_cb, &jp_symbol);
 
 VALUE(l_symbol,    "L",     5,                   NULL);
 INSN(ldax_symbol,  "LDAX",  0x0a,   rp_cb,       &l_symbol);
@@ -252,7 +252,7 @@ struct symbol* hashtable[32] =
 };
 
 #define asm_fcb cpm_fcb
-FCB hex_fcb;
+FCB bin_fcb;
 FCB prn_fcb;
 int pass;
 bool eol;
@@ -260,6 +260,11 @@ uint16_t lineno;
 uint16_t program_counter;
 uint8_t* heapptr = cpm_ram;
 bool db_string_constant_hack = false;
+
+bool bin_buffer_fixed;
+uint16_t bin_buffer_base;
+uint8_t bin_buffer_write_count;
+uint8_t bin_buffer[128];
 
 uint8_t input_buffer_read_count;
 uint8_t token_length;
@@ -376,6 +381,12 @@ void open_output_file(FCB* fcb)
 		fatal("Cannot create output file");
 }
 
+void close_output_file(FCB* fcb)
+{
+	if (cpm_close_file(fcb) == 0xff)
+		fatal("Cannot close output file");
+}
+
 uint8_t read_byte(void)
 {
 	if (input_buffer_read_count == 0x80)
@@ -394,22 +405,50 @@ void unread_byte(uint8_t b)
 	cpm_default_dma[--input_buffer_read_count] = b;
 }
 
-void emit8(uint8_t b)
+void emit_flush(void)
 {
-	(void) b;
-	if (pass == 0)
-		program_counter++;
-	else
-		fatal("pass 2 not supported yet");
+	if (bin_buffer_write_count != 0)
+	{
+		cpm_set_dma(bin_buffer);
+		if (cpm_write_sequential(&bin_fcb) != 0)
+			fatal("Error writing output file");
+	}
 }
 
-void emit16(uint8_t b)
+void emit8_raw(uint8_t b)
 {
-	(void) b;
-	if (pass == 0)
-		program_counter += 2;
-	else
-		fatal("pass 2 not supported yet");
+	bin_buffer[bin_buffer_write_count++] = b;
+	if (bin_buffer_write_count == sizeof(bin_buffer))
+	{
+		emit_flush();
+		bin_buffer_base += sizeof(bin_buffer);
+		bin_buffer_write_count = 0;
+	}
+}
+
+void emit8(uint8_t b)
+{
+	if (pass == 1)
+	{
+		if (!bin_buffer_fixed)
+		{
+			bin_buffer_fixed = true;
+			bin_buffer_base = program_counter;
+		}
+
+		uint16_t delta = program_counter - (bin_buffer_base + bin_buffer_write_count);
+		while (delta--)
+			emit8_raw(0);
+		emit8_raw(b);
+	}
+
+	program_counter++;
+}
+
+void emit16(uint16_t w)
+{
+	emit8(w);
+	emit8(w >> 8);
 }
 
 bool isident(uint8_t c)
@@ -851,7 +890,8 @@ void set_implicit_label(void)
 	if (!current_label)
 		return;
 
-	if (current_label->callback != undeflabel_cb)
+	if ((current_label->value != program_counter) &&
+	    (current_label->callback != undeflabel_cb))
 		fatal("label already defined");
 
 	current_label->value = program_counter;
@@ -875,11 +915,12 @@ void equ_cb(void)
 {
 	if (!current_label)
 		syntax_error();
+	expect_expression();
 
-	if (current_label->callback != undeflabel_cb)
+	if ((current_label->value != token_number) &&
+	    (current_label->callback != undeflabel_cb))
 		fatal("label already defined");
 
-	expect_expression();
 	current_label->value = token_number;
 	current_label->callback = equlabel_cb;
 }
@@ -927,6 +968,9 @@ void endif_cb(void)
 void org_cb(void)
 {
 	expect_expression();
+	if (token_number < program_counter)
+		fatal("program counter moved backwards");
+
 	program_counter = token_number;
 }
 
@@ -1024,7 +1068,7 @@ void lxi_cb(void)
 {
 	if (read_expression() != ',')
 		syntax_error();
-	emit8(current_insn->value | ((token_number & 6) << 3));
+	emit8(0x01 | ((token_number & 6) << 3));
 
 	expect_expression();
 	emit16(token_number);
@@ -1038,16 +1082,16 @@ void mvi_cb(void)
 	expect_expression();
 
 	emit8(0x06 | (dest<<3));
-	emit16(token_number);
+	emit8(token_number);
 }
 
 void end_cb(void) {}
 
 void main(void)
 {
-	memcpy(&hex_fcb, &cpm_fcb, sizeof(FCB));
-	hex_fcb.dr = get_drive_or_default(cpm_fcb.f[9]);
-	memcpy(&hex_fcb.f[8], "HEX", 3);
+	memcpy(&bin_fcb, &cpm_fcb, sizeof(FCB));
+	bin_fcb.dr = get_drive_or_default(cpm_fcb.f[9]);
+	memcpy(&bin_fcb.f[8], "BIN", 3);
 
 	memcpy(&prn_fcb, &cpm_fcb, sizeof(FCB));
 	prn_fcb.dr = get_drive_or_default(cpm_fcb.f[10]);
@@ -1056,7 +1100,11 @@ void main(void)
 	asm_fcb.dr = get_drive_or_default(cpm_fcb.f[8]);
 	memcpy(&asm_fcb.f[8], "ASM", 3);
 
-	open_output_file(&hex_fcb);
+	open_output_file(&bin_fcb);
+	bin_buffer_write_count = 0;
+	bin_buffer_base = 0;
+	bin_buffer_fixed = false;
+
 	open_output_file(&prn_fcb);
 
 	if (cpm_open_file(&asm_fcb) == 0xff)
@@ -1124,7 +1172,18 @@ void main(void)
 					set_implicit_label();
 				cb();
 			}
+			else
+				set_implicit_label();
 		}
 	}
+
+	if (bin_buffer_write_count != 0)
+	{
+		while (bin_buffer_write_count != 0)
+			emit8_raw(0);
+	}
+
+	close_output_file(&bin_fcb);
+	close_output_file(&prn_fcb);
 }
 

@@ -73,6 +73,7 @@ extern uint8_t cpm_make_file(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_open_file(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_close_file(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_read_sequential(FCB* fcb) __z88dk_fastcall;
+extern uint8_t cpm_write_sequential(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_seek_to_end(FCB* fcb) __z88dk_fastcall;
 extern uint8_t cpm_set_file_attributes(FCB* fcb) __z88dk_fastcall;
 
