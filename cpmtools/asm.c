@@ -1,3 +1,34 @@
+/* asm.c
+ * © 2019 David Given
+ * This software is redistributable under the terms of the 2-clause BSD
+ * licensed. See the LICENSE file in the source of the repository for the
+ * full text.
+ *
+ * This is a reimplementation of DR's venerable asm.com, in C.
+ *
+ * It's a simple 8080 assembler which honours the original asm.com syntax,
+ * complete with the non-well defined grammar and poor error handling of the
+ * original.
+ *
+ * Unlike the original, it emits .bin files rather than .hex files, so in the
+ * common use case (producing .com files) you don't need the loader at all ---
+ * just run the assembler and rename the output. Also, it was easier that way.
+ *
+ * See http://www.gaby.de/cpm/randyfiles/DRI/ASM.pdf for the original
+ * documentation.
+ *
+ * This version differs as follows:
+ *
+ *  - the aforesaid .hex / .bin difference
+ *
+ *  - error messages are more human readable, but no error recovery is done
+ *    and assembly stops at the first error (this is to be fixed)
+ *
+ *  - the .prn file is always empty currently (this is to be fixed)
+ *
+ *  - bugs
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
