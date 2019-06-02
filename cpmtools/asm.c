@@ -52,11 +52,11 @@ enum
 
 struct symbol
 {
-	const uint8_t* name; /* not zero terminated */
 	uint8_t namelen;
 	uint16_t value;
 	void (*callback)(void);
 	struct symbol* next;
+	const uint8_t name[]; /* not zero terminated */
 };
 
 struct operator
@@ -115,10 +115,10 @@ const struct operator operators[] =
 
 #define INSN(id, name, value, cb, next) \
 	extern void cb(void); \
-	const struct symbol id = { name, sizeof(name)-1, value, cb, next }
+	const struct symbol id = { sizeof(name)-1, value, cb, next, name }
 
 #define VALUE(id, name, value, next) \
-	const struct symbol id = { name, sizeof(name)-1, value, equlabel_cb, next }
+	const struct symbol id = { sizeof(name)-1, value, equlabel_cb, next, name }
 
 extern void operator_cb(void);
 extern void undeflabel_cb(void);
@@ -591,10 +591,9 @@ token_t read_token(void)
 			token_symbol = token_symbol->next;
 		}
 
-		token_symbol = (struct symbol*) allocmem(sizeof(struct symbol));
+		token_symbol = (struct symbol*) allocmem(sizeof(struct symbol) + token_length);
 		token_symbol->value = 0;
 		token_symbol->callback = undeflabel_cb;
-		token_symbol->name = allocmem(token_length);
 		token_symbol->namelen = token_length;
 		memcpy(token_symbol->name, token_buffer, token_length);
 		token_symbol->next = hashtable[slot];
