@@ -26,6 +26,7 @@
  *
  *  - the .prn file is always empty currently (this is to be fixed)
  *
+ *  - if...endif supports else (but still doesn't support nesting)
  *  - bugs
  */
 
@@ -161,7 +162,8 @@ INSN(daa_symbol,   "DAA",   0x27,   simple1b_cb, &dcr_symbol);
 INSN(di_symbol,    "DI",    0xf3,   simple1b_cb, &daa_symbol);
 
 INSN(equ_symbol,   "EQU",   0,      equ_cb,      NULL);
-INSN(endif_symbol, "ENDIF", 0,      endif_cb,    &equ_symbol);
+INSN(else_symbol,  "ELSE",  0,      else_cb,     &equ_symbol);
+INSN(endif_symbol, "ENDIF", 0,      endif_cb,    &else_symbol);
 VALUE(e_symbol,    "E",     3,                   &endif_symbol);
 INSN(end_symbol,   "END",   0,      end_cb,      &e_symbol);
 INSN(ei_symbol,    "EI",    0xfb,   simple1b_cb, &end_symbol);
@@ -984,11 +986,28 @@ void if_cb(void)
 			token_t t = read_token();
 			if (t == TOKEN_EOF)
 				fatal("unexpected end of file");
-			if ((t == TOKEN_IDENTIFIER) && (token_symbol->callback == endif_cb))
+			if ((t == TOKEN_IDENTIFIER) &&
+				((token_symbol->callback == endif_cb) || (token_symbol->callback == else_cb)))
 				break;
 		}
 		expect(TOKEN_NL);
 	}
+}
+
+void else_cb(void)
+{
+	/* If this pseudoop actually gets executed, then we've been executing the
+	 * true branch of the if...endif. Skip to the end. */
+
+	for (;;)
+	{
+		token_t t = read_token();
+		if (t == TOKEN_EOF)
+			fatal("unexpected end of file");
+		if ((t == TOKEN_IDENTIFIER) && (token_symbol->callback == endif_cb))
+			break;
+	}
+	expect(TOKEN_NL);
 }
 
 void endif_cb(void)
