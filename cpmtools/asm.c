@@ -50,6 +50,13 @@ enum
 	TOKEN_STRING = -3,
 };
 
+struct output_file
+{
+	uint8_t fill;
+	FCB fcb;
+	uint8_t buffer[128];
+};
+
 struct symbol
 {
 	uint8_t namelen;
@@ -285,19 +292,14 @@ struct symbol* hashtable[32] =
 };
 
 #define asm_fcb cpm_fcb
-FCB bin_fcb;
-FCB prn_fcb;
+struct output_file bin_file;
+struct output_file prn_file;
 int pass;
 bool eol;
 uint16_t lineno;
 uint16_t program_counter;
 uint8_t* heapptr = cpm_ram;
 bool db_string_constant_hack = false;
-
-bool bin_buffer_fixed;
-uint16_t bin_buffer_base;
-uint8_t bin_buffer_write_count;
-uint8_t bin_buffer[128];
 
 uint8_t input_buffer_read_count;
 uint8_t token_length;
@@ -404,19 +406,38 @@ uint8_t get_drive_or_default(uint8_t dr)
 	return dr - '@';
 }
 
-void open_output_file(FCB* fcb)
+void emit8_to_output_file(struct output_file* f, uint8_t b)
 {
-	if (fcb->dr > 16)
-		return;
-	
-	cpm_delete_file(fcb);
-	if (cpm_make_file(fcb) == 0xff)
-		fatal("Cannot create output file");
+	f->buffer[f->fill++] = b;
+	if (f->fill == sizeof(f->buffer))
+	{
+		/* Flush to disk. */
+
+		cpm_set_dma(f->buffer);
+		if (cpm_write_sequential(&f->fcb) != 0)
+			fatal("Error writing output file");
+
+		f->fill = 0;
+	}
 }
 
-void close_output_file(FCB* fcb)
+void open_output_file(struct output_file* f)
 {
-	if (cpm_close_file(fcb) == 0xff)
+	if (f->fcb.dr > 16)
+		return;
+	
+	cpm_delete_file(&f->fcb);
+	if (cpm_make_file(&f->fcb) == 0xff)
+		fatal("Cannot create output file");
+	f->fill = 0;
+}
+
+void close_output_file(struct output_file* f)
+{
+	while (f->fill != 0)
+		emit8_to_output_file(f, 0);
+
+	if (cpm_close_file(&f->fcb) == 0xff)
 		fatal("Cannot close output file");
 }
 
@@ -435,47 +456,31 @@ uint8_t read_byte(void)
 
 void unread_byte(uint8_t b)
 {
+	/* Safe because input_buffer_read_count is guaranteed never to be 0. */
 	cpm_default_dma[--input_buffer_read_count] = b;
-}
-
-void emit_flush(void)
-{
-	if (bin_buffer_write_count != 0)
-	{
-		cpm_set_dma(bin_buffer);
-		if (cpm_write_sequential(&bin_fcb) != 0)
-			fatal("Error writing output file");
-	}
-}
-
-void emit8_raw(uint8_t b)
-{
-	bin_buffer[bin_buffer_write_count++] = b;
-	if (bin_buffer_write_count == sizeof(bin_buffer))
-	{
-		emit_flush();
-		bin_buffer_base += sizeof(bin_buffer);
-		bin_buffer_write_count = 0;
-	}
 }
 
 void emit8(uint8_t b)
 {
+	static bool program_counter_fixed = false;
+	static uint16_t old_program_counter = 0;
+
 	if (pass == 1)
 	{
-		if (!bin_buffer_fixed)
+		if (!program_counter_fixed)
 		{
-			bin_buffer_fixed = true;
-			bin_buffer_base = program_counter;
+			program_counter_fixed = true;
+			old_program_counter = program_counter;
 		}
 
-		uint16_t delta = program_counter - (bin_buffer_base + bin_buffer_write_count);
+		uint16_t delta = program_counter - old_program_counter;
 		while (delta--)
-			emit8_raw(0);
-		emit8_raw(b);
+			emit8_to_output_file(&bin_file, 0);
+		emit8_to_output_file(&bin_file, b);
 	}
 
 	program_counter++;
+	old_program_counter = program_counter;
 }
 
 void emit16(uint16_t w)
@@ -1138,23 +1143,19 @@ void end_cb(void) {}
 
 void main(void)
 {
-	memcpy(&bin_fcb, &cpm_fcb, sizeof(FCB));
-	bin_fcb.dr = get_drive_or_default(cpm_fcb.f[9]);
-	memcpy(&bin_fcb.f[8], "BIN", 3);
+	memcpy(&bin_file.fcb, &cpm_fcb, sizeof(FCB));
+	bin_file.fcb.dr = get_drive_or_default(cpm_fcb.f[9]);
+	memcpy(&bin_file.fcb.f[8], "BIN", 3);
 
-	memcpy(&prn_fcb, &cpm_fcb, sizeof(FCB));
-	prn_fcb.dr = get_drive_or_default(cpm_fcb.f[10]);
-	memcpy(&prn_fcb.f[8], "PRN", 3);
+	memcpy(&prn_file.fcb, &cpm_fcb, sizeof(FCB));
+	prn_file.fcb.dr = get_drive_or_default(cpm_fcb.f[10]);
+	memcpy(&prn_file.fcb.f[8], "PRN", 3);
 
 	asm_fcb.dr = get_drive_or_default(cpm_fcb.f[8]);
 	memcpy(&asm_fcb.f[8], "ASM", 3);
 
-	open_output_file(&bin_fcb);
-	bin_buffer_write_count = 0;
-	bin_buffer_base = 0;
-	bin_buffer_fixed = false;
-
-	open_output_file(&prn_fcb);
+	open_output_file(&bin_file);
+	open_output_file(&prn_file);
 
 	if (cpm_open_file(&asm_fcb) == 0xff)
 		fatal("Cannot open input file");
@@ -1226,13 +1227,7 @@ void main(void)
 		}
 	}
 
-	if (bin_buffer_write_count != 0)
-	{
-		while (bin_buffer_write_count != 0)
-			emit8_raw(0);
-	}
-
-	close_output_file(&bin_fcb);
-	close_output_file(&prn_fcb);
+	close_output_file(&bin_file);
+	close_output_file(&prn_file);
 }
 
