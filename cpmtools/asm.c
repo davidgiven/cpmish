@@ -323,7 +323,7 @@ void printn(const char* s, unsigned len)
     }
 }
 
-void print(const char* s) __z88dk_fastcall
+void print(const char* s) 
 {
     for (;;)
     {
@@ -339,13 +339,13 @@ void crlf(void)
     print("\r\n");
 }
 
-void printx(const char* s) __z88dk_fastcall
+void printx(const char* s) 
 {
     print(s);
     crlf();
 }
 
-void printhex4(uint8_t nibble) __z88dk_fastcall
+void printhex4(uint8_t nibble) 
 {
         nibble &= 0x0f;
     if (nibble < 10)
@@ -355,19 +355,19 @@ void printhex4(uint8_t nibble) __z88dk_fastcall
     putchar(nibble);
 }
 
-void printhex8(uint8_t b) __z88dk_fastcall
+void printhex8(uint8_t b) 
 {
     printhex4(b >> 4);
     printhex4(b);
 }
 
-void printhex16(uint16_t b) __z88dk_fastcall
+void printhex16(uint16_t b) 
 {
     printhex8(b >> 8);
     printhex8(b);
 }
 
-void printi(uint16_t v)
+void printi(uint16_t v) 
 {
 	bool zerosup = true;
 	uint16_t precision = 10000;
@@ -384,7 +384,7 @@ void printi(uint16_t v)
     }
 }
 
-void fatal(const char* s) __z88dk_fastcall
+void fatal(const char* s) 
 {
 	printi(lineno);
 	print(": ");
@@ -392,14 +392,14 @@ void fatal(const char* s) __z88dk_fastcall
 	cpm_exit();
 }
 
-uint8_t* allocmem(uint8_t len)
+uint8_t* allocmem(uint8_t len) 
 {
 	uint8_t* ptr = heapptr;
 	heapptr += len;
 	return ptr;
 }
 
-uint8_t get_drive_or_default(uint8_t dr)
+uint8_t get_drive_or_default(uint8_t dr) 
 {
 	if (dr == ' ')
 		return 0;
@@ -421,7 +421,7 @@ void emit8_to_output_file(struct output_file* f, uint8_t b)
 	}
 }
 
-void open_output_file(struct output_file* f)
+void open_output_file(struct output_file* f) 
 {
 	if (f->fcb.dr > 16)
 		return;
@@ -432,7 +432,7 @@ void open_output_file(struct output_file* f)
 	f->fill = 0;
 }
 
-void close_output_file(struct output_file* f)
+void close_output_file(struct output_file* f) 
 {
 	while (f->fill != 0)
 		emit8_to_output_file(f, 0);
@@ -459,8 +459,7 @@ void unread_byte(uint8_t b)
 	/* Safe because input_buffer_read_count is guaranteed never to be 0. */
 	cpm_default_dma[--input_buffer_read_count] = b;
 }
-
-void emit8(uint8_t b)
+void emit8(uint8_t b) 
 {
 	static bool program_counter_fixed = false;
 	static uint16_t old_program_counter = 0;
@@ -483,13 +482,13 @@ void emit8(uint8_t b)
 	old_program_counter = program_counter;
 }
 
-void emit16(uint16_t w)
+void emit16(uint16_t w) 
 {
 	emit8(w);
 	emit8(w >> 8);
 }
 
-bool isident(uint8_t c)
+bool isident(uint8_t c) 
 {
 	return isalnum(c) || (c == '_');
 }
@@ -651,7 +650,7 @@ void syntax_error(void)
 	fatal("syntax error");
 }
 
-void expect(token_t wanted)
+void expect(token_t wanted) 
 {
 	if (read_token() != wanted)
 		syntax_error();
@@ -663,7 +662,7 @@ uint8_t operator_stack[STACK_DEPTH];
 uint8_t value_sp = 1;
 uint8_t operator_sp = 1;
 
-void push_value(uint16_t value)
+void push_value(uint16_t value) 
 {
 	if (value_sp == STACK_DEPTH)
 		fatal("expression stack overflow");
@@ -677,7 +676,7 @@ uint16_t pop_value(void)
 	return value_stack[--value_sp];
 }
 
-void apply_operator(uint8_t opid)
+void apply_operator(uint8_t opid) 
 {
 	const struct operator* op = &operators[opid];
 
@@ -697,14 +696,14 @@ void apply_operator(uint8_t opid)
 		push_value(op->callback(right, 0));
 }
 
-void push_operator(uint8_t opid)
+void push_operator(uint8_t opid) 
 {
 	if (operator_sp == STACK_DEPTH)
 		fatal("operator stack overflow");
 	operator_stack[operator_sp++] = opid;
 }
 
-void push_and_apply_operator(uint8_t opid)
+void push_and_apply_operator(uint8_t opid) 
 {
 	const struct operator* op = &operators[opid];
 	while (operator_sp != 0)
