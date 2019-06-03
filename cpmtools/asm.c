@@ -1,8 +1,7 @@
 /* asm.c
  * © 2019 David Given
- * This software is redistributable under the terms of the 2-clause BSD
- * licensed. See the LICENSE file in the source of the repository for the
- * full text.
+ * This software is redistributable under the terms of the MIT license.
+ * See the LICENSE file in the source of the repository for the full text.
  *
  * This is a reimplementation of DR's venerable asm.com, in C.
  *
@@ -24,7 +23,7 @@
  *  - error messages are more human readable, but no error recovery is done
  *    and assembly stops at the first error (this is to be fixed)
  *
- *  - the .prn file is always empty currently (this is to be fixed)
+ *  - the .prn file syntax is quite different (and very crude).
  *
  *  - if...endif supports else (but still doesn't support nesting)
  *  - bugs
@@ -307,6 +306,11 @@ uint8_t token_buffer[64];
 uint16_t token_number;
 struct symbol* token_symbol;
 
+#define PRN_BUFFER_LEFT_COLUMN_WIDTH 15
+uint8_t prn_buffer[120];
+uint8_t prn_buffer_left_fill;
+uint8_t prn_buffer_right_fill;
+
 struct symbol* current_label;
 struct symbol* current_insn;
 
@@ -347,7 +351,7 @@ void printx(const char* s)
 
 void printhex4(uint8_t nibble) 
 {
-        nibble &= 0x0f;
+    nibble &= 0x0f;
     if (nibble < 10)
         nibble += '0';
     else
@@ -441,6 +445,56 @@ void close_output_file(struct output_file* f)
 		fatal("Cannot close output file");
 }
 
+void emit_char_to_left_prn_buffer(uint8_t b)
+{
+	if (prn_buffer_left_fill != PRN_BUFFER_LEFT_COLUMN_WIDTH)
+		prn_buffer[prn_buffer_left_fill++] = b;
+}
+
+void emit_char_to_right_prn_buffer(uint8_t b)
+{
+	if (prn_buffer_right_fill != sizeof(prn_buffer))
+	{
+		if (iscntrl(b))
+			b = ' ';
+		if ((prn_buffer_right_fill != PRN_BUFFER_LEFT_COLUMN_WIDTH+2) ||
+			!isspace(b) ||
+			!isspace(prn_buffer[PRN_BUFFER_LEFT_COLUMN_WIDTH+1]))
+			prn_buffer[prn_buffer_right_fill++] = b;
+	}
+}
+
+void emit_hex4_to_left_prn_buffer(uint8_t nibble)
+{
+    nibble &= 0x0f;
+    if (nibble < 10)
+        nibble += '0';
+    else
+        nibble += 'a' - 10;
+    emit_char_to_left_prn_buffer(nibble);
+}
+
+void emit_hex8_to_left_prn_buffer(uint8_t b)
+{
+	emit_hex4_to_left_prn_buffer(b >> 4);
+	emit_hex4_to_left_prn_buffer(b);
+}
+
+void emit_hex16_to_left_prn_buffer(uint16_t w)
+{
+	emit_hex8_to_left_prn_buffer(w >> 8);
+	emit_hex8_to_left_prn_buffer(w);
+}
+
+void emit_program_counter_to_left_prn_buffer(void)
+{
+	if (prn_buffer_left_fill == 0)
+	{
+		emit_hex16_to_left_prn_buffer(program_counter);
+		prn_buffer_left_fill++;
+	}
+}
+
 uint8_t read_byte(void)
 {
 	if (input_buffer_read_count == 0x80)
@@ -451,13 +505,18 @@ uint8_t read_byte(void)
 		input_buffer_read_count = 0;
 	}
 
-	return cpm_default_dma[input_buffer_read_count++];
+	uint8_t b = cpm_default_dma[input_buffer_read_count++];
+	if ((pass == 1) && (b != '\n') && (b != '\r'))
+		emit_char_to_right_prn_buffer(b);
+	return b;
 }
 
 void unread_byte(uint8_t b)
 {
 	/* Safe because input_buffer_read_count is guaranteed never to be 0. */
 	cpm_default_dma[--input_buffer_read_count] = b;
+	if (pass == 1)
+		prn_buffer_right_fill--;
 }
 void emit8(uint8_t b) 
 {
@@ -475,6 +534,9 @@ void emit8(uint8_t b)
 		uint16_t delta = program_counter - old_program_counter;
 		while (delta--)
 			emit8_to_output_file(&bin_file, 0);
+
+		emit_program_counter_to_left_prn_buffer();
+		emit_hex8_to_left_prn_buffer(b);
 		emit8_to_output_file(&bin_file, b);
 	}
 
@@ -947,6 +1009,16 @@ void title_cb(void)
 	expect(TOKEN_NL);
 }
 
+void emit_left_column_label_data(void)
+{
+	if (pass == 1)
+	{
+		emit_hex16_to_left_prn_buffer(token_number);
+		emit_char_to_left_prn_buffer(' ');
+		emit_char_to_left_prn_buffer('=');
+	}
+}
+
 void equ_cb(void)
 {
 	if (!current_label)
@@ -959,6 +1031,8 @@ void equ_cb(void)
 
 	current_label->value = token_number;
 	current_label->callback = equlabel_cb;
+
+	emit_left_column_label_data();
 }
 
 void set_cb(void)
@@ -972,6 +1046,8 @@ void set_cb(void)
 	expect_expression();
 	current_label->value = token_number;
 	current_label->callback = setlabel_cb;
+
+	emit_left_column_label_data();
 }
 
 void if_cb(void)
@@ -984,6 +1060,7 @@ void if_cb(void)
 	}
 	else
 	{
+		pass += 10; /* Suppress prn logging */
 		for (;;)
 		{
 			token_t t = read_token();
@@ -994,6 +1071,7 @@ void if_cb(void)
 				break;
 		}
 		expect(TOKEN_NL);
+		pass -= 10; /* Enable prn logging again */
 	}
 }
 
@@ -1002,6 +1080,7 @@ void else_cb(void)
 	/* If this pseudoop actually gets executed, then we've been executing the
 	 * true branch of the if...endif. Skip to the end. */
 
+	pass += 10; /* Suppress prn logging */
 	for (;;)
 	{
 		token_t t = read_token();
@@ -1011,6 +1090,7 @@ void else_cb(void)
 			break;
 	}
 	expect(TOKEN_NL);
+	pass -= 10; /* Enable prn logging again */
 }
 
 void endif_cb(void)
@@ -1184,6 +1264,10 @@ void main(void)
 
 		for (;;)
 		{
+			memset(prn_buffer, ' ', sizeof(prn_buffer));
+			prn_buffer_left_fill = 0;
+			prn_buffer_right_fill = PRN_BUFFER_LEFT_COLUMN_WIDTH + 1;
+
 			token_t t = read_token();
 			if (t == TOKEN_EOF)
 				break;
@@ -1223,10 +1307,22 @@ void main(void)
 			}
 			else
 				set_implicit_label();
+
+			if (pass == 1)
+			{
+				uint8_t* p = prn_buffer;
+				prn_buffer_right_fill++;
+				while (prn_buffer_right_fill--)
+					emit8_to_output_file(&prn_file, *p++);
+				emit8_to_output_file(&prn_file, '\r');
+				emit8_to_output_file(&prn_file, '\n');
+			}
 		}
 	}
 
 	close_output_file(&bin_file);
+
+	emit8_to_output_file(&prn_file, 26);
 	close_output_file(&prn_file);
 }
 
