@@ -203,9 +203,9 @@ $(OBJ)/cpmtools/%.obj: cpmtools/%.asm
 	@mkdir -p $(dir $@)
 	sdasz80 -g -o $@ $<
 
-$(OBJ)/cpmtools/%.obj: cpmtools/%.c cpmtools/libcpm.h
+$(OBJ)/cpmtools/%.obj: cpmtools/%.c cpmtools/libcpm/libcpm.h
 	@mkdir -p $(dir $@)
-	sdcc -mz80 -c --opt-code-size -o $@ $<
+	sdcc -mz80 -c --opt-code-size -Icpmtools/libcpm -o $@ $<
 
 LIBCPM_SRCS = $(wildcard cpmtools/libcpm/*.asm)
 LIBCPM_OBJS = $(patsubst %.asm,$(OBJ)/%.obj,$(LIBCPM_SRCS))
