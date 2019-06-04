@@ -23,9 +23,11 @@
  *  - error messages are more human readable, but no error recovery is done
  *    and assembly stops at the first error (this is to be fixed)
  *
- *  - the .prn file syntax is quite different (and very crude).
+ *  - the .prn file syntax is quite different (and very crude), and defaults
+ *    to Z: (i.e. no output) if you don't explicitly ask for it.
  *
  *  - if...endif supports else (but still doesn't support nesting)
+ * 
  *  - bugs
  */
 
@@ -118,6 +120,35 @@ const struct operator operators[] =
 	{ xor_cb, 2, true },
 	{ NULL,   0xff, false },
 };
+
+#define CONSOLE_DRIVE ('X' - '@') /* FCB drive number representing console */
+#define SKIP_DRIVE    ('Z' - '@') /* FCB drive number representing /dev/null */
+
+#define asm_fcb cpm_fcb
+struct output_file bin_file;
+struct output_file prn_file;
+int pass;
+bool eol;
+uint16_t lineno;
+uint16_t program_counter;
+uint8_t* heapptr = cpm_ram;
+bool db_string_constant_hack = false;
+
+uint8_t input_buffer_read_count;
+uint8_t token_length;
+uint8_t token_buffer[64];
+uint16_t token_number;
+struct symbol* token_symbol;
+
+#define PRN_BUFFER_LEFT_COLUMN_WIDTH 15
+uint8_t prn_buffer[120];
+uint8_t prn_buffer_left_fill;
+uint8_t prn_buffer_right_fill;
+
+struct symbol* current_label;
+struct symbol* current_insn;
+
+extern token_t read_expression(void);
 
 #define INSN(id, name, value, cb, next) \
 	extern void cb(void); \
@@ -290,32 +321,6 @@ struct symbol* hashtable[32] =
 	0, /* _ */
 };
 
-#define asm_fcb cpm_fcb
-struct output_file bin_file;
-struct output_file prn_file;
-int pass;
-bool eol;
-uint16_t lineno;
-uint16_t program_counter;
-uint8_t* heapptr = cpm_ram;
-bool db_string_constant_hack = false;
-
-uint8_t input_buffer_read_count;
-uint8_t token_length;
-uint8_t token_buffer[64];
-uint16_t token_number;
-struct symbol* token_symbol;
-
-#define PRN_BUFFER_LEFT_COLUMN_WIDTH 15
-uint8_t prn_buffer[120];
-uint8_t prn_buffer_left_fill;
-uint8_t prn_buffer_right_fill;
-
-struct symbol* current_label;
-struct symbol* current_insn;
-
-extern token_t read_expression(void);
-
 void printn(const char* s, unsigned len)
 {
 	while (len--)
@@ -412,17 +417,22 @@ uint8_t get_drive_or_default(uint8_t dr)
 
 void emit8_to_output_file(struct output_file* f, uint8_t b)
 {
-	f->buffer[f->fill++] = b;
-	if (f->fill == sizeof(f->buffer))
+	if (f->fcb.dr <= 16)
 	{
-		/* Flush to disk. */
+		f->buffer[f->fill++] = b;
+		if (f->fill == sizeof(f->buffer))
+		{
+			/* Flush to disk. */
 
-		cpm_set_dma(f->buffer);
-		if (cpm_write_sequential(&f->fcb) != 0)
-			fatal("Error writing output file");
+			cpm_set_dma(f->buffer);
+			if (cpm_write_sequential(&f->fcb) != 0)
+				fatal("Error writing output file");
 
-		f->fill = 0;
+			f->fill = 0;
+		}
 	}
+	else if (f->fcb.dr == CONSOLE_DRIVE)
+		putchar(b);
 }
 
 void open_output_file(struct output_file* f) 
@@ -438,6 +448,9 @@ void open_output_file(struct output_file* f)
 
 void close_output_file(struct output_file* f) 
 {
+	if (f->fcb.dr > 16)
+		return;
+
 	while (f->fill != 0)
 		emit8_to_output_file(f, 0);
 
@@ -447,12 +460,18 @@ void close_output_file(struct output_file* f)
 
 void emit_char_to_left_prn_buffer(uint8_t b)
 {
+	if (prn_file.fcb.dr == SKIP_DRIVE)
+		return;
+	
 	if (prn_buffer_left_fill != PRN_BUFFER_LEFT_COLUMN_WIDTH)
 		prn_buffer[prn_buffer_left_fill++] = b;
 }
 
 void emit_char_to_right_prn_buffer(uint8_t b)
 {
+	if (prn_file.fcb.dr == SKIP_DRIVE)
+		return;
+	
 	if (prn_buffer_right_fill != sizeof(prn_buffer))
 	{
 		if (iscntrl(b))
@@ -466,6 +485,9 @@ void emit_char_to_right_prn_buffer(uint8_t b)
 
 void emit_hex4_to_left_prn_buffer(uint8_t nibble)
 {
+	if (prn_file.fcb.dr == SKIP_DRIVE)
+		return;
+	
     nibble &= 0x0f;
     if (nibble < 10)
         nibble += '0';
@@ -476,18 +498,27 @@ void emit_hex4_to_left_prn_buffer(uint8_t nibble)
 
 void emit_hex8_to_left_prn_buffer(uint8_t b)
 {
+	if (prn_file.fcb.dr == SKIP_DRIVE)
+		return;
+	
 	emit_hex4_to_left_prn_buffer(b >> 4);
 	emit_hex4_to_left_prn_buffer(b);
 }
 
 void emit_hex16_to_left_prn_buffer(uint16_t w)
 {
+	if (prn_file.fcb.dr == SKIP_DRIVE)
+		return;
+	
 	emit_hex8_to_left_prn_buffer(w >> 8);
 	emit_hex8_to_left_prn_buffer(w);
 }
 
 void emit_program_counter_to_left_prn_buffer(void)
 {
+	if (prn_file.fcb.dr == SKIP_DRIVE)
+		return;
+	
 	if (prn_buffer_left_fill == 0)
 	{
 		emit_hex16_to_left_prn_buffer(program_counter);
@@ -1228,6 +1259,8 @@ void main(void)
 
 	memcpy(&prn_file.fcb, &cpm_fcb, sizeof(FCB));
 	prn_file.fcb.dr = get_drive_or_default(cpm_fcb.f[10]);
+	if (prn_file.fcb.dr == 0)
+		prn_file.fcb.dr = SKIP_DRIVE;
 	memcpy(&prn_file.fcb.f[8], "PRN", 3);
 
 	asm_fcb.dr = get_drive_or_default(cpm_fcb.f[8]);
@@ -1264,9 +1297,12 @@ void main(void)
 
 		for (;;)
 		{
-			memset(prn_buffer, ' ', sizeof(prn_buffer));
-			prn_buffer_left_fill = 0;
-			prn_buffer_right_fill = PRN_BUFFER_LEFT_COLUMN_WIDTH + 1;
+			if (prn_file.fcb.dr != SKIP_DRIVE)
+			{
+				memset(prn_buffer, ' ', sizeof(prn_buffer));
+				prn_buffer_left_fill = 0;
+				prn_buffer_right_fill = PRN_BUFFER_LEFT_COLUMN_WIDTH + 1;
+			}
 
 			token_t t = read_token();
 			if (t == TOKEN_EOF)
@@ -1308,7 +1344,7 @@ void main(void)
 			else
 				set_implicit_label();
 
-			if (pass == 1)
+			if ((pass == 1) && (prn_file.fcb.dr != SKIP_DRIVE))
 			{
 				uint8_t* p = prn_buffer;
 				prn_buffer_right_fill++;
