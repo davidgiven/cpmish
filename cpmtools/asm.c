@@ -64,7 +64,7 @@ struct symbol
 	uint16_t value;
 	void (*callback)(void);
 	struct symbol* next;
-	const uint8_t name[]; /* not zero terminated */
+	const uint8_t* name; /* not zero terminated */
 };
 
 struct operator
@@ -528,6 +528,8 @@ void emit_program_counter_to_left_prn_buffer(void)
 
 uint8_t read_byte(void)
 {
+	uint8_t b;
+
 	if (input_buffer_read_count == 0x80)
 	{
 		cpm_set_dma(cpm_default_dma);
@@ -536,7 +538,7 @@ uint8_t read_byte(void)
 		input_buffer_read_count = 0;
 	}
 
-	uint8_t b = cpm_default_dma[input_buffer_read_count++];
+	b = cpm_default_dma[input_buffer_read_count++];
 	if ((pass == 1) && (b != '\n') && (b != '\r'))
 		emit_char_to_right_prn_buffer(b);
 	return b;
@@ -556,13 +558,15 @@ void emit8(uint8_t b)
 
 	if (pass == 1)
 	{
+		uint16_t delta;
+
 		if (!program_counter_fixed)
 		{
 			program_counter_fixed = true;
 			old_program_counter = program_counter;
 		}
 
-		uint16_t delta = program_counter - old_program_counter;
+		delta = program_counter - old_program_counter;
 		while (delta--)
 			emit8_to_output_file(&bin_file, 0);
 
@@ -617,6 +621,9 @@ token_t read_token(void)
 	token_length = 0;
 	if (isdigit(c))
 	{
+		uint8_t base;
+		unsigned i;
+
 		for (;;)
 		{
 			check_token_buffer_size();
@@ -630,7 +637,7 @@ token_t read_token(void)
 		}
 		unread_byte(c);
 
-		int base = 10;
+		base = 10;
 		c = token_buffer[--token_length];
 		switch (c)
 		{
@@ -644,7 +651,7 @@ token_t read_token(void)
 		}
 
 		token_number = 0;
-		for (unsigned i=0; i<token_length; i++)
+		for (i=0; i<token_length; i++)
 		{
 			c = token_buffer[i];
 			if (c >= 'A')
@@ -661,6 +668,8 @@ token_t read_token(void)
 	}
 	else if (isupper(c))
 	{
+		uint8_t slot;
+
 		for (;;)
 		{
 			check_token_buffer_size();
@@ -676,7 +685,7 @@ token_t read_token(void)
 
 		/* Search for this identifier in the symbol table. */
 
-		uint8_t slot = token_buffer[0] & 0x1f;
+		slot = token_buffer[0] & 0x1f;
 		token_symbol = hashtable[slot];
 		while (token_symbol)
 		{
@@ -842,13 +851,14 @@ token_t read_expression(void)
 {
 	token_t t;
 	uint16_t v;
+	bool seenvalue;
 
 	#if defined EXPR_DEBUG
 		printx("read expression");
 	#endif
 
 	value_sp = operator_sp = 0;
-	bool seenvalue = false;
+	seenvalue = false;
 	for (;;)
 	{
 		#if defined EXPR_DEBUG
@@ -941,9 +951,11 @@ token_t read_expression(void)
 
 				for (;;)
 				{
+					uint8_t opid;
+
 					if (operator_sp == 0)
 						fatal("unbalanced parentheses");
-					uint8_t opid = operator_stack[--operator_sp];
+					opid = operator_stack[--operator_sp];
 					if (opid == OP_PAR)
 						break;
 					apply_operator(opid);
@@ -1140,15 +1152,18 @@ void org_cb(void)
 
 void db_cb(void)
 {
+	token_t t;
+
 	db_string_constant_hack = true;
 
-	token_t t;
 	do
 	{
+		unsigned i;
+
 		t = read_expression();
 		if (t == TOKEN_STRING)
 		{
-			for (unsigned i=0; i<token_length; i++)
+			for (i=0; i<token_length; i++)
 				emit8(token_buffer[i]);
 			t = read_token();
 			if ((t != TOKEN_NL) && (t != ','))
@@ -1219,11 +1234,14 @@ void rp_cb(void)
 
 void mov_cb(void)
 {
+	uint16_t src;
+	uint16_t dest;
+
 	if (read_expression() != ',')
 		syntax_error();
-	uint16_t dest = token_number;
+	dest = token_number;
 	expect_expression();
-	uint16_t src = token_number;
+	src = token_number;
 
 	emit8(0x40 | (dest<<3) | src);
 }
@@ -1240,9 +1258,11 @@ void lxi_cb(void)
 
 void mvi_cb(void)
 {
+	uint16_t dest;
+
 	if (read_expression() != ',')
 		syntax_error();
-	uint16_t dest = token_number;
+	dest = token_number;
 	expect_expression();
 
 	emit8(0x06 | (dest<<3));
@@ -1297,6 +1317,8 @@ void main(void)
 
 		for (;;)
 		{
+			token_t t;
+
 			if (prn_file.fcb.dr != SKIP_DRIVE)
 			{
 				memset(prn_buffer, ' ', sizeof(prn_buffer));
@@ -1304,7 +1326,7 @@ void main(void)
 				prn_buffer_right_fill = PRN_BUFFER_LEFT_COLUMN_WIDTH + 1;
 			}
 
-			token_t t = read_token();
+			t = read_token();
 			if (t == TOKEN_EOF)
 				break;
 			if (t == TOKEN_NL)

@@ -8,5 +8,5 @@
 
 	public bootblock
 bootblock:
-        include ".obj/supervisor/auto.cim.inc"
+        include "auto_inc.inc"
 

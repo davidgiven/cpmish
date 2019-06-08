@@ -7,3 +7,13 @@ diskdef nc200cpm
   boottrk 2
   os 2.2
 end
+
+diskdef osborne1
+   seclen 1024
+   tracks 40
+   sectrk 5
+   blocksize 1024
+   maxdir 64
+   boottrk 3
+   os 2.2
+end

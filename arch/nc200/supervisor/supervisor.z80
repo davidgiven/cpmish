@@ -1,0 +1,22 @@
+	maclib supervisor
+	maclib cpm
+	maclib nc200
+
+	extern BBASE
+	extern BDISK
+	extern BDMA
+	extern BIRQ
+	extern BOOT
+	extern BSECTOR
+	extern BTRACK
+	extern FBASE
+	extern SYSOUT
+
+	include "interrupts.inc"
+	include "keyboard.inc"
+	include "syscalls.inc"
+	include "startup.inc"
+	include "floppy.inc"
+	include "cache.inc"
+	include "tty.inc"
+

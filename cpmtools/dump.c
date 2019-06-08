@@ -52,6 +52,8 @@ void printhex24(uint32_t n) __z88dk_fastcall
 
 void main(void)
 {
+    uint32_t address;
+
     cpm_fcb.cr = 0;
     if (cpm_open_file(&cpm_fcb) == 0xff)
     {
@@ -59,31 +61,36 @@ void main(void)
         return;
     }
 
-    uint32_t address = 0;
+    address = 0;
     for (;;)
     {
+        const uint8_t* data;
+        uint8_t i;
+        uint8_t j;
+        uint8_t b;
+
         if (cpm_read_sequential(&cpm_fcb) != 0)
             break;
         
-        const uint8_t* data = (const uint8_t*)0x80;
-        for (uint8_t i=0; i<8; i++)
+        data = (const uint8_t*)0x80;
+        for (i=0; i<8; i++)
         {
 			printhex24(address);
 			print(" : ");
             address += 16;
 
-            for (uint8_t j=0; j<16; j++)
+            for (j=0; j<16; j++)
             {
-                uint8_t b = *data++;
+                b = *data++;
                 printhex8(b);
                 putchar(' ');
             }
             data -= 16;
 
             print(": ");
-            for (uint8_t j=0; j<16; j++)
+            for (j=0; j<16; j++)
             {
-                uint8_t b = *data++;
+                b = *data++;
                 putchar(isprint(b) ? b : '.');
             }
 

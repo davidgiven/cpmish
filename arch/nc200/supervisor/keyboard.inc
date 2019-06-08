@@ -142,5 +142,5 @@ kbd_get_next_key:
 		ei
 		ret
 
-.include ".obj/keyboard.inc"
+.include "keytab.inc"
 

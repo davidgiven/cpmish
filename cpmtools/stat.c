@@ -98,7 +98,9 @@ uint8_t compare_accumulator(const uint8_t* list, uint8_t length)
     while (length--)
     {
         bool m = true;
-        for (uint8_t j=0; j<4; j++)
+        uint8_t j;
+
+        for (j=0; j<4; j++)
         {
             if (*list++ != accumulator[j])
                 m = false;
@@ -130,7 +132,9 @@ uint16_t count_space(void)
 {
     uint8_t* alloca = cpm_get_allocation_vector();
     uint16_t blocks = 0;
-    for (uint16_t i=0; i<=dpb->dsm; i++)
+    uint16_t i;
+
+    for (i=0; i<=dpb->dsm; i++)
     {
         bool bit = alloca[i >> 3] & (0x80 >> (i & 7));
         if (!bit)
@@ -177,19 +181,23 @@ void print_drive_status(void)
 /* Reads the next input token into the 4-byte accumulator. */
 void scan(void)
 {
+    uint8_t obp;
+
     /* Skip whitespace. */
 
     while ((ibp != cpm_cmdlinelen) && (cpm_cmdline[ibp] == ' '))
         ibp++;
 
-    uint8_t obp = 0;
+    obp = 0;
     memset(accumulator, ' ', sizeof(accumulator));
     while (obp != 4)
     {
+        uint8_t b;
+
         if (ibp == cpm_cmdlinelen)
             return;
 
-        uint8_t b = cpm_cmdline[ibp++];
+        b = cpm_cmdline[ibp++];
         accumulator[obp++] = b;
         switch (b)
         {
@@ -218,13 +226,15 @@ void get_detailed_drive_status(void)
     putchar(':');
     printx(" Drive Characteristics");
 
-    uint16_t rpb = 1<<dpb->bsh;
-    uint16_t rpd = (dpb->dsm+1) * rpb;
-    if ((rpd == 0) && (rpb != 0))
-        print("65536");
-    else
-        printipadded(rpd);
-    printx(": 128 byte record capacity");
+    {
+        uint16_t rpb = 1<<dpb->bsh;
+        uint16_t rpd = (dpb->dsm+1) * rpb;
+        if ((rpd == 0) && (rpb != 0))
+            print("65536");
+        else
+            printipadded(rpd);
+        printx(": 128 byte record capacity");
+    }
 
     printipadded(count_space());
     printx(": kilobyte drive capacity");
@@ -254,7 +264,9 @@ int index_sort_cb(const void* left, const void* right)
 
 void print_filename(uint8_t* filename)
 {
-    for (uint8_t i=0; i<11; i++)
+    uint8_t i;
+
+    for (i=0; i<11; i++)
     {
         uint8_t b = *filename++ & 0x7f;
         if (b != ' ')
@@ -268,6 +280,10 @@ void print_filename(uint8_t* filename)
 
 void file_manipulation(void)
 {
+    uint8_t command;
+    uint16_t count;
+    uint8_t r;
+
     /* Options are passed as the second word on the command line, which the
      * CPP parses as a filename and writes into cpm_fcb2. There will now be
      * a short pause for me to be ill. */
@@ -275,16 +291,17 @@ void file_manipulation(void)
     const static uint8_t command_names[] = "$S  $R/O$R/W$SYS$DIR";
     enum { LIST = 0, LIST_WITH_SIZE, SET_RO, SET_RW, SET_SYS, SET_DIR };
     memcpy(accumulator, cpm_fcb2.f, 4);
-    uint8_t command = compare_accumulator(command_names, sizeof(command_names)/4);
+    command = compare_accumulator(command_names, sizeof(command_names)/4);
 
     select_fcb_disk();
     cpm_fcb.ex = '?'; /* find all extents, not just the first */
-    uint16_t count = 0;
-    uint8_t r = cpm_findfirst(&cpm_fcb);
+    count = 0;
+    r = cpm_findfirst(&cpm_fcb);
     while (r != 0xff)
     {
         DIRE* de = (DIRE*)0x80 + r;
         struct fe* fe = files;
+        uint8_t j;
 
         /* Try to find the file in the array. */
 
@@ -318,7 +335,7 @@ void file_manipulation(void)
         if (dpb->dsm < 256)
         {
             /* 8-bit allocation map. */
-            for (uint8_t j=0; j<16; j++)
+            for (j=0; j<16; j++)
             {
                 if (de->al.al8[j])
                     fe->blocks++;
@@ -327,7 +344,7 @@ void file_manipulation(void)
         else
         {
             /* 16-bit allocation map. */
-            for (uint8_t j=0; j<8; j++)
+            for (j=0; j<8; j++)
             {
                 if (de->al.al16[j])
                     fe->blocks++;
@@ -342,13 +359,18 @@ void file_manipulation(void)
         case LIST:
         case LIST_WITH_SIZE:
         {
-            qsort(findex, count, sizeof(void*), index_sort_cb);
+            uint8_t current_drive;
+            struct fe** fep;
 
-            uint8_t current_drive = 'A' + cpm_get_current_drive();
+            #if !defined SDCC || (SDCC >= 380)
+                qsort(findex, count, sizeof(void*), index_sort_cb);
+            #endif
+
+            current_drive = 'A' + cpm_get_current_drive();
             if (command == LIST_WITH_SIZE)
                 print("  Size");
             printx(" Recs   Bytes  Ext Acc");
-            struct fe** fep = findex;
+            fep = findex;
             while (count--)
             {
                 struct fe* f = *fep++;
@@ -399,6 +421,8 @@ void file_manipulation(void)
             struct fe* fe = files;
             while (count--)
             {
+                const uint8_t* p;
+
                 print_filename(fe->filename);
                 memset(&cpm_fcb, 0, sizeof(FCB));
                 memcpy(cpm_fcb.f, fe->filename, 11);
@@ -406,7 +430,7 @@ void file_manipulation(void)
                 cpm_set_file_attributes(&cpm_fcb);
 
                 print(" set to ");
-                const uint8_t* p = &command_names[(command-1)*4] + 1;
+                p = &command_names[(command-1)*4] + 1;
                 putchar(*p++);
                 putchar(*p++);
                 putchar(*p);
@@ -463,6 +487,9 @@ void print_device_name(const char* p)
 
 bool change_device_assignment(uint8_t logical)
 {
+    uint8_t physical;
+    uint8_t b;
+
     scan();
     if (accumulator[0] != '=')
     {
@@ -471,14 +498,14 @@ bool change_device_assignment(uint8_t logical)
     }
 
     scan();
-    uint8_t physical = compare_accumulator(&physical_device_names[logical*16], 4) - 1;
+    physical = compare_accumulator(&physical_device_names[logical*16], 4) - 1;
     if (physical == 0xff)
     {
         printx("Invalid assignment");
         return true;
     }
 
-    uint8_t b = 3;
+    b = 3;
     while (logical--)
     {
         b <<= 2;
@@ -494,8 +521,9 @@ void show_device_assignments(void)
     uint8_t b = cpm_iobyte;
     const char* lp = logical_device_names;
     const char* pp = physical_device_names;
+    uint8_t i;
 
-    for (uint8_t i=0; i<4; i++)
+    for (i=0; i<4; i++)
     {
         print_device_name(lp);
         print(" is ");
@@ -509,6 +537,11 @@ void show_device_assignments(void)
 
 void show_help(void)
 {
+    const char* lp;
+    const char* pp;
+    uint8_t i;
+    uint8_t j;
+
     printx(
         "Set disk to read only:  stat d:=R/O\r\n"
         "Set file attributes:    stat d:filename.typ $R/O / $R/W / $SYS / $DIR\r\n"
@@ -518,16 +551,16 @@ void show_help(void)
         "Show device mapping:    stat DEV:"
     );
 
-    const char* lp = logical_device_names;
-    const char* pp = physical_device_names;
-    for (uint8_t i=0; i<4; i++)
+    lp = logical_device_names;
+    pp = physical_device_names;
+    for (i=0; i<4; i++)
     {
         print("Set device mapping:     stat ");
         print_device_name(lp);
         lp += 4;
         putchar('=');
 
-        for (uint8_t j=0; j<4; j++)
+        for (j=0; j<4; j++)
         {
             if (j)
                 print(" / ");
@@ -540,20 +573,23 @@ void show_help(void)
 
 void show_user_numbers(void)
 {
+    static uint8_t users[32];
     static FCB wildcard_fcb;
-    memcpy(&wildcard_fcb, &wildcard_fcb_template, sizeof(FCB));
+    uint8_t r;
+    uint8_t i;
+    DIRE* data;
 
     print("Active user: ");
     printi(cpm_get_current_user());
     crlf();
     print("Active files:");
 
-    DIRE* data = (DIRE*) files; /* horrible, but it's unused and big enough */
+    data = (DIRE*) files; /* horrible, but it's unused and big enough */
     cpm_set_dma(data);
-    static uint8_t users[32];
     memset(users, 0, sizeof(users));
 
-    uint8_t r = cpm_findfirst(&wildcard_fcb);
+    memcpy(&wildcard_fcb, &wildcard_fcb_template, sizeof(FCB));
+    r = cpm_findfirst(&wildcard_fcb);
     while (r != 0xff)
     {
         DIRE* found = &data[r];
@@ -563,7 +599,7 @@ void show_user_numbers(void)
         r = cpm_findnext(&wildcard_fcb);
     }
 
-    for (uint8_t i=0; i<32; i++)
+    for (i=0; i<32; i++)
     {
         if (users[i])
         {
@@ -581,8 +617,10 @@ bool device_manipulation(void)
     uint8_t items = 0;
     for (;;)
     {
+        uint8_t i;
+
         scan();
-        uint8_t i = compare_accumulator(logical_device_names, 8);
+        i = compare_accumulator(logical_device_names, 8);
         if (!i)
             return items;
         items++;
