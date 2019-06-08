@@ -15,6 +15,9 @@ addons:
         - sdcc
         - netpbm
         - cpmtools
+        - libstb-dev
+        - lua5.1
+        - ninja-build
 
 script:
     - make
