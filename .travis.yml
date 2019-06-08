@@ -16,6 +16,7 @@ addons:
         - netpbm
         - cpmtools
         - lua5.1
+        - lua-posix
         - ninja-build
 
 script:
