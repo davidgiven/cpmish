@@ -17,4 +17,6 @@ $(OBJDIR)/build.ninja: build/ackbuilder.lua build/cpm.lua Makefile $(lua-files)
 		build.lua \
 		--ninja \
 		OBJDIR=$(OBJDIR) \
+		CC=gcc \
+		AR=ar \
 		> $@

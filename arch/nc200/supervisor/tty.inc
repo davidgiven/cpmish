@@ -682,5 +682,5 @@ tty_scroll:
 ; The font.
 
 font_data:
-	include ".obj/font.inc"
+	include "font.inc"
 

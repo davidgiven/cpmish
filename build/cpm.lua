@@ -106,12 +106,14 @@ definerule("file",
 definerule("diskimage",
     {
         diskdefs = { type="targets", default={ "diskdefs" } },
-        format = { type="string" },
+		format = { type="string" },
+		bootfile = { type="targets" },
         map = { type="targets", default={} },
         deps = { type="targets", default={} },
     },
-    function (e)
-		local deps = { e.deps, e.diskdefs }
+	function (e)
+		local bootfile = filenamesof(e.bootfile)[1]
+		local deps = { e.deps, e.diskdefs, e.bootfile }
 		local commands = {}
 		local outs = {}
 		for dest, src in pairs(e.map) do
@@ -133,7 +135,7 @@ definerule("diskimage",
             outleaves = { e.name..".img" },
             ins = deps,
             commands = {
-                "mkfs.cpm -f "..e.format.." %{outs}",
+                "mkfs.cpm -f "..e.format.." -b "..bootfile.." %{outs}",
                 commands
             }
         }
