@@ -1,4 +1,5 @@
 vars.cflags = { "-g", "-Og" }
+vars.ldflags = { "-lm" }
 vars.cpmcflags = { "--opt-code-size" }
 vars.cpmldflags = {}
 
@@ -10,6 +11,7 @@ diskimage {
         ["dump.com"] = "cpmtools+dump",
         ["stat.com"] = "cpmtools+stat",
         ["asm.com"] = "cpmtools+asm",
+        ["copy.com"] = "cpmtools+copy",
 
         -- These binary tools are here temporarily and need to be removed ---
         -- we have no license for them.
@@ -44,6 +46,7 @@ diskimage {
 installable {
     name = "all",
     map = {
+        ["emu"] = "utils/emu+emu",
         ["nc200.img"] = "+nc200-img",
     --    ["osborne1.img"] = "+osborne1-img"
     }

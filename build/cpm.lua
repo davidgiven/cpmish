@@ -66,11 +66,13 @@ definerule("sdccprogram",
 		deps = { type="targets", default={} },
 	},
 	function (e)
+		local crt = "cpmtools+cpmcrt"
+
 		return cprogram {
 			name = e.name,
 			srcs = e.srcs,
 			deps = {
-				"cpmtools/libcpm+cpmcrt",
+				crt,
 				"cpmtools/libcpm+libcpm",
 				e.deps,
 			},
@@ -82,6 +84,7 @@ definerule("sdccprogram",
 					.. "-k /usr/share/sdcc/lib/z80 "
 					.. "-l z80 "
 					.. "-m "
+					.. filenamesof(crt)[1] .. " "
 					.. "%{ins} ",
 				"makebin -p %{outs}.ihx - | dd status=none of=%{outs} bs=128 skip=2"
 			}

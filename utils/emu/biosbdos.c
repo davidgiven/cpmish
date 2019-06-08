@@ -17,7 +17,7 @@
 #define CBASE 0xf700
 
 static const uint8_t cpm_data[] =
-#include ".obj/emucpm.cim.h"
+#include "biosbdos_cim_h.h"
 
 static uint16_t dma;
 static int exitcode = 0;

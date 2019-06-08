@@ -1,6 +1,8 @@
 #ifndef LIBCPM_H
 #define LIBCPM_H
 
+#include <stdint.h>
+
 typedef struct
 {
     uint8_t dr;
@@ -54,6 +56,7 @@ extern uint8_t cpm_cmdlinelen;
 extern uint8_t cpm_cmdline[127];
 
 extern uint8_t cpm_ram[];
+extern uint8_t* cpm_ramtop;
 
 #define FASTCALL __z88dk_fastcall
 

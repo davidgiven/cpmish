@@ -1,3 +1,8 @@
+sdccfile {
+    name = "cpmcrt",
+    srcs = {"./cpmcrt.s"}
+}
+
 sdccprogram {
     name = "dump",
     srcs = { "./dump.c" },
@@ -11,4 +16,9 @@ sdccprogram {
 sdccprogram {
     name = "asm",
     srcs = { "./asm.c" },
+}
+
+sdccprogram {
+    name = "copy",
+    srcs = { "./copy.c" },
 }

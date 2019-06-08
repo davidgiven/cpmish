@@ -13,6 +13,9 @@ _cpm_cmdline = 0x0081
 .globl _cpm_default_dma
 _cpm_default_dma = 0x0080
 
+.globl _cpm_ramtop
+_cpm_ramtop = 0x0006
+
 .globl _cpm_exit
 _cpm_exit = 0
 

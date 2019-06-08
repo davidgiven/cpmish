@@ -28,7 +28,31 @@ definerule("objectify",
             },
             outleaves = { e.name..".inc" },
             commands = {
-                "%{ins} > %{outs}"
+                "%{ins[1]} < %{ins[2]} > %{outs}"
+            }
+        }
+    end
+)
+
+cprogram {
+    name = "objectifyc",
+    srcs = { "./objectifyc.c" }
+}
+
+definerule("objectifyc",
+    {
+        srcs = { type="targets" },
+    },
+    function (e)
+        return normalrule {
+            name = e.name,
+            ins = {
+                "utils+objectifyc",
+                e.srcs,
+            },
+            outleaves = { e.name..".h" },
+            commands = {
+                "%{ins[1]} < %{ins[2]} > %{outs}"
             }
         }
     end
