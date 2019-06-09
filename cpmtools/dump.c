@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include "libcpm.h"
 
-void print(const char* s) __z88dk_fastcall
+void print(const char* s)
 {
     for (;;)
     {
@@ -21,13 +21,13 @@ void crlf(void)
     print("\r\n");
 }
 
-void printx(const char* s) __z88dk_fastcall
+void printx(const char* s)
 {
     print(s);
     crlf();
 }
 
-void printhex4(uint8_t nibble) __z88dk_fastcall
+void printhex4(uint8_t nibble)
 {
 	nibble &= 0x0f;
     if (nibble < 10)
@@ -37,13 +37,13 @@ void printhex4(uint8_t nibble) __z88dk_fastcall
     putchar(nibble);
 }
 
-void printhex8(uint8_t b) __z88dk_fastcall
+void printhex8(uint8_t b)
 {
     printhex4(b >> 4);
     printhex4(b);
 }
 
-void printhex24(uint32_t n) __z88dk_fastcall
+void printhex24(uint32_t n)
 {
     printhex8(n >> 16);
     printhex8(n >> 8);
