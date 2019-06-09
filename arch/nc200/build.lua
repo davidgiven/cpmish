@@ -33,8 +33,9 @@ zmac {
     deps = { "./include/*.lib" },
 }
 
+-- Builds the memory image.
 ld80 {
-    name = "bootfile",
+    name = "bootfile_mem",
     srcs = {
         "-P0000", "+startup.z80",
         "-P000b", "+bpb1.z80",
@@ -48,5 +49,16 @@ ld80 {
         "-Pe800", "third_party/zcpr1+zcpr",
         "-Pf000", "third_party/zsdos+zsdos",
         "-Pfe00", "+bios",
+    }
+}
+
+-- Repackages the memory image as a boot track.
+normalrule {
+    name = "bootfile",
+    ins = { "+bootfile_mem" },
+    outleaves = { "bootfile.img" },
+    commands = {
+        "dd if=%{ins[1]} of=%{outs} status=none bs=256 count=36",
+        "dd if=%{ins[1]} of=%{outs} status=none bs=256 seek=36 skip=232 count=24"
     }
 }
