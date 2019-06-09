@@ -56,6 +56,7 @@ struct output_file
 	uint8_t fill;
 	FCB fcb;
 	uint8_t buffer[128];
+	bool opened : 1;
 };
 
 struct symbol
@@ -149,6 +150,7 @@ struct symbol* current_label;
 struct symbol* current_insn;
 
 extern token_t read_expression(void);
+extern void close_output_file(struct output_file* f);
 
 #define INSN(id, name, value, cb, next) \
 	extern void cb(void); \
@@ -211,7 +213,7 @@ INSN(hlt_symbol,   "HLT",   0x76,   simple1b_cb, &h_symbol);
 INSN(if_symbol,    "IF",    0,      if_cb,       NULL);
 INSN(inx_symbol,   "INX",   0x03,   rp_cb,       &if_symbol);
 INSN(inr_symbol,   "INR",   0x04,   aludst_cb,   &inx_symbol);
-INSN(in_symbol,    "IN",    0xdb,   simple1b_cb, &inr_symbol);
+INSN(in_symbol,    "IN",    0xdb,   simple2b_cb, &inr_symbol);
 
 INSN(jmp_symbol,   "JMP",   0xc3,   simple3b_cb, NULL);
 INSN(jnz_symbol,   "JNZ",   0xc2,   simple3b_cb, &jmp_symbol);
@@ -241,7 +243,7 @@ INSN(or_symbol,    "OR",    OP_OR,  operator_cb, NULL);
 INSN(org_symbol,   "ORG",   0,      org_cb,      &or_symbol);
 INSN(ora_symbol,   "ORA",   0xb0,   alusrc_cb,   &org_symbol);
 INSN(ori_symbol,   "ORI",   0xf6,   simple2b_cb, &ora_symbol);
-INSN(out_symbol,   "OUT",   0xd3,   simple1b_cb, &ori_symbol);
+INSN(out_symbol,   "OUT",   0xd3,   simple2b_cb, &ori_symbol);
 
 VALUE(psw_symbol,  "PSW",   6,                   NULL);
 INSN(push_symbol,  "PUSH",  0xc5,   rp_cb,       &psw_symbol);
@@ -398,6 +400,7 @@ void fatal(const char* s)
 	printi(lineno);
 	print(": ");
 	printx(s);
+	close_output_file(&prn_file);
 	cpm_exit();
 }
 
@@ -443,11 +446,15 @@ void open_output_file(struct output_file* f)
 	cpm_delete_file(&f->fcb);
 	if (cpm_make_file(&f->fcb) == 0xff)
 		fatal("Cannot create output file");
+	f->fcb.cr = 0;
 	f->fill = 0;
+	f->opened = true;
 }
 
 void close_output_file(struct output_file* f) 
 {
+	if (!f->opened)
+		return;
 	if (f->fcb.dr > 16)
 		return;
 
@@ -697,10 +704,11 @@ token_t read_token(void)
 			token_symbol = token_symbol->next;
 		}
 
-		token_symbol = (struct symbol*) allocmem(sizeof(struct symbol) + token_length);
+		token_symbol = (struct symbol*) allocmem(sizeof(struct symbol));
 		token_symbol->value = 0;
 		token_symbol->callback = undeflabel_cb;
 		token_symbol->namelen = token_length;
+		token_symbol->name = allocmem(token_length);
 		memcpy(token_symbol->name, token_buffer, token_length);
 		token_symbol->next = hashtable[slot];
 		hashtable[slot] = token_symbol;
@@ -845,6 +853,16 @@ void push_and_apply_operator(uint8_t opid)
 	}
 #endif
 
+void wanted_operator(void)
+{
+	fatal("expected operator, got value");
+}
+
+void wanted_value(void)
+{
+	fatal("expected value, got operator");
+}
+
 /* Includes terminator (newline or comma).
  * The value is written to token_number. */
 token_t read_expression(void)
@@ -877,7 +895,7 @@ token_t read_expression(void)
 		{
 			case '$':
 				if (seenvalue)
-					syntax_error();
+					wanted_operator();
 
 				push_value(program_counter);
 				seenvalue = true;
@@ -885,7 +903,7 @@ token_t read_expression(void)
 
 			case TOKEN_NUMBER:
 				if (seenvalue)
-					syntax_error();
+					wanted_operator();
 
 				push_value(token_number);
 				seenvalue = true;
@@ -893,7 +911,7 @@ token_t read_expression(void)
 			
 			case TOKEN_STRING:
 				if (seenvalue)
-					syntax_error();
+					wanted_operator();
 
 				/* Special hack for db */
 				if (db_string_constant_hack && (value_sp == 0) && (operator_sp == 0))
@@ -925,21 +943,21 @@ token_t read_expression(void)
 
 			case '*':
 				if (!seenvalue)
-					syntax_error();
+					wanted_value();
 				push_and_apply_operator(OP_MUL);
 				seenvalue = false;
 				break;
 
 			case '/':
 				if (!seenvalue)
-					syntax_error();
+					wanted_value();
 				push_and_apply_operator(OP_DIV);
 				seenvalue = false;
 				break;
 
 			case '(':
 				if (seenvalue)
-					syntax_error();
+					wanted_operator();
 
 				push_operator(OP_PAR);
 				seenvalue = false;
@@ -947,7 +965,7 @@ token_t read_expression(void)
 
 			case ')':
 				if (!seenvalue)
-					syntax_error();
+					wanted_value();
 
 				for (;;)
 				{
@@ -975,7 +993,7 @@ token_t read_expression(void)
 				else if (islabel())
 				{
 					if (seenvalue)
-						syntax_error();
+						wanted_operator();
 
 					push_value(token_symbol->value);
 					seenvalue = true;
@@ -1004,6 +1022,8 @@ terminate:
 		apply_operator(opid);
 	}
 
+	if (value_sp != 1)
+		fatal("missing expression");
 	token_number = value_stack[0];
 
 	#if defined EXPR_DEBUG
@@ -1018,7 +1038,7 @@ terminate:
 void expect_expression(void)
 {
 	if (read_expression() != TOKEN_NL)
-		syntax_error();
+		fatal("expected a single expression");
 }
 
 void operator_cb(void)   { fatal("operators are not instructions"); }
@@ -1065,7 +1085,7 @@ void emit_left_column_label_data(void)
 void equ_cb(void)
 {
 	if (!current_label)
-		syntax_error();
+		fatal("equ with no label");
 	expect_expression();
 
 	if ((current_label->value != token_number) &&
@@ -1081,7 +1101,7 @@ void equ_cb(void)
 void set_cb(void)
 {
 	if (!current_label)
-		syntax_error();
+		fatal("set with no label");
 
 	if (current_label->callback == equlabel_cb)
 		fatal("label already defined");
@@ -1150,6 +1170,11 @@ void org_cb(void)
 	program_counter = token_number;
 }
 
+void bad_separator(void)
+{
+	fatal("invalid separator");
+}
+
 void db_cb(void)
 {
 	token_t t;
@@ -1167,7 +1192,7 @@ void db_cb(void)
 				emit8(token_buffer[i]);
 			t = read_token();
 			if ((t != TOKEN_NL) && (t != ','))
-				syntax_error();
+				bad_separator();
 		}
 		else
 			emit8(token_number);
@@ -1196,7 +1221,6 @@ void ds_cb(void)
 
 void simple1b_cb(void)
 {
-	expect_expression();
 	emit8(current_insn->value);
 }
 
@@ -1238,7 +1262,7 @@ void mov_cb(void)
 	uint16_t dest;
 
 	if (read_expression() != ',')
-		syntax_error();
+		bad_separator();
 	dest = token_number;
 	expect_expression();
 	src = token_number;
@@ -1249,7 +1273,7 @@ void mov_cb(void)
 void lxi_cb(void)
 {
 	if (read_expression() != ',')
-		syntax_error();
+		bad_separator();
 	emit8(0x01 | ((token_number & 6) << 3));
 
 	expect_expression();
@@ -1261,7 +1285,7 @@ void mvi_cb(void)
 	uint16_t dest;
 
 	if (read_expression() != ',')
-		syntax_error();
+		bad_separator();
 	dest = token_number;
 	expect_expression();
 
@@ -1273,6 +1297,12 @@ void end_cb(void) {}
 
 void main(void)
 {
+	uint16_t freeram = ((uint16_t)cpm_ramtop - (uint16_t)heapptr) / 1024;
+
+	print("CP/M Assembler (C) 2019 David Given; ");
+	printi(freeram);
+	printx("kB free");
+
 	memcpy(&bin_file.fcb, &cpm_fcb, sizeof(FCB));
 	bin_file.fcb.dr = get_drive_or_default(cpm_fcb.f[9]);
 	memcpy(&bin_file.fcb.f[8], "BIN", 3);
@@ -1289,19 +1319,21 @@ void main(void)
 	open_output_file(&bin_file);
 	open_output_file(&prn_file);
 
-	if (cpm_open_file(&asm_fcb) == 0xff)
-		fatal("Cannot open input file");
-
 	for (pass=0; pass<2; pass++)
 	{
-		asm_fcb.ex = asm_fcb.cr = 0;
+		/* Rewinding files doesn't work on my PX-8, so just reoopen the file. */
+		asm_fcb.ex = asm_fcb.s1 = asm_fcb.s2 = asm_fcb.rc = asm_fcb.cr = 0;
+		if (cpm_open_file(&asm_fcb) == 0xff)
+			fatal("Cannot open input file");
+		asm_fcb.cr = 0;
+
 		input_buffer_read_count = 0x80;
 		program_counter = 0;
 		eol = true;
 		lineno = 0;
 
 		print("Pass ");
-		printi(pass);
+		printi(pass + 1);
 		crlf();
 
 		/* Each statement consists of:
@@ -1319,6 +1351,9 @@ void main(void)
 		{
 			token_t t;
 
+			if (cpm_get_console_status())
+				fatal("user abort");
+
 			if (prn_file.fcb.dr != SKIP_DRIVE)
 			{
 				memset(prn_buffer, ' ', sizeof(prn_buffer));
@@ -1327,6 +1362,7 @@ void main(void)
 			}
 
 			t = read_token();
+
 			if (t == TOKEN_EOF)
 				break;
 			if (t == TOKEN_NL)
@@ -1382,5 +1418,11 @@ void main(void)
 
 	emit8_to_output_file(&prn_file, 26);
 	close_output_file(&prn_file);
+
+	print("Assembly successful; ");
+	printi(((uint16_t)heapptr - (uint16_t)cpm_ram) / 1024);
+	print("kB/");
+	printi(freeram);
+	printx("kB used");
 }
 

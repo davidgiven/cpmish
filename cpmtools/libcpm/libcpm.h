@@ -8,7 +8,8 @@ typedef struct
     uint8_t dr;
     uint8_t f[11];
     uint8_t ex;
-    uint8_t s[2];
+    uint8_t s1;
+    uint8_t s2;
     uint8_t rc;
     uint8_t d[16];
     uint8_t cr;
