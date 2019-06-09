@@ -1,0 +1,5 @@
+    org 0xfa00
+    jr $
+    nop
+    call po, 0xfa00
+    jr nc, 0xfa08

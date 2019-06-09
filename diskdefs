@@ -17,3 +17,17 @@ diskdef osborne1
    boottrk 3
    os 2.2
 end
+
+# setfdprm /dev/fd0 zerobased SS DD ssize=512 cyl=40 sect=10 head=1
+# Kaypro II
+diskdef kpii
+  seclen 512
+  tracks 40
+  sectrk 10
+  blocksize 1024
+  maxdir 128 # actually only 64 are usable
+  skew 0
+  boottrk 1
+  os 2.2
+end
+

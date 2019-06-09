@@ -16,11 +16,24 @@ diskimage {
     },
 }
     
+diskimage {
+    name = "kayproii-img",
+    format = "kpii",
+    bootfile = { "arch/kayproii+bootfile" },
+    map = {
+        ["dump.com"] = "cpmtools+dump",
+        ["stat.com"] = "cpmtools+stat",
+        ["asm.com"] = "cpmtools+asm",
+        ["copy.com"] = "cpmtools+copy",
+        ["submit.com"] = "cpmtools+submit",
+    },
+}
+    
 installable {
     name = "all",
     map = {
         ["emu"] = "utils/emu+emu",
         ["nc200.img"] = "+nc200-img",
-    --    ["osborne1.img"] = "+osborne1-img"
+        ["kayproii.img"] = "+kayproii-img"
     }
 }
