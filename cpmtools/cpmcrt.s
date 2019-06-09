@@ -16,6 +16,8 @@ gsinit:
 gsinit_next:
 .area _GSFINAL
     call _main
+.globl _cpm_fastexit
+_cpm_fastexit:
     ld sp, (oldstack)
     ret
 

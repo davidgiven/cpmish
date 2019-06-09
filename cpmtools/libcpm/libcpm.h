@@ -61,6 +61,7 @@ extern uint8_t* cpm_ramtop;
 
 #define FASTCALL __z88dk_fastcall
 
+extern void cpm_fastexit(void);
 extern void cpm_exit(void);
 extern uint16_t cpm_get_login_vector(void);
 extern uint16_t cpm_get_rodisk_vector(void);

@@ -12,6 +12,7 @@ diskimage {
         ["stat.com"] = "cpmtools+stat",
         ["asm.com"] = "cpmtools+asm",
         ["copy.com"] = "cpmtools+copy",
+        ["submit.com"] = "cpmtools+submit",
     },
 }
     

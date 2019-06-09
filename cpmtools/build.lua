@@ -22,3 +22,8 @@ sdccprogram {
     name = "copy",
     srcs = { "./copy.c" },
 }
+
+sdccprogram {
+    name = "submit",
+    srcs = { "./submit.c" },
+}
