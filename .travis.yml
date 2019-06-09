@@ -18,6 +18,7 @@ addons:
         - lua5.1
         - lua-posix
         - ninja-build
+        - libz80ex-dev
 
 script:
     - make
