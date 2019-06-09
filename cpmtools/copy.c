@@ -13,7 +13,7 @@ bool only_one_record = false;
 FCB src_fcb;
 FCB dest_fcb;
 
-void printn(const char* s, unsigned len)
+static void printn(const char* s, unsigned len)
 {
 	while (len--)
     {
@@ -24,7 +24,7 @@ void printn(const char* s, unsigned len)
     }
 }
 
-void print(const char* s) 
+static void print(const char* s) 
 {
     for (;;)
     {
@@ -35,54 +35,15 @@ void print(const char* s)
     }
 }
 
-void crlf(void)
+static void crlf(void)
 {
     print("\r\n");
 }
 
-void printx(const char* s) 
+static void printx(const char* s) 
 {
     print(s);
     crlf();
-}
-
-void printhex4(uint8_t nibble) 
-{
-    nibble &= 0x0f;
-    if (nibble < 10)
-        nibble += '0';
-    else
-        nibble += 'a' - 10;
-    putchar(nibble);
-}
-
-void printhex8(uint8_t b) 
-{
-    printhex4(b >> 4);
-    printhex4(b);
-}
-
-void printhex16(uint16_t b) 
-{
-    printhex8(b >> 8);
-    printhex8(b);
-}
-
-void printi(uint16_t v) 
-{
-	bool zerosup = true;
-	uint16_t precision = 10000;
-    while (precision)
-    {
-        uint8_t d = v / precision;
-        v %= precision;
-        precision /= 10;
-        if ((d != 0) || (precision == 0) || !zerosup)
-        {
-            zerosup = false;
-            putchar('0' + d);
-        }
-    }
 }
 
 void fatal(const char* s) 
@@ -100,6 +61,21 @@ void syntax_error(void)
 void cant_use_wildcards(void)
 {
     fatal("you can't use wildcards in this mode");
+}
+
+void abort(void)
+{
+    fatal("user cancel");
+}
+
+void help(void)
+{
+    printx("Syntax: copy [/uf] [<inputspec...>] <outputspec>");
+    printx("Options:");
+    printx("  F: overwrite output");
+    printx("  U: unbuffered");
+    printx("<inputspec> may contain wildcards. <outputspec> may be just a drive.");
+    cpm_exit();
 }
 
 void skip_whitespace(void)
@@ -134,6 +110,7 @@ void parse_options(void)
         {
             case 'F': erase_destination = true; break;
             case 'U': only_one_record = true; break;
+            case '?': case 'H': help();
             default:
                 fatal("invalid option");
         }
@@ -157,8 +134,10 @@ void print_fcb(const FCB* fcb)
         putchar(b);
     }
 
-    putchar('.');
+    if (fcb->f[8] == ' ')
+        return;
 
+    putchar('.');
     p = fcb->f+8;
     for (i=0; i<3; i++)
     {
@@ -174,16 +153,18 @@ const uint8_t* read_fcb(const uint8_t* inp, FCB* fcb)
     uint8_t* outp;
     uint8_t b;
 
-    memset(fcb, 0, sizeof(fcb));
+    memset(fcb, 0, sizeof(FCB));
     memset(fcb->f, ' ', sizeof(fcb->f));
     if (inp[1] == ':')
     {
-        /* There's a drive litter. */
+        /* There's a drive letter. */
         fcb->dr = inp[0] - '@';
         inp += 2;
         if (inp >= cmdline_limit)
             return inp;
     }
+    else
+        fcb->dr = cpm_get_current_drive() + 1;
 
     /* Read left side of filename. */
 
@@ -270,11 +251,6 @@ void copy_one_file(FCB* src, FCB* dest)
     
     maxp = buffer_start + (only_one_record ? 128 : ((cpm_ramtop - buffer_start + 1) & ~127));
 
-    printhex16((uint16_t) buffer_start);
-    putchar(' ');
-    printhex16((uint16_t) maxp);
-    putchar(' ');
-
     print_fcb(src);
     print(" -> ");
     print_fcb(dest);
@@ -297,6 +273,7 @@ void copy_one_file(FCB* src, FCB* dest)
     
     if (cpm_open_file(src) == 0xff)
         fatal("cannot open source file");
+    src->cr = 0;
     if (cpm_make_file(dest) == 0xff)
         fatal("cannot open destination file");
 
@@ -324,6 +301,9 @@ void copy_one_file(FCB* src, FCB* dest)
             if ((count & 3) == 0)
                 putchar('r');
             count++;
+
+            if (cpm_get_console_status())
+                abort();
         }
 
         /* Write phase */
@@ -342,18 +322,21 @@ void copy_one_file(FCB* src, FCB* dest)
             if ((count & 3) == 0)
                 putchar('w');
             count++;
+
+            if (cpm_get_console_status())
+                abort();
         }
     }
 
-    cpm_close_file(src);
-    cpm_close_file(dest);
     crlf();
+    if (cpm_close_file(dest) == 0xff)
+        fatal("failed to close output file");
 }
 
 void multicopy(void)
 {
     DIRE* dmabuf = (DIRE*) buffer_start;
-    FCB const* fcbtab_start = (FCB*) (buffer_start + 128);
+    FCB* const fcbtab_start = (FCB*) (buffer_start + 128);
     FCB* fcbtab_max = fcbtab_start;
     FCB* fcbtab_ptr = fcbtab_start;
     uint8_t i;
@@ -369,9 +352,11 @@ void multicopy(void)
         i = cpm_findfirst(&cpm_fcb);
         while (i != 0xff)
         {
+            DIRE* de = &dmabuf[i];
             memset(fcbtab_max, 0, sizeof(FCB));
             fcbtab_max->dr = cpm_fcb.dr;
-            memcpy(fcbtab_max->f, dmabuf[i].f, sizeof(fcbtab_max->f));
+            for (i=0; i<11; i++)
+                fcbtab_max->f[i] = de->f[i] & 0x7f;
             fcbtab_max++;
             i = cpm_findnext(&cpm_fcb);
         }
