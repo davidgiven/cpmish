@@ -1,0 +1,8 @@
+    ; Emits the startup banner for CPMish. The parameter is a string with the
+    ; platform in it.
+cpmish_banner macro L
+    db 13, 10
+    db 'CP/Mish 2.2r0 for '
+    db 'L' ; this is terrifying but correct
+    db 13, 10
+    endm

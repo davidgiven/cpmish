@@ -64,10 +64,11 @@ bootfailure:
     jr warmboot
     
 str.insert_disk:
-		db "[Cannot load CP/M, please insert a system disk]", 10, 0
+	db "[Cannot load CP/M, please insert a system disk]", 10, 0
 
 str.banner:
-		db "NC200 CP/M Supervisor (C) 2018 David Given", 10, 0
+    cpmish_banner "Amstrad NC200"
+    db 0
 
 supervisor_stack:
 		ds 64

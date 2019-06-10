@@ -1,6 +1,7 @@
 	maclib supervisor
 	maclib cpm
 	maclib nc200
+	maclib cpmish
 
 	extern BBASE
 	extern BDISK

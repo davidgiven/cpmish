@@ -1,5 +1,6 @@
     maclib cpm
     maclib kayproii
+    maclib cpmish
 
     cseg
 label BBASE
@@ -58,8 +59,8 @@ BOOTE:
 
     call print
     db 0x1a                  ; clear screen
-    db 0x0d, 0x0a
-    db 'CP/Mish for Kaypro II', 0x0d, 0x0a, 0x00
+    cpmish_banner 'Kaypro II'
+    db 0
     ; fall through
 call_ccp:
     ld a, 0xc3
