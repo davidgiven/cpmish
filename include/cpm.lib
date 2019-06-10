@@ -2,6 +2,9 @@ IOBYTE   equ 0x0003
 CDISK    equ 0x0004
 BDOSCALL equ 0x0005
 
+    extern FBASE
+    extern CBASE
+
 label   macro L
         public L
 L:

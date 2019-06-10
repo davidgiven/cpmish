@@ -3,7 +3,6 @@
 
     cseg
 label BBASE
-    extern FBASE
 
 ; BIOS jump table.
 
@@ -74,7 +73,7 @@ call_ccp:
 
     ld a, (CDISK)            ; current selected disk
     ld c, a
-    jp FBASE + 6             ; pass control to CCP
+    jp CBASE                 ; pass control to CCP
 
 stop_disk_motor:
     in a, (PORT_BITPORT)
@@ -89,9 +88,41 @@ reset_disk_system:
 ; Warm boot on application exit.
 WBOOTE:
     call reset_disk_system
-    call print
-    db "warm boot", 13, 10, 0
-    jr $
+
+    ld sp, 0x0100            ; ephemeral user stack
+
+    ld c, 0                  ; select drive 0
+    call SELDSKE
+    ld bc, 0
+    call SETTRKE             ; select track 0
+
+    ld hl, CBASE             ; location to load
+    ld bc, 1                 ; first sector to load
+
+    ; We just load track 0. There is some BDOS and BIOS on track 1, but this
+    ; should only ever need loading once on cold boot, so we save a bit of
+    ; time and complexity by not reloading it here.
+boot_loop:
+    push bc
+    push hl
+
+    call SETSECE             ; set sector to load
+
+    pop bc                   ; DMA address into BC
+    push bc
+    call SETDMAE             ; set address
+    call READE               ; actually load the sector
+
+    pop hl                   ; DMA address back into HL
+    ld bc, 128
+    add hl, bc
+
+    pop bc                   ; current sector back into bc
+    ld a, c
+    inc c
+    cp 39                    ; end of track 0
+    jr nz, boot_loop
+    jr call_ccp
 
 CONSTE:
     ld hl, disk_off_count
