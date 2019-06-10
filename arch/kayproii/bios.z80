@@ -1,0 +1,264 @@
+    maclib cpm
+    maclib kayproii
+
+    cseg
+label BBASE
+    extern FBASE
+
+; BIOS jump table.
+
+    jp BOOTE
+    jp WBOOTE
+    jp CONSTE
+    jp CONINE
+    jp CONOUTE
+    jp LISTE
+    jp PUNCHE
+    jp READERE
+    jp HOMEE
+    jp SELDSKE
+    jp SETTRKE
+    jp SETSECE
+    jp SETDMAE
+    jp READE
+    jp WRITEE
+    jp LISTSTE
+    jp SECTRANE
+
+; This is the default IOBYTE, which must be immediately after the jump table
+; for compatibility with the Kaypro config.com command which will patch it.
+ioconfig: db 0x81
+
+; Actual BIOS entrypoints.
+;
+; The BIOS calls typically use a simple calling convention where the parameter
+; is in BC and the result is returned in A and HL. The docs don't mention
+; anything about other registers so we'll assume they can be corrupted. In
+; addition, our syscall stuff assumes that on return A = L, just like in the
+; BDOS, so we have a single parameter and a single response --- all very simple.
+
+; Cold boot on system startup.
+BOOTE:
+    di
+    in a, (PORT_BITPORT)     ; disable ROM
+    and 0x7f
+    out (PORT_BITPORT), a
+    ld sp, 0x0100            ; ephemeral startup stack
+    ei
+
+    call reset_disk_system
+
+    ld a, (ioconfig)         ; set default IOBYTE
+    ld (IOBYTE), a
+    
+    xor a
+    ld (CDISK), a            ; clear current disk / user
+
+    ld a, (baudrate)         ; initialise serial hardware
+    out (PORT_SERIAL_BAUD), a
+
+    call print
+    db 0x1a                  ; clear screen
+    db 0x0d, 0x0a
+    db 'CP/Mish for Kaypro II', 0x0d, 0x0a, 0x00
+    ; fall through
+call_ccp:
+    ld a, 0xc3
+    ld hl, BBASE + 3         ; init BIOS entrypoint
+    ld (0x0000), a
+    ld (0x0001), hl
+
+    ld hl, FBASE + 6         ; init BDOS entrypoint
+    ld (0x0005), a
+    ld (0x0006), hl
+
+    ld a, (CDISK)            ; current selected disk
+    ld c, a
+    jp FBASE + 6             ; pass control to CCP
+
+stop_disk_motor:
+    in a, (PORT_BITPORT)
+    or 0x40                  ; turn off motor
+    out (PORT_BITPORT)
+    ret
+
+reset_disk_system:
+    ld l, 0x03
+    jp syscall
+
+; Warm boot on application exit.
+WBOOTE:
+    call reset_disk_system
+    call print
+    db "warm boot", 13, 10, 0
+    jr $
+
+CONSTE:
+    ld hl, disk_off_count
+    inc (hl)                 ; increment drive motor count and...
+    call z, stop_disk_motor  ; ...turn the motor off on rollover
+
+    ld a, (IOBYTE)
+    and 0x03
+    ld l, 0x33               ; test serial port input status
+    jp z, syscall
+    ld l, 0x2a               ; test console input status
+    jp syscall
+
+CONINE:
+    call stop_disk_motor
+
+    ld a, (IOBYTE)
+    and 0x03
+    ld l, 0x36               ; read serial port
+    jp z, syscall
+    ld l, 0x2d               ; read console
+    call syscall
+
+    or a
+    ret p                    ; normal key, exit now
+
+    and 0x7f                 ; translate via the lookup table
+    ld hl, numpad_translation_table
+    ld c, a
+    ld b, 0
+    add hl, bc
+    ld a, (hl)
+    ret
+
+CONOUTE:
+    ld a, (IOBYTE)
+    and 0x03
+    jp z, PUNCHE             ; send to serial
+    ld l, 0x45               ; send to console
+    jr syscall
+
+LISTE:
+    ld a, (IOBYTE)
+    and 0xc0
+    jp z, PUNCHE             ; send to serial
+    cp 0x80
+    ld l, 0x3f               ; send to printer
+    jp z, syscall
+    cp 0x40
+    ld l, 0x45               ; send to console
+    jp z, syscall
+    ; fall through
+PUNCHE:
+    ld l, 0x39               ; always send to serial
+    jr syscall
+
+LISTSTE:
+    ld a, (IOBYTE)
+    and 0xc0
+    ld l, 0x42               ; test serial port output status
+    jp z, syscall
+    ld l, 0x3c               ; test print port output status
+    cp 0x80
+    jp z, syscall
+    xor a                    ; the console is always ready
+    ret
+
+READERE:
+    ld l, 0x36
+    jr syscall
+
+; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
+; error).
+SELDSKE:
+    ld l, 0x0f
+    jr syscall
+
+HOMEE:
+    ld l, 0x0c
+    jr syscall
+
+SETTRKE:
+    ld l, 0x12
+    jr syscall
+
+SETSECE:
+    ld l, 0x15
+    jr syscall
+
+SETDMAE:
+    ld l, 0x18
+    jr syscall
+
+READE:
+    xor a                    ; reset disk timer
+    ld (disk_off_count), a
+
+    ld l, 0x1b
+    jr syscall
+
+WRITEE:
+    xor a                    ; reset disk timer
+    ld (disk_off_count), a
+
+    ld l, 0x1e
+    jr syscall
+
+SECTRANE:
+    ld l, 0x21
+    jr syscall
+
+; Call the Kaypro ROM (which is actually doing most of the work). On entry,
+; L contains the address into the syscall jump table.
+
+syscall:
+    exx
+    di                       ; remapping and adjusting the stack must be atomic
+    in a, (PORT_BITPORT)     ; enable ROM
+    or 0x80
+    out (PORT_BITPORT), a
+    ld (saved_stack), sp     ; save old stack
+    ld sp, stack_top         ; switch to shared stack
+    ei
+    exx
+
+    ld h, 0
+    call call_hl             ; enter ROM
+    
+    ex af, af'               ; save A
+    
+    di
+    ld sp, (saved_stack)     ; restore old stack
+    in a, (PORT_BITPORT)     ; disable ROM
+    and 0x7f
+    out (PORT_BITPORT), a
+    ei
+
+    ex af, af'               ; restore A
+    ret
+
+call_hl:
+    jp (hl)
+
+; Prints the text immediately following the call to print.
+print:
+    pop hl                   ; return address points to text to print
+    ld a, (hl)
+    inc hl
+    push hl                  ; save address after current char
+
+    or a
+    ret z                    ; if byte was zero, return
+    ld c, a
+    call CONOUTE
+    jr print
+
+; The number pad produces unique keycodes, which are mapped to normal keys here.
+numpad_translation_table:
+    db 11, 10, 8, 12       ; cursor keys (^K, ^J, ^H, ^L)
+    db '0', '1', '2', '3'  ; numbers
+    db '4', '5', '6', '7'
+    db '8', '9', '-', ','
+    db 13, '.'
+
+saved_stack: dw 0            ; user stack pointer while in system calls
+baudrate: db 5               ; current serial baud rate (300 baud)
+disk_off_count: db 0         ; cheap and nasty drive motor timer
+
+stack:
+stack_top: equ BBASE + 512

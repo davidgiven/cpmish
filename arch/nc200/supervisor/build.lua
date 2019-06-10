@@ -25,6 +25,7 @@ zmac {
     name = "supervisor",
     srcs = { "./supervisor.z80" },
     deps = {
+        "include/*.lib",
         "arch/nc200/include/*.lib",
         "./*.inc",
         "+keytab_inc",

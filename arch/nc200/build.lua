@@ -5,7 +5,10 @@ include "utils/build.lua"
 zmac {
     name = "auto",
     srcs = { "./auto.z80" },
-    deps = { "./include/*.lib" },
+    deps = {
+        "include/*.lib",
+        "./include/*.lib"
+    },
     relocatable = false
 }
 
@@ -21,6 +24,7 @@ for _, f in pairs(bootfiles) do
         name = base,
         srcs = { f },
         deps = {
+            "include/*.lib",
             "./include/*.lib",
             "+auto_inc"
         }
@@ -30,7 +34,10 @@ end
 zmac {
     name = "bios",
     srcs = { "./bios.z80" },
-    deps = { "./include/*.lib" },
+    deps = {
+        "include/*.lib",
+        "./include/*.lib"
+    },
 }
 
 -- Builds the memory image.
@@ -62,3 +69,17 @@ normalrule {
         "dd if=%{ins[1]} of=%{outs} status=none bs=256 seek=36 skip=232 count=24"
     }
 }
+
+diskimage {
+    name = "diskimage",
+    format = "nc200cpm",
+    bootfile = { "arch/nc200+bootfile" },
+    map = {
+        ["dump.com"] = "cpmtools+dump",
+        ["stat.com"] = "cpmtools+stat",
+        ["asm.com"] = "cpmtools+asm",
+        ["copy.com"] = "cpmtools+copy",
+        ["submit.com"] = "cpmtools+submit",
+    },
+}
+    

@@ -1,3 +1,7 @@
+; This is the boot sector needed by a Kaypro II to recognise the disk as
+; bootable. It doesn't actually appear to run any of this; the contents
+; are magic. I don't know how much it actually needs.
+
     org 0xfa00
     jr $
     nop
