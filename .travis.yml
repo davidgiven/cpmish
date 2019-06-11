@@ -12,7 +12,6 @@ dist:
 addons:
     apt:
         packages:
-        - sdcc
         - netpbm
         - cpmtools
         - lua5.1
@@ -21,5 +20,6 @@ addons:
         - libz80ex-dev
 
 script:
+    - (mkdir ack && cd ack && git clone --depth=1 git@github.com:davidgiven/ack.git && make +ack-cpm && make install)
     - make
 
