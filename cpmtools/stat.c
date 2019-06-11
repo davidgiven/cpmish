@@ -1,9 +1,9 @@
+#include <cpm.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include "libcpm.h"
 
 #define FCB_COUNT 512
 
@@ -23,7 +23,7 @@ struct fe
 struct fe files[FCB_COUNT];
 struct fe* findex[FCB_COUNT]; /* pointers to above (for sorting) */
 
-const uint8_t logical_device_names[] = "CON:RDR:PUN:LST:DEV:VAL:USR:DSK:";
+const char logical_device_names[] = "CON:RDR:PUN:LST:DEV:VAL:USR:DSK:";
 enum { CON = 1, RDR, PUN, LST, DEV, VAL, USR, DSK };
 
 const char physical_device_names[] =
@@ -34,8 +34,8 @@ const char physical_device_names[] =
 
 const FCB wildcard_fcb_template =
 {
-    .dr = '?',
-    .f = "???????????"
+    /* dr */ '?',
+    /* f  */ "???????????"
 };
 
 void print(const char* s)
@@ -45,7 +45,7 @@ void print(const char* s)
         uint8_t b = *s++;
         if (!b)
             return;
-        putchar(b);
+        cpm_conout(b);
     }
 }
 
@@ -75,12 +75,12 @@ void printip(uint16_t v, bool pad, uint16_t precision)
         if (precision && zerosup && !d)
         {
             if (pad)
-                putchar(' ');
+                cpm_conout(' ');
         }
         else
         {
             zerosup = false;
-            putchar('0' + d);
+            cpm_conout('0' + d);
         }
     }
 }
@@ -92,7 +92,7 @@ void printi(uint16_t v)
 
 /* Compares the accumulator with an array of uint8_t[4] words. Returns the
  * matching index plus one or 0. */
-uint8_t compare_accumulator(const uint8_t* list, uint8_t length)
+uint8_t compare_accumulator(const char* list, uint8_t length)
 {
     uint8_t match = 1;
     while (length--)
@@ -134,7 +134,7 @@ uint16_t count_space(void)
     uint16_t blocks = 0;
     uint16_t i;
 
-    for (i=0; i<=dpb->dsm; i++)
+    for (i=0; i<=U16(dpb->dsm); i++)
     {
         bool bit = alloca[i >> 3] & (0x80 >> (i & 7));
         if (!bit)
@@ -148,7 +148,7 @@ void print_free_space(void)
     uint16_t blocks = count_space();
     printi(blocks << (dpb->bsh - 3));
     print("/");
-    printi((dpb->dsm+1) << (dpb->bsh - 3));
+    printi((U16(dpb->dsm)+1) << (dpb->bsh - 3));
     print("kB");
 }
 
@@ -156,7 +156,7 @@ void print_free_space(void)
 void print_drive_status(void)
 {
     uint16_t login = cpm_get_login_vector();
-    uint16_t rodisk = cpm_get_rodisk_vector();
+    uint16_t rodisk = cpm_get_readonly_vector();
 
     uint8_t d = 0;
     while (login)
@@ -164,9 +164,9 @@ void print_drive_status(void)
         if (login & 1)
         {
             select_disk(d);
-            putchar('A' + d);
+            cpm_conout('A' + d);
             print(": R/");
-            putchar((rodisk & 1) ? 'O' : 'W');
+            cpm_conout((rodisk & 1) ? 'O' : 'W');
             print(", space: ");
             print_free_space();
             crlf();
@@ -222,13 +222,13 @@ void printipadded(uint16_t value)
 void get_detailed_drive_status(void)
 {
     print("    ");
-    putchar(cpm_get_current_drive() + 'A');
-    putchar(':');
+    cpm_conout(cpm_get_current_drive() + 'A');
+    cpm_conout(':');
     printx(" Drive Characteristics");
 
     {
         uint16_t rpb = 1<<dpb->bsh;
-        uint16_t rpd = (dpb->dsm+1) * rpb;
+        uint16_t rpd = (U16(dpb->dsm)+1) * rpb;
         if ((rpd == 0) && (rpb != 0))
             print("65536");
         else
@@ -239,19 +239,19 @@ void get_detailed_drive_status(void)
     printipadded(count_space());
     printx(": kilobyte drive capacity");
 
-    printipadded(dpb->drm+1);
+    printipadded(U16(dpb->drm)+1);
     printx(": 32 byte directory entries");
 
-    printipadded(dpb->cks);
+    printipadded(U16(dpb->cks));
     printx(": checked directory entries");
 
     printipadded((dpb->exm+1)*128);
     printx(": records per extent");
 
-    printipadded(dpb->spt);
+    printipadded(U16(dpb->spt));
     printx(": sectors per track");
 
-    printipadded(dpb->off);
+    printipadded(U16(dpb->off));
     printx(": reserved tracks");
 }
 
@@ -272,8 +272,8 @@ void print_filename(uint8_t* filename)
         if (b != ' ')
         {
             if (i == 8)
-                putchar('.');
-            putchar(b);
+                cpm_conout('.');
+            cpm_conout(b);
         }
     }
 }
@@ -288,7 +288,7 @@ void file_manipulation(void)
      * CPP parses as a filename and writes into cpm_fcb2. There will now be
      * a short pause for me to be ill. */
 
-    const static uint8_t command_names[] = "$S  $R/O$R/W$SYS$DIR";
+    const static char command_names[] = "$S  $R/O$R/W$SYS$DIR";
     enum { LIST = 0, LIST_WITH_SIZE, SET_RO, SET_RW, SET_SYS, SET_DIR };
     memcpy(accumulator, cpm_fcb2.f, 4);
     command = compare_accumulator(command_names, sizeof(command_names)/4);
@@ -332,21 +332,21 @@ void file_manipulation(void)
 
         fe->extents++;
         fe->records += de->rc + (de->ex & dpb->exm)*128;
-        if (dpb->dsm < 256)
+        if (U16(dpb->dsm) < 256)
         {
             /* 8-bit allocation map. */
             for (j=0; j<16; j++)
             {
-                if (de->al.al8[j])
+                if (de->al[j])
                     fe->blocks++;
             }
         }
         else
         {
             /* 16-bit allocation map. */
-            for (j=0; j<8; j++)
+            for (j=0; j<16; j+=2)
             {
-                if (de->al.al16[j])
+                if (U16(de->al + j))
                     fe->blocks++;
             }
         }
@@ -379,31 +379,31 @@ void file_manipulation(void)
                     memset(&cpm_fcb, 0, sizeof(FCB));
                     memcpy(cpm_fcb.f, f->filename, 11);
                     cpm_seek_to_end(&cpm_fcb);
-                    if (cpm_fcb.r2)
+                    if (cpm_fcb.r[2])
                         print("65536");
                     else
-                        printipadded(cpm_fcb.r);
-                    putchar(' ');
+                        printipadded(U16(cpm_fcb.r));
+                    cpm_conout(' ');
                 }
                 printipadded(f->records);
-                putchar(' ');
+                cpm_conout(' ');
                 printipadded(f->blocks << (dpb->bsh - 3));
                 print("kB ");
                 printip(f->extents, true, 1000);
                 print((f->filename[8] & 0x80) ? " R/O " : " R/W ");
-                putchar(current_drive);
-                putchar(':');
+                cpm_conout(current_drive);
+                cpm_conout(':');
                 if (f->filename[9] & 0x80)
-                    putchar('(');
+                    cpm_conout('(');
                 print_filename(f->filename);
                 if (f->filename[9] & 0x80)
-                    putchar(')');
+                    cpm_conout(')');
                 crlf();
-                if (cpm_get_console_status())
+                if (cpm_const())
                     return;
             }
             print("Bytes remaining on ");
-            putchar(current_drive);
+            cpm_conout(current_drive);
             print(": ");
             print_free_space();
             crlf();
@@ -421,7 +421,7 @@ void file_manipulation(void)
             struct fe* fe = files;
             while (count--)
             {
-                const uint8_t* p;
+                const char* p;
 
                 print_filename(fe->filename);
                 memset(&cpm_fcb, 0, sizeof(FCB));
@@ -431,11 +431,11 @@ void file_manipulation(void)
 
                 print(" set to ");
                 p = &command_names[(command-1)*4] + 1;
-                putchar(*p++);
-                putchar(*p++);
-                putchar(*p);
+                cpm_conout(*p++);
+                cpm_conout(*p++);
+                cpm_conout(*p);
                 crlf();
-                if (cpm_get_console_status())
+                if (cpm_const())
                     return;
 
                 fe++;
@@ -479,7 +479,7 @@ void print_device_name(const char* p)
     for (;;)
     {
         uint8_t c = *p++;
-        putchar(c);
+        cpm_conout(c);
         if (c == ':')
             break;
     }
@@ -558,7 +558,7 @@ void show_help(void)
         print("Set device mapping:     stat ");
         print_device_name(lp);
         lp += 4;
-        putchar('=');
+        cpm_conout('=');
 
         for (j=0; j<4; j++)
         {
@@ -580,7 +580,7 @@ void show_user_numbers(void)
     DIRE* data;
 
     print("Active user: ");
-    printi(cpm_get_current_user());
+    printi(cpm_get_set_user(0xff));
     crlf();
     print("Active files:");
 
@@ -603,7 +603,7 @@ void show_user_numbers(void)
     {
         if (users[i])
         {
-            putchar(' ');
+            cpm_conout(' ');
             printi(i);
         }
     }

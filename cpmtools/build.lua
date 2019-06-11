@@ -1,29 +1,24 @@
-sdccfile {
-    name = "cpmcrt",
-    srcs = {"./cpmcrt.s"}
-}
-
-sdccprogram {
+ackprogram {
     name = "dump",
     srcs = { "./dump.c" },
 }
 
-sdccprogram {
+ackprogram {
     name = "stat",
     srcs = { "./stat.c" },
 }
 
-sdccprogram {
+ackprogram {
     name = "asm",
     srcs = { "./asm.c" },
 }
 
-sdccprogram {
+ackprogram {
     name = "copy",
     srcs = { "./copy.c" },
 }
 
-sdccprogram {
+ackprogram {
     name = "submit",
     srcs = { "./submit.c" },
 }

@@ -1,11 +1,11 @@
-#include <stdio.h>
+#include <cpm.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include "libcpm.h"
 
-uint8_t* cmdline_cursor;
-uint8_t* cmdline_limit;
+const char** gargv;
+uint8_t first_arg;
+uint8_t last_arg;
 uint8_t* buffer_start;
 bool erase_destination = false;
 bool only_one_record = false;
@@ -20,7 +20,7 @@ static void printn(const char* s, unsigned len)
         uint8_t b = *s++;
         if (!b)
             return;
-        putchar(b);
+        cpm_conout(b);
     }
 }
 
@@ -31,7 +31,7 @@ static void print(const char* s)
         uint8_t b = *s++;
         if (!b)
             return;
-        putchar(b);
+        cpm_conout(b);
     }
 }
 
@@ -78,33 +78,23 @@ void help(void)
     cpm_exit();
 }
 
-void skip_whitespace(void)
-{
-    while (cmdline_cursor != cmdline_limit)
-    {
-        uint8_t c = *cmdline_cursor;
-        if (c != ' ')
-            return;
-        cmdline_cursor++;
-    }
-}
-
 void parse_options(void)
 {
+    const char* opt;
     uint8_t b;
 
-    skip_whitespace();
-    b = *cmdline_cursor;
-    if ((b != '-') && (b != '/'))
-        return;
-    cmdline_cursor++;
+    opt = gargv[first_arg];
+    b = *opt++;
 
-    while (cmdline_cursor != cmdline_limit)
+    if ((b != '-') && (b != '/')) /* includes \0 */
+        return;
+    first_arg++;
+
+    for (;;)
     {
-        b = *cmdline_cursor;
-        if (b == ' ')
+        b = *opt++;
+        if (!b)
             return;
-        cmdline_cursor++;
 
         switch (b)
         {
@@ -122,8 +112,8 @@ void print_fcb(const FCB* fcb)
     uint8_t i;
     const uint8_t* p;
 
-    putchar('@' + fcb->dr);
-    putchar(':');
+    cpm_conout('@' + fcb->dr);
+    cpm_conout(':');
 
     p = fcb->f;
     for (i=0; i<8; i++)
@@ -131,24 +121,24 @@ void print_fcb(const FCB* fcb)
         uint8_t b = *p++;
         if (b == ' ')
             break;
-        putchar(b);
+        cpm_conout(b);
     }
 
     if (fcb->f[8] == ' ')
         return;
 
-    putchar('.');
+    cpm_conout('.');
     p = fcb->f+8;
     for (i=0; i<3; i++)
     {
         uint8_t b = *p++;
         if (b == ' ')
             break;
-        putchar(b);
+        cpm_conout(b);
     }
 }
 
-const uint8_t* read_fcb(const uint8_t* inp, FCB* fcb)
+void read_fcb(const uint8_t* inp, FCB* fcb)
 {
     uint8_t* outp;
     uint8_t b;
@@ -158,10 +148,8 @@ const uint8_t* read_fcb(const uint8_t* inp, FCB* fcb)
     if (inp[1] == ':')
     {
         /* There's a drive letter. */
-        fcb->dr = inp[0] - '@';
+        fcb->dr = inp[0] - '@'; /* inp[0] cannot be \0 */
         inp += 2;
-        if (inp >= cmdline_limit)
-            return inp;
     }
     else
         fcb->dr = cpm_get_current_drive() + 1;
@@ -171,12 +159,9 @@ const uint8_t* read_fcb(const uint8_t* inp, FCB* fcb)
     outp = fcb->f;
     for (;;)
     {
-        if (inp == cmdline_limit)
-            break;
-        
         b = *inp++;
-        if (b == ' ') 
-            return inp;
+        if (!b)
+            return;
         if (b == '.')
             break;
         if (b == '*')
@@ -193,12 +178,9 @@ const uint8_t* read_fcb(const uint8_t* inp, FCB* fcb)
     outp = fcb->f + 8;
     for (;;)
     {
-        if (inp == cmdline_limit)
-            break;
-
         b = *inp++;
-        if (b == ' ')
-            return inp;
+        if (!b)
+            return;
         if (b == '*')
         {
             while (outp != (fcb->f + 11))
@@ -207,26 +189,6 @@ const uint8_t* read_fcb(const uint8_t* inp, FCB* fcb)
         if (outp != (fcb->f + 11))
             *outp++ = b;
     }
-
-    return inp;
-}
-
-void parse_destination(void)
-{
-    uint8_t* p = cmdline_limit - 1;
-    for (;;)
-    {
-        uint8_t b = *p;
-        if (b == ' ')
-            break;
-        p--;
-        if (p == cmdline_cursor)
-            syntax_error();
-    }
-    p++;
-
-    read_fcb(p, &dest_fcb);
-    cmdline_limit = p;
 }
 
 bool does_fcb_have_wildcards(const FCB* fcb)
@@ -299,10 +261,10 @@ void copy_one_file(FCB* src, FCB* dest)
 
             readp += 128;
             if ((count & 3) == 0)
-                putchar('r');
+                cpm_conout('r');
             count++;
 
-            if (cpm_get_console_status())
+            if (cpm_const())
                 abort();
         }
 
@@ -320,10 +282,10 @@ void copy_one_file(FCB* src, FCB* dest)
             writep += 128;
 
             if ((count & 3) == 0)
-                putchar('w');
+                cpm_conout('w');
             count++;
 
-            if (cpm_get_console_status())
+            if (cpm_const())
                 abort();
         }
     }
@@ -341,13 +303,9 @@ void multicopy(void)
     FCB* fcbtab_ptr = fcbtab_start;
     uint8_t i;
 
-    for (;;)
+    while (first_arg != last_arg)
     {
-        skip_whitespace();
-        if (cmdline_cursor == cmdline_limit)
-            break;
-
-        cmdline_cursor = read_fcb(cmdline_cursor, &cpm_fcb);
+        read_fcb(gargv[first_arg++], &cpm_fcb);
         cpm_set_dma(dmabuf);
         i = cpm_findfirst(&cpm_fcb);
         while (i != 0xff)
@@ -377,30 +335,31 @@ void multicopy(void)
 
 void singlecopy(void)
 {
-    skip_whitespace();
-    cmdline_cursor = read_fcb(cmdline_cursor, &src_fcb);
-    skip_whitespace();
-    if (cmdline_cursor != cmdline_limit)
+    if (last_arg != (first_arg + 1))
         fatal("only one source allowed if a filename is specified as destination");
 
+    read_fcb(gargv[first_arg], &src_fcb);
     if (does_fcb_have_wildcards(&src_fcb) || does_fcb_have_wildcards(&dest_fcb))
         cant_use_wildcards();
 
     copy_one_file(&src_fcb, &dest_fcb);
 }
 
-void main(void)
+void main(int argc, const char* argv[])
 {
-    cmdline_limit = cpm_cmdline + cpm_cmdlinelen;
-    cmdline_cursor = cpm_cmdline;
+    if (argc == 1)
+        help();
+
+    gargv = argv;
+    first_arg = 1;
+    last_arg = argc - 1;
     buffer_start = cpm_ram;
 
     parse_options();
-    if (*cmdline_cursor == '-')
-        parse_options();
-    skip_whitespace();
+    if (last_arg <= first_arg)
+        syntax_error();
 
-    parse_destination();
+    read_fcb(gargv[last_arg], &dest_fcb);
     if (dest_fcb.f[0] == ' ')
     {
         /* Destination is a drive spec. */
@@ -411,6 +370,4 @@ void main(void)
         /* Copy a single file. */
         singlecopy();
     }
-
-    cpm_exit();
 }

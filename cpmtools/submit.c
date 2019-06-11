@@ -1,17 +1,16 @@
-#include <stdio.h>
+#include <cpm.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
-#include "libcpm.h"
 
 static int lineno = 0;
-static uint8_t input_buffer[128];
-static char* parameter[10];
-static uint8_t parameter_length[10];
+static uint8_t buffer[128];
+static uint8_t gargc;
+static char** gargv;
 
-static uint8_t* record_ptr = cpm_ram;
-static uint8_t record_fill = 0;
+static uint8_t* record_ptr;
+static uint8_t record_fill;
 
 static FCB out_fcb = {
     1, /* dr; drive A */
@@ -25,7 +24,7 @@ void printn(const char* s, unsigned len)
         uint8_t b = *s++;
         if (!b)
             return;
-        putchar(b);
+        cpm_conout(b);
     }
 }
 
@@ -36,7 +35,7 @@ static void print(const char* s)
         uint8_t b = *s++;
         if (!b)
             return;
-        putchar(b);
+        cpm_conout(b);
     }
 }
 
@@ -63,7 +62,7 @@ static void printi(uint16_t v)
         if ((d != 0) || (precision == 0) || !zerosup)
         {
             zerosup = false;
-            putchar('0' + d);
+            cpm_conout('0' + d);
         }
     }
 }
@@ -81,33 +80,7 @@ static void fatal(const char* s)
 
     printx(s);
     cpm_delete_file(&out_fcb);
-    cpm_fastexit();
-}
-
-static void parse_parameters(void)
-{
-    char* inp = cpm_cmdline;
-    char* const maxp = cpm_cmdline + cpm_cmdlinelen;
-    uint8_t param = 0;
-
-    while (inp != maxp)
-    {
-        while ((inp != maxp) && (*inp == ' '))
-            inp++;
-        parameter[param] = inp;
-
-        while ((inp != maxp) && (*inp != ' '))
-            inp++;
-        parameter_length[param] = inp - parameter[param];
-        param++;
-    }
-
-    while (param < 10)
-    {
-        parameter[param] = 0;
-        parameter_length[param] = 0;
-        param++;
-    }
+    cpm_exit();
 }
 
 static void process_byte(uint8_t b)
@@ -144,9 +117,14 @@ static void process_byte(uint8_t b)
             }
             else if (isdigit(b))
             {
-                uint8_t p = b - '0';
-                memcpy(&record_ptr[1 + record_fill], parameter[p], parameter_length[p]);
-                record_fill += parameter_length[p];
+                uint8_t p = b - '0' + 1;
+                if (p < gargc)
+                {
+                    char* param = gargv[p];
+                    uint8_t len = strlen(param);
+                    memcpy(&record_ptr[1 + record_fill], param, len);
+                    record_fill += len;
+                }
                 goto exit;
             }
             else
@@ -171,20 +149,23 @@ exit:
     control = false;
 }
 
-void main(void)
+void main(int argc, const char* argv[])
 {
-    parse_parameters();
+    gargc = argc;
+    gargv = argv;
 
     memcpy(&cpm_fcb.f[8], "SUB", 3);
     if (cpm_open_file(&cpm_fcb) == 0xff)
         fatal("could not open input file");
 
+    record_ptr = cpm_ram;
+    record_fill = 0;
     lineno = 1;
     for (;;)
     {
         uint8_t i;
 
-        cpm_set_dma(&input_buffer);
+        cpm_set_dma(&buffer);
         i = cpm_read_sequential(&cpm_fcb);
         if (i == 1) /* EOF */
             goto eof;
@@ -193,7 +174,7 @@ void main(void)
 
         for (i=0; i<128; i++)
         {
-            uint8_t b = input_buffer[i];
+            uint8_t b = buffer[i];
             if (b == 26)
                 goto eof;
             process_byte(b);
@@ -217,6 +198,6 @@ eof:
         fatal("error writing output file");
 
     /* Force a CP/M restart so the file gets invoked */
-    cpm_exit();
+    cpm_warmboot();
 }
 

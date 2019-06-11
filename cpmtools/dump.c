@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
-#include "libcpm.h"
+#include <cpm.h>
 
 void print(const char* s)
 {
@@ -12,7 +12,7 @@ void print(const char* s)
         uint8_t b = *s++;
         if (!b)
             return;
-        putchar(b);
+        cpm_conout(b);
     }
 }
 
@@ -34,7 +34,7 @@ void printhex4(uint8_t nibble)
         nibble += '0';
     else
         nibble += 'a' - 10;
-    putchar(nibble);
+    cpm_conout(nibble);
 }
 
 void printhex8(uint8_t b)
@@ -83,7 +83,7 @@ void main(void)
             {
                 b = *data++;
                 printhex8(b);
-                putchar(' ');
+                cpm_conout(' ');
             }
             data -= 16;
 
@@ -91,11 +91,11 @@ void main(void)
             for (j=0; j<16; j++)
             {
                 b = *data++;
-                putchar(isprint(b) ? b : '.');
+                cpm_conout(isprint(b) ? b : '.');
             }
 
             crlf();
-            if (cpm_get_console_status())
+            if (cpm_const())
                 return;
         }
     }

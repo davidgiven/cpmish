@@ -1,48 +1,28 @@
-definerule("sdccfile",
+definerule("ackfile",
 	{
 		srcs = { type="targets" },
 		deps = { type="targets", default={} },
-		suffix = { type="string", default=".rel" },
+		suffix = { type="string", default=".o" },
 	},
 	function (e)
-		if (#e.srcs ~= 1) then
-			error("you can only have one input to a sdccfile")
-		end
-
-		local firstfilename = filenamesof(e.srcs)[1]
-		local _, _, ext = firstfilename:find("%.(%w+)$")
-
-		if (ext == "c") then
-			return cfile {
-				name = e.name,
-				srcs = e.srcs,
-				deps = e.deps,
-				suffix = e.suffix,
-				commands = {
-					"sdcc -mz80 -c -o %{outs} %{ins} %{hdrpaths} %{cpmcflags}"
-				}
+		return cfile {
+			name = e.name,
+			srcs = e.srcs,
+			deps = e.deps,
+			suffix = e.suffix,
+			commands = {
+				"ack -mcpm -c -o %{outs} %{ins} %{hdrpaths} %{cpmcflags}"
 			}
-		elseif (ext == "s") then
-			return normalrule {
-				name = e.name,
-				ins = e.srcs,
-				outleaves = { e.name..e.suffix },
-				deps = e.deps,
-				commands = {
-					"sdasz80 -g -o %{outs} %{ins}"
-				}
-			}
-		else
-			error("unknown cpmcfile extension '"..ext.."'")
-		end
+		}
 	end
 )
 
-definerule("sdcclibrary",
+definerule("acklibrary",
 	{
 		srcs = { type="targets", default={} },
 		hdrs = { type="targets", default={} },
 		deps = { type="targets", default={} },
+		suffix = { type="string", default=".o" },
 	},
 	function (e)
 		return clibrary {
@@ -50,58 +30,30 @@ definerule("sdcclibrary",
 			srcs = e.srcs,
 			hdrs = e.hdrs,
 			deps = e.deps,
-			suffix = ".rel",
-			_cfile = sdccfile,
+			suffix = e.suffix,
+			_cfile = ackfile,
 			commands = {
 				"rm -f %{outs[1]}",
-				"sdcclib a %{outs[1]} %{ins}"
+				"aal qc %{outs[1]} %{ins}"
 			}
 		}
 	end
 )
 
-definerule("sdccprogram",
+definerule("ackprogram",
 	{
 		srcs = { type="targets", default={} },
 		deps = { type="targets", default={} },
 	},
 	function (e)
-		local crt = "cpmtools+cpmcrt"
-
 		return cprogram {
 			name = e.name,
 			srcs = e.srcs,
-			deps = {
-				crt,
-				"cpmtools/libcpm+libcpm",
-				e.deps,
-			},
-			_clibrary = sdcclibrary,
+			deps = e.deps,
+			_clibrary = acklibrary,
 			commands = {
-				"sdldz80 -nmjwz "
-					.. "-i %{outs}.ihx "
-					.. "-b _CODE=0x0100 "
-					.. "-k /usr/share/sdcc/lib/z80 "
-					.. "-l z80 "
-					.. "-m "
-					.. filenamesof(crt)[1] .. " "
-					.. "%{ins} ",
-				"makebin -p %{outs}.ihx - | dd status=none of=%{outs} bs=128 skip=2"
+				"ack -mcpm -.c -o %{outs} %{ins} %{cpmldflags}"
 			}
-		}
-	end
-)
-
-definerule("file",
-	{
-		srcs = { type="targets", default={} },
-	},
-	function (e)
-		return simplerule {
-			name = e.name,
-			ins = {},
-			outs = e.srcs,
-			commands = {}
 		}
 	end
 )

@@ -31,24 +31,24 @@
  *  - bugs
  */
 
-#include <stdio.h>
+#include <cpm.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
-#include "libcpm.h"
+#include <unistd.h>
 
-typedef int token_t;
+typedef uint16_t token_t;
 
 enum
 {
 	TOKEN_EOF = 26,
 	TOKEN_NL = '\n',
 
-	TOKEN_IDENTIFIER = -1,
-	TOKEN_NUMBER = -2,
-	TOKEN_STRING = -3,
+	TOKEN_IDENTIFIER = 0x8000,
+	TOKEN_NUMBER,
+	TOKEN_STRING
 };
 
 struct output_file
@@ -65,7 +65,7 @@ struct symbol
 	uint16_t value;
 	void (*callback)(void);
 	struct symbol* next;
-	const uint8_t* name; /* not zero terminated */
+	const char* name; /* not zero terminated */
 };
 
 struct operator
@@ -102,7 +102,7 @@ enum
 	OP_SHR,
 	OP_SUB,
 	OP_XOR,
-	OP_PAR,
+	OP_PAR
 };
 
 const struct operator operators[] =
@@ -132,7 +132,6 @@ int pass;
 bool eol;
 uint16_t lineno;
 uint16_t program_counter;
-uint8_t* heapptr = cpm_ram;
 bool db_string_constant_hack = false;
 
 uint8_t input_buffer_read_count;
@@ -154,10 +153,10 @@ extern void close_output_file(struct output_file* f);
 
 #define INSN(id, name, value, cb, next) \
 	extern void cb(void); \
-	const struct symbol id = { sizeof(name)-1, value, cb, next, name }
+	struct symbol id = { sizeof(name)-1, value, cb, next, name }
 
 #define VALUE(id, name, value, next) \
-	const struct symbol id = { sizeof(name)-1, value, equlabel_cb, next, name }
+	struct symbol id = { sizeof(name)-1, value, equlabel_cb, next, name }
 
 extern void operator_cb(void);
 extern void undeflabel_cb(void);
@@ -330,7 +329,7 @@ void printn(const char* s, unsigned len)
         uint8_t b = *s++;
         if (!b)
             return;
-        putchar(b);
+        cpm_conout(b);
     }
 }
 
@@ -341,7 +340,7 @@ void print(const char* s)
         uint8_t b = *s++;
         if (!b)
             return;
-        putchar(b);
+        cpm_conout(b);
     }
 }
 
@@ -363,7 +362,7 @@ void printhex4(uint8_t nibble)
         nibble += '0';
     else
         nibble += 'a' - 10;
-    putchar(nibble);
+    cpm_conout(nibble);
 }
 
 void printhex8(uint8_t b) 
@@ -390,7 +389,7 @@ void printi(uint16_t v)
         if ((d != 0) || (precision == 0) || !zerosup)
         {
             zerosup = false;
-            putchar('0' + d);
+            cpm_conout('0' + d);
         }
     }
 }
@@ -402,13 +401,6 @@ void fatal(const char* s)
 	printx(s);
 	close_output_file(&prn_file);
 	cpm_exit();
-}
-
-uint8_t* allocmem(uint8_t len) 
-{
-	uint8_t* ptr = heapptr;
-	heapptr += len;
-	return ptr;
 }
 
 uint8_t get_drive_or_default(uint8_t dr) 
@@ -435,7 +427,7 @@ void emit8_to_output_file(struct output_file* f, uint8_t b)
 		}
 	}
 	else if (f->fcb.dr == CONSOLE_DRIVE)
-		putchar(b);
+		cpm_conout(b);
 }
 
 void open_output_file(struct output_file* f) 
@@ -704,11 +696,11 @@ token_t read_token(void)
 			token_symbol = token_symbol->next;
 		}
 
-		token_symbol = (struct symbol*) allocmem(sizeof(struct symbol));
+		token_symbol = (struct symbol*) sbrk(sizeof(struct symbol));
 		token_symbol->value = 0;
 		token_symbol->callback = undeflabel_cb;
 		token_symbol->namelen = token_length;
-		token_symbol->name = allocmem(token_length);
+		token_symbol->name = sbrk(token_length);
 		memcpy(token_symbol->name, token_buffer, token_length);
 		token_symbol->next = hashtable[slot];
 		hashtable[slot] = token_symbol;
@@ -839,7 +831,7 @@ void push_and_apply_operator(uint8_t opid)
 		for (unsigned i=0; i<value_sp; i++)
 		{
 			printhex16(value_stack[i]);
-			putchar(' ');
+			cpm_conout(' ');
 		}
 		crlf();
 
@@ -847,7 +839,7 @@ void push_and_apply_operator(uint8_t opid)
 		for (unsigned i=0; i<operator_sp; i++)
 		{
 			printhex8(operator_stack[i]);
-			putchar(' ');
+			cpm_conout(' ');
 		}
 		crlf();
 	}
@@ -1065,7 +1057,7 @@ void title_cb(void)
 	if (pass == 0)
 	{
 		print("Title: ");
-		printn(token_buffer, token_length);
+		printn((char*) token_buffer, token_length);
 		crlf();
 	}
 
@@ -1297,7 +1289,12 @@ void end_cb(void) {}
 
 void main(void)
 {
-	uint16_t freeram = ((uint16_t)cpm_ramtop - (uint16_t)heapptr) / 1024;
+	uint8_t* rambottom;
+	uint16_t freeram;
+
+	cpm_overwrite_ccp();
+	rambottom = cpm_ram;
+	freeram = ((uint16_t)cpm_ramtop - (uint16_t)rambottom) / 1024;
 
 	print("CP/M Assembler (C) 2019 David Given; ");
 	printi(freeram);
@@ -1351,7 +1348,7 @@ void main(void)
 		{
 			token_t t;
 
-			if (cpm_get_console_status())
+			if (cpm_const())
 				fatal("user abort");
 
 			if (prn_file.fcb.dr != SKIP_DRIVE)
@@ -1387,7 +1384,7 @@ void main(void)
 			if (t != TOKEN_NL)
 			{
 				if (t != TOKEN_IDENTIFIER)
-					fatal("expected an identifier");
+					fatal("expected an identifier 2");
 
 				current_insn = token_symbol;
 			}
@@ -1420,9 +1417,8 @@ void main(void)
 	close_output_file(&prn_file);
 
 	print("Assembly successful; ");
-	printi(((uint16_t)heapptr - (uint16_t)cpm_ram) / 1024);
+	printi(((uint16_t)cpm_ram - (uint16_t)rambottom) / 1024);
 	print("kB/");
 	printi(freeram);
 	printx("kB used");
 }
-
