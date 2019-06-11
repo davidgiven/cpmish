@@ -1,6 +1,0 @@
-ZCPR1 is, as far as I can tell, in the public domain. This is based on the
-wording in the original release announcement (included here as
-[Announcement.pdf](Announcement.pdf)). The distribution itself has no
-copyright message or licensing. If anyone knows better, please get in touch.
-
-David Given <dg@cowlark.com>
