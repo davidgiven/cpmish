@@ -121,42 +121,39 @@ something interesting there.
 License?
 --------
 
-This is a big aggregation of software, all with its own licensing. It
-contains GPLv2-licensed code, so as a whole it must be distributed under the
-terms of the GPL version 2 (because complying with the GPL also complies with
-the license of everything else). See the [COPYING.gpl2](COPYING.gpl2) file
-for more details.
+This is a big aggregation of software, all with its own licensing. It contains
+GPLv2-licensed code, so as a whole it must be distributed under the terms of
+the GPL version 2 (because complying with the GPL also complies with the
+license of everything else). See the `COPYING.gpl2` file for more details.
 
 Specifically:
 
-  - Everything _not_ in `arch` or `third_party` is © 2018-2019 David Given
-    and is distributable under the terms of the 2-clause BSD license. See the
-    [COPYING.cpmish](COPYING.cpmish) file for more details.
+  - Everything _not_ in `arch` or `third_party` is © 2018-2019 David Given and
+	is distributable under the terms of the 2-clause BSD license. See the
+	`COPYING.cpmish` file for more details.
 
-  - `arch/nc200` and `arch/kayproii` were written by me and are covered by
-    the main CP/Mish license.
+  - `arch/nc200` and `arch/kayproii` were written by me and are covered by the
+	main CP/Mish license.
 
-  - `third_party/zcpr1` contains a
-    (modified) copy of the ZCPR1 CCP replacement, written by the CCP-GROUP,
-    which is in the public domain. See the
-    [third_party/zcpr1/COPYING](third_party/zcpr1/COPYING) file for more
-    details.
+  - `third_party/libstb` contains a copy of Sean Barrett's stb library, which
+	is partially in the public domain and partially distributable under the
+	Expat license. See the `third_party/libstb/COPYING` file for more details.
 
-  - `third_party/zmac` contains a
-    (modified) copy of the ZMAC macro assembler, written by George Phillips,
-    Thierry Join, Mark Rison, Russell Marks, Colin Kelley, John Providenza
-    and Bruce Norskog (some time in 1978!) --- and probably others. To the
-    best of my knowledge this is in the public domain. See the
-    [third_party/zmac/COPYING](third_party/zmac/COPYING) file for more
-    details.
+  - `third_party/zcpr1` contains a (modified) copy of the ZCPR1 CCP
+	replacement, written by the CCP-GROUP, which is in the public domain. See
+	the `third_party/zcpr1/COPYING` file for more details.
+
+  - `third_party/zmac` contains a (modified) copy of the ZMAC macro assembler,
+	written by George Phillips, Thierry Join, Mark Rison, Russell Marks, Colin
+	Kelley, John Providenza and Bruce Norskog (some time in 1978!) --- and
+	probably others. To the best of my knowledge this is in the public domain.
+	See the `third_party/zmac/COPYING` file for more details.
 
   - `third_party/ld80` contains a
     (modified) copy of the LD80 macro assembler, written by (as far as I
     know) George Philips and Gabor Kiss. It is in the public domain.
 
-  - `third_party/zsdos` contains a
-    (modified) copy of the ZSDOS CP/M BDOS clone, written by lots of people
-    but mainly Cameron W. Cotrill and Harold F. Bower. This is available
-    under the terms of the General Public License version 2. See the
-    [third_party/zsdos/COPYING](third_party/zsdos/COPYING) file for more
-    details.
+  - `third_party/zsdos` contains a (modified) copy of the ZSDOS CP/M BDOS
+	clone, written by lots of people but mainly Cameron W. Cotrill and Harold
+	F. Bower. This is available under the terms of the General Public License
+	version 2. See the `third_party/zsdos/COPYING` file for more details.
