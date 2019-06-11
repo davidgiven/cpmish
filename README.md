@@ -45,15 +45,15 @@ even useful today: both to study (as aa superb example of sheer minimalism)
 but also to use; the Z80 is a common target for homebrew computers, and CP/M
 is the obvious operating system to run on one.
 
+Don't believe me? Watch this:
+
+[![Video of me doing stuff on an NC200](http://img.youtube.com/vi/FGWshrMZcCc/0.jpg)](https://www.youtube.com/watch?v=FGWshrMZcCc)
+
 However, while you can get the source and binaries today, the [license it's
 released](http://www.gaby.de/cpm/license.html) with is encumbered and it
 can't be distributed outside (the amazing) [Unofficial CP/M Web
 Site](http://www.gaby.de/cpm/); so it's useful as a reference, but you can't
 distribute CP/M images with, e.g., emulators.
-
-Don't believe me? Watch this:
-
-[![Video of me doing stuff on an NC200](http://img.youtube.com/vi/FGWshrMZcCc/0.jpg)](https://www.youtube.com/watch?v=FGWshrMZcCc)
 
 CP/Mish is not CP/M, but it's enough like CP/M to run CP/M programs and do
 CP/M things. And, if you want the real CP/M, CP/Mish uses the standard
