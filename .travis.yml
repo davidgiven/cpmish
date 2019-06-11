@@ -20,6 +20,6 @@ addons:
         - libz80ex-dev
 
 script:
-    - (mkdir ack && cd ack && git clone --depth=1 git@github.com:davidgiven/ack.git && make +ack-cpm && make install)
+    - (mkdir ack && cd ack && git clone --depth=1 https://github.com/davidgiven/ack.git && make +ack-cpm && make install)
     - make
 
