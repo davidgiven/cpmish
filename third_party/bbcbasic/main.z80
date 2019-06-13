@@ -37,7 +37,7 @@
         EXTRN   ZERO
         EXTRN   ITEMI
         EXTRN   EXPRI
-        EXTRN   EXPR$
+        EXTRN   EXPRS
         EXTRN   DECODE
         EXTRN   LOADN
         EXTRN   SFIX
@@ -74,7 +74,7 @@
         GLOBAL  RANGE
 ;
         EXTRN   PAGE
-        EXTRN   ACC$
+        EXTRN   ACCS
         EXTRN   BUFFER
         EXTRN   LINENO
         EXTRN   LOMEM
@@ -193,11 +193,11 @@ CLOOP:  SCF
         LD      (AUTONO),HL
         LD      A,' '
         CALL    OUTCHR
-NOAUTO: LD      HL,ACC$
+NOAUTO: LD      HL,ACCS
         CALL    OSLINE          ;GET CONSOLE INPUT
         XOR     A
         LD      (COUNT),A
-        LD      IY,ACC$
+        LD      IY,ACCS
         CALL    LINNUM
         CALL    NXT
         LD      A,H
@@ -1009,7 +1009,7 @@ CLOOP0: JP      CLOOP
 ;
 ;LOAD filename
 ;
-LOAD:   CALL    EXPR$           ;GET FILENAME
+LOAD:   CALL    EXPRS           ;GET FILENAME
         LD      A,CR
         LD      (DE),A
         CALL    LOAD0
@@ -1019,7 +1019,7 @@ LOAD:   CALL    EXPR$           ;GET FILENAME
 ;SAVE filename
 ;
 SAVE:   CALL    SETTOP          ;SET TOP
-        CALL    EXPR$           ;FILENAME
+        CALL    EXPRS           ;FILENAME
         LD      A,CR
         LD      (DE),A
         LD      DE,(PAGE)
@@ -1028,7 +1028,7 @@ SAVE:   CALL    SETTOP          ;SET TOP
         SBC     HL,DE
         LD      B,H             ;LENGTH OF PROGRAM
         LD      C,L
-        LD      HL,ACC$
+        LD      HL,ACCS
         CALL    OSSAVE
 WARM0:  JP      WARM
 ;
@@ -1144,7 +1144,7 @@ DEL:    PUSH    DE
         RET
 ;
 ;LOAD0 - LOAD A DISK FILE THEN CLEAN.
-;   Inputs: Filename in ACC$ (term CR)
+;   Inputs: Filename in ACCS (term CR)
 ; Destroys: A,B,C,D,E,H,L,F
 ;
 ;CLEAN - CHECK FOR BAD PROGRAM, FIND END OF TEXT
@@ -1157,7 +1157,7 @@ LOAD0:  LD      DE,(PAGE)
         SBC     HL,DE           ;FIND AVAILABLE SPACE
         LD      B,H
         LD      C,L
-        LD      HL,ACC$
+        LD      HL,ACCS
         CALL    OSLOAD          ;LOAD
         CALL    NC,NEWIT
         LD      A,0

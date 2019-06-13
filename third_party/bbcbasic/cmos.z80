@@ -37,7 +37,7 @@
         EXTRN   CRLF
         EXTRN   TELL
 ;
-        EXTRN   ACC$
+        EXTRN   ACCS
         EXTRN   FREE
         EXTRN   HIMEM
         EXTRN   ERRLIN
@@ -1079,13 +1079,13 @@ SUM:    ADD     A,(HL)
 CLRTAB: LD      (HL),A          ;CLEAR FILE TABLE ETC.
         INC     HL
         DJNZ    CLRTAB
-        LD      DE,ACC$
+        LD      DE,ACCS
         LD      HL,DSKBUF
         LD      C,(HL)
         INC     HL
         CP      C               ;N.B. A=B=0
         JR      Z,NOBOOT
-        LDIR                    ;COPY TO ACC$
+        LDIR                    ;COPY TO ACCS
 NOBOOT: EX      DE,HL
         LD      (HL),CR
         LD      DE,(6)          ;DE = HIMEM

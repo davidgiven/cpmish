@@ -105,7 +105,7 @@ FTABLE: DEFW    ABS             ;ABS
         DEFW    INT             ;INT
         DEFW    LN              ;LN
         DEFW    LOG             ;LOG
-        DEFW    NOT             ;NOT
+        DEFW    NOTK            ;NOT
         DEFW    RAD             ;RAD
         DEFW    SGN             ;SGN
         DEFW    SIN             ;SIN
@@ -642,7 +642,7 @@ ABS:    BIT     7,H
 ;NOT - Complement integer.
 ;Result is integer numeric.
 ;
-NOT:    CALL    SFIX
+NOTK:   CALL    SFIX
         LD      A,H
         CPL
         LD      H,A

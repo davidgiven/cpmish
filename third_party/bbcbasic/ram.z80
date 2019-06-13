@@ -5,7 +5,7 @@
 ;*STANDARD CP/M DISTRIBUTION VERSION*
 ;(C) COPYRIGHT R.T.RUSSELL 31-12-1983
 ;
-        GLOBAL  ACC$
+        GLOBAL  ACCS
         GLOBAL  BUFFER
         GLOBAL  LINENO
         GLOBAL  TOP
@@ -34,9 +34,9 @@
         GLOBAL  ERRLIN
         GLOBAL  USER
 ;
-;n.b. ACC$, BUFFER & STAVAR must be on page boundaries.
+;n.b. ACCS, BUFFER & STAVAR must be on page boundaries.
 ;
-ACC$:   DEFS    256             ;STRING ACCUMULATOR
+ACCS:   DEFS    256             ;STRING ACCUMULATOR
 BUFFER: DEFS    256             ;STRING INPUT BUFFER
 STAVAR: DEFS    27*4            ;STATIC VARIABLES
 OC      EQU     STAVAR+15*4     ;CODE ORIGIN (O%)

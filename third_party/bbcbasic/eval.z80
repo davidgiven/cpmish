@@ -24,10 +24,10 @@
         GLOBAL  EXPR
         GLOBAL  EXPRN
         GLOBAL  EXPRI
-        GLOBAL  EXPR$
+        GLOBAL  EXPRS
         GLOBAL  ITEMI
-        GLOBAL  CON$
-        GLOBAL  LOAD$
+        GLOBAL  CONS
+        GLOBAL  LOADS
         GLOBAL  VAL0
         GLOBAL  SFIX
         GLOBAL  STR
@@ -42,8 +42,8 @@
         GLOBAL  COMMA
         GLOBAL  BRAKET
         GLOBAL  DECODE
-        GLOBAL  PUSH$
-        GLOBAL  POP$
+        GLOBAL  PUSHS
+        GLOBAL  POPS
         GLOBAL  SEARCH
 ;
         EXTRN   ERROR
@@ -70,7 +70,7 @@
         EXTRN   PC
         EXTRN   ERL
         EXTRN   ERR
-        EXTRN   ACC$
+        EXTRN   ACCS
 ;
         EXTRN   OSRDCH
         EXTRN   OSOPEN
@@ -123,7 +123,7 @@ FUNTBL: DEFW    DECODE          ;Line number
         DEFW    LEN             ;LEN
         DEFW    LN              ;LN
         DEFW    LOG             ;LOG
-        DEFW    NOT             ;NOT
+        DEFW    NOTK            ;NOT
         DEFW    OPENUP          ;OPENUP
         DEFW    OPENOT          ;OPENOUT
         DEFW    PI              ;PI
@@ -140,23 +140,23 @@ FUNTBL: DEFW    DECODE          ;Line number
         DEFW    USR             ;USR
         DEFW    VAL             ;VAL
         DEFW    VPOS            ;VPOS
-        DEFW    CHR$            ;CHR$
-        DEFW    GET$            ;GET$
-        DEFW    INKEY$          ;INKEY$
-        DEFW    LEFT$           ;LEFT$(
-        DEFW    MID$            ;MID$(
-        DEFW    RIGHT$          ;RIGHT$(
-        DEFW    STR$            ;STR$
-        DEFW    STRING          ;STRING$(
+        DEFW    CHRS            ;CHRS
+        DEFW    GETS            ;GETS
+        DEFW    INKEYS          ;INKEYS
+        DEFW    LEFTS           ;LEFTS(
+        DEFW    MIDS            ;MIDS(
+        DEFW    RIGHTS          ;RIGHTS(
+        DEFW    STRS            ;STR$
+        DEFW    STRING          ;STRINGS(
         DEFW    EOF             ;EOF
 ;
 TCMD    EQU     FUNTOK+($-FUNTBL)/2
 ;
-AND     EQU     80H
-DIV     EQU     81H
-EOR     EQU     82H
-MOD     EQU     83H
-OR      EQU     84H
+ANDK    EQU     80H
+DIVK    EQU     81H
+EORK    EQU     82H
+MODK    EQU     83H
+ORK     EQU     84H
 ;
 SOPTBL: DEFW    SLE             ;<= (STRING)
         DEFW    SNE             ;<>
@@ -183,9 +183,9 @@ SOPTBL: DEFW    SLE             ;<= (STRING)
 ;              (7) EOR OR
 ;
 EXPR:   CALL    EXPR1           ;GET FIRST OPERAND
-EXPR0A: CP      EOR             ;CHECK OPERATOR
+EXPR0A: CP      EORK            ;CHECK OPERATOR
         JR      Z,EXPR0B
-        CP      OR
+        CP      ORK
         RET     NZ
 EXPR0B: CALL    SAVE            ;SAVE FIRST OPERAND
         CALL    EXPR1           ;GET SECOND OPERAND
@@ -193,7 +193,7 @@ EXPR0B: CALL    SAVE            ;SAVE FIRST OPERAND
         JR      EXPR0A          ;CONTINUE
 ;
 EXPR1:  CALL    EXPR2
-EXPR1A: CP      AND
+EXPR1A: CP      ANDK
         RET     NZ
         CALL    SAVE
         CALL    EXPR2
@@ -215,7 +215,7 @@ EXPR2:  CALL    EXPR3
         LD      B,A
 EXPR2B: LD      A,B
         EX      AF,AF'
-        JP      M,EXPR2$
+        JP      M,EXPR2S
         EX      AF,AF'
         SUB     4
         CP      '>'-4
@@ -226,10 +226,10 @@ EXPR2C: CALL    SAVE1
         CALL    DOIT            ;Must NOT be "JP DOIT"
         RET
 ;
-EXPR2$: EX      AF,AF'
+EXPR2S: EX      AF,AF'
         DEC     A
         AND     7
-        CALL    PUSH$           ;SAVE STRING ON STACK
+        CALL    PUSHS           ;SAVE STRING ON STACK
         PUSH    AF              ;SAVE OPERATOR
         CALL    EXPR3           ;SECOND STRING
         EX      AF,AF'
@@ -241,7 +241,7 @@ EXPR2$: EX      AF,AF'
         ADD     HL,SP
         LD      B,E             ;LENGTH OF STRING #1
         PUSH    DE
-        LD      DE,ACC$
+        LD      DE,ACCS
         EX      DE,HL
         CALL    DISPT2
         POP     DE
@@ -262,27 +262,27 @@ EXPR3A: CP      '-'
         CP      '+'
         RET     NZ
         EX      AF,AF'
-        JP      M,EXPR3$
+        JP      M,EXPR3S
         EX      AF,AF'
 EXPR3B: CALL    SAVE
         CALL    EXPR4
         CALL    DOIT
         JR      EXPR3A
 ;
-EXPR3$: EX      AF,AF'
+EXPR3S: EX      AF,AF'
         INC     IY              ;BUMP PAST '+'
-        CALL    PUSH$           ;SAVE STRING ON STACK
+        CALL    PUSHS           ;SAVE STRING ON STACK
         CALL    EXPR4           ;SECOND STRING
         EX      AF,AF'
         JP      P,TYPE
         LD      C,E             ;C=LENGTH
         POP     DE
         PUSH    DE
-        LD      HL,ACC$
+        LD      HL,ACCS
         LD      D,H
         LD      A,C
         OR      A
-        JR      Z,EXP3$3
+        JR      Z,EXP3S3
         LD      B,L
         LD      L,A             ;SOURCE
         ADD     A,E
@@ -294,9 +294,9 @@ EXPR3$: EX      AF,AF'
         DEC     L
         LDDR                    ;COPY
         POP     DE
-EXP3$3: EXX
+EXP3S3: EXX
         POP     BC
-        CALL    POP$            ;RESTORE FROM STACK
+        CALL    POPS            ;RESTORE FROM STACK
         EXX
         OR      80H             ;FLAG STRING
         EX      AF,AF'
@@ -308,9 +308,9 @@ EXPR4A: CP      '*'
         JR      Z,EXPR4B
         CP      '/'
         JR      Z,EXPR4B
-        CP      MOD
+        CP      MODK
         JR      Z,EXPR4B
-        CP      DIV
+        CP      DIVK
         RET     NZ
 EXPR4B: CALL    SAVE
         CALL    EXPR5
@@ -340,7 +340,7 @@ EXPRI:  CALL    EXPR
         JP      P,SFIX
         JR      TYPE
 ;
-EXPR$:  CALL    EXPR
+EXPRS:  CALL    EXPR
         EX      AF,AF'
         RET     M
         JR      TYPE
@@ -356,7 +356,7 @@ ITEMI:  CALL    ITEM
         JP      P,SFIX
         JR      TYPE
 ;
-ITEM$:  CALL    ITEM
+ITEMS:  CALL    ITEM
         OR      A
         RET     M
 TYPE:   LD      A,6
@@ -453,7 +453,7 @@ ITEM:   CALL    CHECK
         CP      '('
         JR      Z,ITEM1         ;EXPRESSION
         CP      '"'
-        JR      Z,CON$          ;STRING CONSTANT
+        JR      Z,CONS          ;STRING CONSTANT
         CP      TCMD
         JP      NC,SYNTAX       ;SYNTAX ERROR
         CP      FUNTOK
@@ -468,7 +468,7 @@ ITEM:   CALL    CHECK
 ITEM2:  CALL    GETVAR          ;VARIABLE
         JR      NZ,NOSUCH
         OR      A
-        JP      M,LOAD$         ;STRING VARIABLE
+        JP      M,LOADS         ;STRING VARIABLE
 LOADN:  OR      A
         JR      Z,LOAD1         ;BYTE VARIABLE
         LD      C,0
@@ -504,29 +504,29 @@ NOS1:   INC     IY
         LD      C,A
         JR      LOAD4
 ;
-;CON$ - Get string constant from ASCII string.
+;CONS - Get string constant from ASCII string.
 ;   Inputs: ASCII string at (IY)
 ;  Outputs: Result in string accumulator.
-;           D = MS byte of ACC$, E = string length
+;           D = MS byte of ACCS, E = string length
 ;           A7 = 1 (string marker)
 ;           IY updated
 ;
-CON$:   LD      DE,ACC$
-CON$3:  LD      A,(IY)
+CONS:   LD      DE,ACCS
+CONS3:  LD      A,(IY)
         INC     IY
         CP      '"'
-        JR      Z,CON$2
-CON$1:  LD      (DE),A
+        JR      Z,CONS2
+CONS1:  LD      (DE),A
         INC     E
         CP      CR
-        JR      NZ,CON$3
+        JR      NZ,CONS3
         LD      A,9
 ERROR0: JP      ERROR           ;"Missing """
 ;
-CON$2:  LD      A,(IY)
+CONS2:  LD      A,(IY)
         CP      '"'
         INC     IY
-        JR      Z,CON$1
+        JR      Z,CONS1
         DEC     IY
         LD      A,80H           ;STRING MARKER
         RET
@@ -556,9 +556,9 @@ DLOAD5: LD      B,(IX+4)
         LD      D,(IX+3)
         RET
 ;
-LOAD$:  LD      DE,ACC$
+LOADS:  LD      DE,ACCS
         RRA
-        JR      NC,LOAD$2       ;FIXED STRING
+        JR      NC,LOADS2       ;FIXED STRING
         CALL    LOAD4
         EXX
         LD      A,L
@@ -570,14 +570,14 @@ LOAD$:  LD      DE,ACC$
         LD      B,0
         LDIR
         RET
-LOAD$2: LD      A,(HL)
+LOADS2: LD      A,(HL)
         LD      (DE),A
         INC     HL
         CP      CR
         LD      A,80H           ;STRING MARKER
         RET     Z
         INC     E
-        JR      NZ,LOAD$2
+        JR      NZ,LOADS2
         RET                     ;RETURN NULL STRING
 ;
         PAGE
@@ -623,7 +623,7 @@ BGET:   CALL    CHANEL          ;CHANNEL NUMBER
         CALL    OSBGET
         LD      L,A
         JR      COUNT0
-INKEY:  CALL    INKEY$
+INKEY:  CALL    INKEYS
         JR      ASC0
 GET:    CALL    NXT
         CP      '('
@@ -634,15 +634,15 @@ GET:    CALL    NXT
         LD      C,L
         IN      L,(C)           ;INPUT FROM PORT BC
         JR      COUNT0
-GET0:   CALL    GET$
+GET0:   CALL    GETS
         JR      ASC1
-ASC:    CALL    ITEM$
+ASC:    CALL    ITEMS
 ASC0:   XOR     A
         CP      E
         JP      Z,TRUE          ;NULL STRING
-ASC1:   LD      HL,(ACC$)
+ASC1:   LD      HL,(ACCS)
         JR      COUNT0
-LEN:    CALL    ITEM$
+LEN:    CALL    ITEMS
         EX      DE,HL
         JR      COUNT0
 LOMEMV: LD      HL,(LOMEM)
@@ -681,12 +681,12 @@ OPENUP: LD      A,2
         DEFB    21H             ;SKIP NEXT 2 BYTES
 OPENIN: LD      A,1
         PUSH    AF              ;SAVE OPEN TYPE
-        CALL    ITEM$           ;FILENAME
+        CALL    ITEMS           ;FILENAME
         LD      A,CR
         LD      (DE),A
         POP     AF              ;RESTORE OPEN TYPE
         ADD     A,-1            ;AFFECT FLAGS
-        LD      HL,ACC$
+        LD      HL,ACCS
         CALL    OSOPEN
         LD      L,A
         JR      COUNT0
@@ -779,7 +779,7 @@ ABS:    LD      A,16
 ;NOT - Complement integer.
 ;Result is integer numeric.
 ;
-NOT:    LD      A,26
+NOTK:   LD      A,26
         JR      FPPN
 ;
 ;DEG - Convert radians to degrees
@@ -885,28 +885,28 @@ SFLOAT: LD      A,39
 ;VAL - Return numeric value of string.
 ;Result is variable type numeric.
 ;
-VAL:    CALL    ITEM$
+VAL:    CALL    ITEMS
 VAL0:   XOR     A
         LD      (DE),A
-        LD      IX,ACC$
+        LD      IX,ACCS
         LD      A,36
         JR      FPP1
 ;
 ;EVAL - Pass string to expression evaluator.
 ;Result is variable type (numeric or string).
 ;
-EVAL:   CALL    ITEM$
+EVAL:   CALL    ITEMS
         LD      A,CR
         LD      (DE),A
         PUSH    IY
-        LD      DE,ACC$
-        LD      IY,ACC$
+        LD      DE,ACCS
+        LD      IY,ACCS
         LD      C,0
         CALL    LEXAN2          ;TOKENISE
         LD      (DE),A
         INC     DE
         XOR     A
-        CALL    PUSH$           ;PUT ON STACK
+        CALL    PUSHS           ;PUT ON STACK
         LD      IY,2
         ADD     IY,SP
         CALL    EXPR
@@ -986,9 +986,9 @@ RND7:   RES     7,H             ;POSITIVE 0-0.999999
 ;INSTR - String search.
 ;Result is integer numeric.
 ;
-INSTR:  CALL    EXPR$C          ;STRING TO SEARCH
-        CALL    PUSH$           ;SAVE STRING ON STACK
-        CALL    EXPR$           ;SUB-STRING
+INSTR:  CALL    EXPRSC          ;STRING TO SEARCH
+        CALL    PUSHS           ;SAVE STRING ON STACK
+        CALL    EXPRS           ;SUB-STRING
         POP     BC
         LD      HL,0
         ADD     HL,SP           ;HL ADDRESSES MAIN
@@ -1001,10 +1001,10 @@ INSTR:  CALL    EXPR$C          ;STRING TO SEARCH
         INC     IY              ;SKIP COMMA
         PUSH    BC              ;SAVE LENGTHS
         PUSH    HL              ;SAVE MAIN ADDRESS
-        CALL    PUSH$
+        CALL    PUSHS
         CALL    EXPRI
         POP     BC
-        CALL    POP$
+        CALL    POPS
         POP     HL              ;RESTORE MAIN ADDRESS
         POP     BC              ;RESTORE LENGTHS
         EXX
@@ -1013,7 +1013,7 @@ INSTR:  CALL    EXPR$C          ;STRING TO SEARCH
         OR      A
         JR      Z,INSTR1
         DEC     A
-INSTR1: LD      DE,ACC$         ;DE ADDRESSES SUB
+INSTR1: LD      DE,ACCS         ;DE ADDRESSES SUB
         CALL    SEARCH
         POP     DE
         JR      Z,INSTR2        ;N.B. CARRY CLEARED
@@ -1078,30 +1078,30 @@ SRCH3:  POP     HL
 SRCH4:  OR      0FFH            ;NZ, NC
         RET                     ;NOT FOUND
 ;
-;CHR$ - Return character with given ASCII value.
+;CHRS - Return character with given ASCII value.
 ;Result is string.
 ;
-CHR$:   CALL    ITEMI
+CHRS:   CALL    ITEMI
         EXX
         LD      A,L
         JR      GET1
 ;
-;GET$ - Return key pressed as string.
+;GETS - Return key pressed as string.
 ;Result is string.
 ;
-GET$:   CALL    OSRDCH
+GETS:   CALL    OSRDCH
 GET1:   SCF
         JR      INKEY1
 ;
-;INKEY$ - Wait up to n centiseconds for keypress.
+;INKEYS - Wait up to n centiseconds for keypress.
 ;         Return key pressed as string or null
 ;         string if time elapsed.
 ;Result is string.
 ;
-INKEY$: CALL    ITEMI
+INKEYS: CALL    ITEMI
         EXX
         CALL    OSKEY
-INKEY1: LD      DE,ACC$
+INKEY1: LD      DE,ACCS
         LD      (DE),A
         LD      A,80H
         RET     NC
@@ -1111,25 +1111,25 @@ INKEY1: LD      DE,ACC$
 ;MID$ - Return sub-string.
 ;Result is string.
 ;
-MID$:   CALL    EXPR$C
-        CALL    PUSH$           ;SAVE STRING ON STACK
+MIDS:   CALL    EXPRSC
+        CALL    PUSHS           ;SAVE STRING ON STACK
         CALL    EXPRI
         POP     BC
-        CALL    POP$
+        CALL    POPS
         EXX
         LD      A,L
         EXX
         OR      A
-        JR      Z,MID$1
+        JR      Z,MIDS1
         DEC     A
         LD      L,A
         SUB     E
         LD      E,0
-        JR      NC,MID$1
+        JR      NC,MIDS1
         NEG
         LD      C,A
         CALL    RIGHT1
-MID$1:  CALL    NXT
+MIDS1:  CALL    NXT
         CP      ','
         INC     IY
         JR      Z,LEFT1
@@ -1142,18 +1142,18 @@ MID$1:  CALL    NXT
 ;Carry cleared if entire string returned.
 ;Result is string.
 ;
-LEFT$:  CALL    EXPR$C
-LEFT1:  CALL    PUSH$           ;SAVE STRING ON STACK
+LEFTS:  CALL    EXPRSC
+LEFT1:  CALL    PUSHS           ;SAVE STRING ON STACK
         CALL    EXPRI
         POP     BC
-        CALL    POP$
+        CALL    POPS
         CALL    BRAKET
         EXX
         LD      A,L
         EXX
         CP      E
         JR      NC,LEFT3
-        LD      L,E             ;FOR RIGHT$
+        LD      L,E             ;FOR RIGHTS
 LEFT2:  LD      E,A
 LEFT3:  LD      A,80H           ;STRING MARKER
         RET
@@ -1161,7 +1161,7 @@ LEFT3:  LD      A,80H           ;STRING MARKER
 ;RIGHT$ - Return right part of string.
 ;Result is string.
 ;
-RIGHT$: CALL    LEFT$
+RIGHTS: CALL    LEFTS
         RET     NC
         INC     E
         DEC     E
@@ -1177,7 +1177,7 @@ RIGHT1: LD      B,0
         LD      A,80H
         RET
 ;
-;STRING$ - Return n concatenations of a string.
+;STRINGS - Return n concatenations of a string.
 ;Result is string.
 ;
 STRING: CALL    EXPRI
@@ -1186,7 +1186,7 @@ STRING: CALL    EXPRI
         LD      A,L
         EXX
         PUSH    AF
-        CALL    EXPR$
+        CALL    EXPRS
         CALL    BRAKET
         POP     AF
         OR      A
@@ -1276,9 +1276,9 @@ DECODE: EXX
 ;HEXSTR - convert numeric value to HEX string.
 ;   Inputs: HLH'L'C = integer or floating-point number
 ;  Outputs: String in string accumulator.
-;           E = string length.  D = ACC$/256
+;           E = string length.  D = ACCS/256
 ;
-HEXST$: INC     IY              ;SKIP TILDE
+HEXSTS: INC     IY              ;SKIP TILDE
         CALL    ITEMN
         CALL    HEXSTR
         LD      A,80H
@@ -1286,7 +1286,7 @@ HEXST$: INC     IY              ;SKIP TILDE
 ;
 HEXSTR: CALL    SFIX
         LD      BC,8
-        LD      DE,ACC$
+        LD      DE,ACCS
 HEXST1: PUSH    BC
         LD      B,4
         XOR     A
@@ -1316,14 +1316,14 @@ HEXST3: ADD     A,90H
 ;Function STR - convert numeric value to ASCII string.
 ;   Inputs: HLH'L'C = integer or floating-point number.
 ;  Outputs: String in string accumulator.
-;           E = length, D = ACC$/256
+;           E = length, D = ACCS/256
 ;           A = 80H (type=string)
 ;
 ;First normalise for decimal output:
 ;
-STR$:   CALL    NXT
+STRS:   CALL    NXT
         CP      '~'
-        JR      Z,HEXST$
+        JR      Z,HEXSTS
         CALL    ITEMN
         LD      IX,STAVAR
         LD      A,(IX+3)
@@ -1331,7 +1331,7 @@ STR$:   CALL    NXT
         LD      IX,G9-1         ;G9 FORMAT
         JR      Z,STR0
 STR:    LD      IX,STAVAR
-STR0:   LD      DE,ACC$
+STR0:   LD      DE,ACCS
         LD      A,37
         CALL    FPP
         JP      C,ERROR
@@ -1386,16 +1386,16 @@ SCP3:   OR      A
         INC     C
         RET
 ;
-;PUSH$ - SAVE STRING ON STACK.
+;PUSHS - SAVE STRING ON STACK.
 ;    Inputs: String in string accumulator.
 ;            E = string length.
 ;            A - saved on stack.
 ;  Destroys: B,C,D,E,H,L,IX,SP,F
 ;
-PUSH$:  CALL    CHECK
+PUSHS:  CALL    CHECK
         POP     IX              ;RETURN ADDRESS
         OR      A               ;CLEAR CARRY
-        LD      HL,ACC$
+        LD      HL,ACCS
         LD      D,H
         LD      B,L             ;B=0
         SBC     HL,DE
@@ -1403,30 +1403,30 @@ PUSH$:  CALL    CHECK
         LD      SP,HL
         LD      D,A
         PUSH    DE
-        JR      Z,PUSH$1        ;ZERO LENGTH
+        JR      Z,PUSHS1        ;ZERO LENGTH
         LD      C,E
-        LD      DE,ACC$
+        LD      DE,ACCS
         EX      DE,HL
         LDIR                    ;COPY TO STACK
         CALL    CHECK
-PUSH$1: JP      (IX)            ;"RETURN"
+PUSHS1: JP      (IX)            ;"RETURN"
 ;
-;POP$ - RESTORE STRING FROM STACK.
+;POPS - RESTORE STRING FROM STACK.
 ;    Inputs: C = string length.
 ;   Outputs: String in string accumulator.
 ;            E = string length.
 ;  Destroys: B,C,D,E,H,L,IX,SP,F
 ;
-POP$:   POP     IX              ;RETURN ADDRESS
+POPS:   POP     IX              ;RETURN ADDRESS
         LD      HL,0
         LD      B,H             ;B=0
         ADD     HL,SP
-        LD      DE,ACC$
+        LD      DE,ACCS
         INC     C
         DEC     C
-        JR      Z,POP$1         ;ZERO LENGTH
+        JR      Z,POPS1         ;ZERO LENGTH
         LDIR                    ;COPY FROM STACK
-POP$1:  LD      SP,HL
+POPS1:  LD      SP,HL
         JP      (IX)            ;"RETURN"
 ;
 HEXDIG: LD      A,(IY)
@@ -1449,7 +1449,7 @@ RELOP?: CP      '>'
         CP      '<'
         RET
 ;
-EXPR$C: CALL    EXPR$
+EXPRSC: CALL    EXPRS
 COMMA:  CALL    NXT
         INC     IY
         CP      ','

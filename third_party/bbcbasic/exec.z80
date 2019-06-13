@@ -79,10 +79,10 @@
         EXTRN   EXPR
         EXTRN   EXPRN
         EXTRN   EXPRI
-        EXTRN   EXPR$
+        EXTRN   EXPRS
         EXTRN   ITEMI
-        EXTRN   CON$
-        EXTRN   LOAD$
+        EXTRN   CONS
+        EXTRN   LOADS
         EXTRN   VAL0
         EXTRN   SFIX
         EXTRN   TEST
@@ -94,11 +94,11 @@
         EXTRN   FPP
         EXTRN   COMMA
         EXTRN   BRAKET
-        EXTRN   PUSH$
-        EXTRN   POP$
+        EXTRN   PUSHS
+        EXTRN   POPS
         EXTRN   ZERO
 ;
-        EXTRN   ACC$
+        EXTRN   ACCS
         EXTRN   PAGE
         EXTRN   LOMEM
         EXTRN   HIMEM
@@ -199,7 +199,7 @@ CMDTAB: DEFW    AUTO
 ;
 RUN:    CALL    TERM?
         JR      Z,RUN0
-CHAIN:  CALL    EXPR$
+CHAIN:  CALL    EXPRS
         LD      A,CR
         LD      (DE),A
 CHAIN0: LD      SP,(HIMEM)
@@ -280,10 +280,10 @@ NEWLIN: LD      A,(IY+0)        ;A=LINE LENGTH
 ;
 ;OSCLI
 ;
-CLI:    CALL    EXPR$
+CLI:    CALL    EXPRS
         LD      A,CR
         LD      (DE),A
-        LD      HL,ACC$
+        LD      HL,ACCS
         CALL    OSCLI
         JR      XEQ
 ;
@@ -305,11 +305,11 @@ REM:    PUSH    IY
 ;
 LET0:   CP      ELSE-TCMD
         JR      Z,REM
-        CP      '*'-TCMD
+        CP      ('*'-TCMD) AND 0xFF
         JR      Z,EXT
-        CP      '='-TCMD
+        CP      ('='-TCMD) AND 0xFF
         JR      Z,FNEND
-        CP      '['-TCMD
+        CP      ('['-TCMD) AND 0xFF
         JR      Z,ASM
         DEC     IY
 LET:    CALL    ASSIGN
@@ -318,10 +318,10 @@ LET:    CALL    ASSIGN
         PUSH    AF              ;SAVE STRING TYPE
         CALL    EQUALS
         PUSH    HL
-        CALL    EXPR$
+        CALL    EXPRS
         POP     IX
         POP     AF
-        CALL    STACC$
+        CALL    STACCS
 XEQR:   JP      XEQ
 ;
 ASM0:   CALL    NEWLIN
@@ -368,7 +368,7 @@ FNEND5: POP     BC
         EX      DE,HL
         EXX
         EX      DE,HL
-        LD      DE,ACC$
+        LD      DE,ACCS
         LD      E,B
         EX      AF,AF'
         RET
@@ -388,7 +388,7 @@ FNEND1: LD      HL,0
         ADD     HL,SP
         PUSH    DE
         LD      E,C
-        CALL    STORE$
+        CALL    STORES
         POP     DE
         LD      SP,HL
         JR      FNEND5
@@ -523,7 +523,7 @@ PRNTN1: CALL    NXT
         JR      PRNTN1
 PRNTN2: LD      C,E
         POP     DE
-        LD      HL,ACC$
+        LD      HL,ACCS
         INC     C
 PRNTN3: DEC     C
         JR      Z,PRNTN4
@@ -972,7 +972,7 @@ LOCAL2: CALL    GETVAR
         CALL    P,STORE         ;ZERO
         POP     AF
         LD      E,C
-        CALL    M,STORE$
+        CALL    M,STORES
         CALL    NXT
         CP      ','
         JP      NZ,XEQ
@@ -1009,7 +1009,7 @@ UNSTK:  POP     IX
 UNSTK1: LD      HL,0
         ADD     HL,SP
         LD      E,C
-        CALL    STORE$
+        CALL    STORES
         LD      SP,HL
         JR      ENDPRO
 ;
@@ -1048,7 +1048,7 @@ INPN1:  CALL    NXT
         CALL    STORE
         POP     DE
         JR      INPN1
-INPN2:  LD      HL,ACC$
+INPN2:  LD      HL,ACCS
 INPN3:  CALL    OSBGET
         CP      CR
         JR      Z,INPN4
@@ -1059,7 +1059,7 @@ INPN4:  POP     IX
         POP     AF
         PUSH    DE
         EX      DE,HL
-        CALL    STACC$
+        CALL    STACCS
         POP     DE
         JR      INPN1
 ;
@@ -1086,7 +1086,7 @@ INPUT1: CALL    TERM?
         CP      '"'
         JR      NZ,INPUT6
         PUSH    BC
-        CALL    CON$
+        CALL    CONS
         POP     BC
         CALL    PTEXT           ;PRINT PROMPT
         JR      INPUT9
@@ -1107,9 +1107,9 @@ INPUT2: DEC     IY
         CALL    Z,REFILL
         BIT     7,C
         PUSH    AF
-        CALL    NZ,LINE$
+        CALL    NZ,LINES
         POP     AF
-        CALL    Z,FETCH$
+        CALL    Z,FETCHS
         POP     AF              ;RESTORE TYPE
         PUSH    BC
         PUSH    HL
@@ -1122,7 +1122,7 @@ INPUT2: DEC     IY
         POP     AF
         CALL    STORE
         JR      INPUT5
-INPUT4: CALL    STACC$
+INPUT4: CALL    STACCS
 INPUT5: POP     HL
         POP     BC
 INPUT3: RES     0,C
@@ -1178,9 +1178,9 @@ READ0:  LD      A,(HL)
         CALL    STORE
         EX      (SP),IY
         JR      READ2
-READ1:  CALL    FETCH$
+READ1:  CALL    FETCHS
         PUSH    HL
-        CALL    STACC$
+        CALL    STACCS
 READ2:  POP     HL
         LD      (DATPTR),HL
         CALL    NXT
@@ -1302,7 +1302,7 @@ TIMEV:  CP      '$'
 ;
 TIMEVS: INC     IY              ;SKIP '$'
         CALL    EQUALS
-        CALL    EXPR$
+        CALL    EXPRS
         CALL    PUTIMS
         JP      XEQ
 ;
@@ -1509,9 +1509,9 @@ STORE1: EXX
         EXX
         RET
 ;
-STACC$: LD      HL,ACC$
-STORE$: RRA
-        JR      NC,STOR$3       ;FIXED STRING
+STACCS: LD      HL,ACCS
+STORES: RRA
+        JR      NC,STORS3       ;FIXED STRING
         PUSH    HL
         CALL    LOAD4
         LD      A,E             ;LENGTH OF STRING
@@ -1520,7 +1520,7 @@ STORE$: RRA
         LD      A,H             ;LENGTH ALLOCATED
         EXX
         CP      E
-        JR      NC,STOR$1       ;ENOUGH ROOM
+        JR      NC,STORS1       ;ENOUGH ROOM
         EXX
         LD      H,L
         EXX
@@ -1532,10 +1532,10 @@ STORE$: RRA
         SBC     HL,BC           ;IS STRING LAST?
         POP     HL
         SCF
-        JR      Z,STOR$1
+        JR      Z,STORS1
         LD      H,B
         LD      L,C
-STOR$1: CALL    STORE4          ;PRESERVES CARRY!
+STORS1: CALL    STORE4          ;PRESERVES CARRY!
         LD      B,0
         LD      C,E
         EX      DE,HL
@@ -1555,15 +1555,15 @@ CHECK:  PUSH    HL
         XOR     A
         JP      ERROR           ;"No room"
 ;
-STOR$3: LD      C,E
+STORS3: LD      C,E
         PUSH    IX
         POP     DE
         XOR     A
         LD      B,A
         CP      C
-        JR      Z,STOR$5
+        JR      Z,STORS5
         LDIR
-STOR$5: LD      A,CR
+STORS5: LD      A,CR
         LD      (DE),A
         RET
 ;
@@ -1604,13 +1604,13 @@ ARGUE1: INC     IY              ;BUMP PAST ( OR ,
         PUSH    BC
         CALL    CHECK           ;CHECK ROOM
         JR      ARGUE4
-ARGUE2: CALL    EXPR$
+ARGUE2: CALL    EXPRS
         EX      (SP),IY
         EXX
         POP     DE
         EXX
         POP     AF
-        CALL    PUSH$
+        CALL    PUSHS
         EXX
 ARGUE4: CALL    NXT
         CP      ','
@@ -1641,9 +1641,9 @@ ARGUE6: POP     BC
         POP     IX
         CALL    STORE           ;WRITE TO DUMMY
         JR      ARGUE6
-ARGUE7: CALL    POP$
+ARGUE7: CALL    POPS
         POP     IX
-        CALL    STACC$
+        CALL    STACCS
         JR      ARGUE6
 ;
 ;SAVLOC: SUBROUTINE TO STACK LOCAL PARAMETERS
@@ -1687,7 +1687,7 @@ SAVLO2: PUSH    AF              ;STRING TYPE
         EXX
         PUSH    HL
         EXX
-        CALL    LOAD$
+        CALL    LOADS
         EXX
         POP     HL
         EXX
@@ -1704,7 +1704,7 @@ SAVLO2: PUSH    AF              ;STRING TYPE
         PUSH    BC
         JR      Z,SAVLO4
         PUSH    DE
-        LD      DE,ACC$
+        LD      DE,ACCS
         EX      DE,HL
         LD      B,L
         LDIR                    ;SAVE STRING ON STACK
@@ -1807,7 +1807,7 @@ FILL1:  LD      A,' '
         XOR     A
         RET
 ;
-PTEXT:  LD      HL,ACC$
+PTEXT:  LD      HL,ACCS
         INC     E
 PTEXT1: DEC     E
         RET     Z
@@ -1816,7 +1816,7 @@ PTEXT1: DEC     E
         CALL    OUTCHR
         JR      PTEXT1
 ;
-FETCH$: PUSH    AF
+FETCHS: PUSH    AF
         PUSH    BC
         PUSH    HL
         EX      (SP),IY
@@ -1828,21 +1828,21 @@ FETCH$: PUSH    AF
         POP     AF
         RET
 ;
-LINE$:  LD      DE,ACC$
-LINE1$: LD      A,(HL)
+LINES:  LD      DE,ACCS
+LINE1S: LD      A,(HL)
         LD      (DE),A
         CP      CR
         RET     Z
         INC     HL
         INC     E
-        JR      LINE1$
+        JR      LINE1S
 ;
 XTRACT: CALL    NXT
         CP      '"'
         INC     IY
-        JP      Z,CON$
+        JP      Z,CONS
         DEC     IY
-        LD      DE,ACC$
+        LD      DE,ACCS
 XTRAC1: LD      A,(IY)
         LD      (DE),A
         CP      ','
@@ -2287,9 +2287,9 @@ BYTE1:  JR      BYTE
 ;
 MISC:   DJNZ    OPT
         PUSH    IX
-        CALL    EXPR$
+        CALL    EXPRS
         POP     IX
-        LD      HL,ACC$
+        LD      HL,ACCS
 DEFM1:  XOR     A
         CP      E
         RET     Z
@@ -2486,7 +2486,7 @@ SIGN:   CP      '+'
         CP      '-'
         RET
 ;
-        .XLIST
+        ;.XLIST
 OPCODS: DEFM    'NO'
         DEFB    'P'+80H
         DEFB    0
