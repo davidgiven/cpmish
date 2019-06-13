@@ -40,7 +40,7 @@ FPP:	PUSH	IY		;Save IY
 	CALL	OP		;Perform operation
 	CP	A		;Good return (Z, NC)
 EXIT:	POP	IY		;Restore IY
-	RET			;Return to caller
+	ret			;Return to caller
 ;
 ;Error exit:
 ;
