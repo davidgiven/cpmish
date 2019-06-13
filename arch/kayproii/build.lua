@@ -53,6 +53,7 @@ diskimage {
         ["asm.com"] = "cpmtools+asm",
         ["copy.com"] = "cpmtools+copy",
         ["submit.com"] = "cpmtools+submit",
+        ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
     },
 }
     
