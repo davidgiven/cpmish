@@ -135,6 +135,10 @@ Specifically:
   - `arch/nc200` and `arch/kayproii` were written by me and are covered by the
 	main CP/Mish license.
 
+  - `third_party/bbcbasic` contains a copy of R.T.Russell's Z80 BBC Basic,
+  which is distributable under the terms of the zlib license. See the
+  `third_party/bbcbasic/COPYING` file for more details.
+
   - `third_party/libstb` contains a copy of Sean Barrett's stb library, which
 	is partially in the public domain and partially distributable under the
 	Expat license. See the `third_party/libstb/COPYING` file for more details.
