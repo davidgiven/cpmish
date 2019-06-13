@@ -159,7 +159,7 @@ PURGE:  LD      (HL),A          ;CLEAR SCRATCHPAD
         CALL    NEWIT
         JP      NZ,CHAIN0       ;AUTO-RUN
         CALL    TELL
-        DEFM    'BBC BASIC (Z80) Version 3.00  '
+        DEFM    'BBC BASIC (Z80) Version 3.00+1  '
         DEFB    CR
         DEFB    LF
 NOTICE: DEFM    '(C) Copyright R.T.Russell 1987'

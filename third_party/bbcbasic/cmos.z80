@@ -1061,19 +1061,23 @@ BADSUM: CALL    TELL
 OSINIT: LD      C,45            ;*
         LD      E,254           ;*
         CALL    BDOS            ;*
-        LD      BC,SUMFIX+2-200H
-        LD      HL,200H
-        XOR     A
-        LD      E,A
-SUM:    ADD     A,(HL)
-        LD      D,E
-        LD      E,A
-        LD      A,D
-        ADC     A,0
-        CPI
-        JP      PE,SUM
-        OR      E
-        JR      NZ,BADSUM
+
+        ; dtrg: this is the checksum code, intended to validate binary
+        ; integrity over bad connections. It doesn't have any use with
+        ; CP/Mish so I've simply disabled it.
+;        LD      BC,SUMFIX+2-200H
+;        LD      HL,200H
+;        XOR     A
+;        LD      E,A
+;SUM:    ADD     A,(HL)
+;        LD      D,E
+;        LD      E,A
+;        LD      A,D
+;        ADC     A,0
+;        CPI
+;        JP      PE,SUM
+;        OR      E
+;        JR      NZ,BADSUM
         LD      B,INILEN
         LD      HL,TABLE
 CLRTAB: LD      (HL),A          ;CLEAR FILE TABLE ETC.
