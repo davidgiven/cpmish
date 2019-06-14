@@ -32,14 +32,31 @@ definerule("ld80",
             name = e.name,
             outleaves = {
                 e.name..".cim",
-                e.name..".sym",
             },
             ins = {
                 "third_party/ld80+ld80",
                 deps,
             },
             commands = {
-                "%{ins[1]} -m -O bin -o %{outs[1]} -s %{outs[2]} "..table.concat(args, " ")
+                "%{ins[1]} -m -O bin -o %{outs[1]} -s %{outs[1]}.sym "..table.concat(args, " ")
+            }
+        }
+    end
+)
+
+definerule("bintocom",
+    {
+        srcs = { type="table" },
+    },
+    function (e)
+        return normalrule {
+            name = e.name,
+            outleaves = {
+                e.name..".com",
+            },
+            ins = e.srcs,
+            commands = {
+                "dd if=%{ins[1]} of=%{outs[1]} status=none bs=128 skip=2"
             }
         }
     end
