@@ -5182,6 +5182,7 @@ struct item *keyword(char *name)
 			if (name[0] == '.' && key[0] != '.')
 				break;
 
+fprintf(stderr, "<%s> -> %p\n", name, ip);
 			return ip;
 		}
 		if (r < 0)
