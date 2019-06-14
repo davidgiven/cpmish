@@ -299,6 +299,9 @@ struct	item	{
 	int	i_pass;
 };
 
+extern struct	item	keytab[];
+
+
 void itemcpy(struct item *dst, struct item *src);
 struct item *keyword(char *name);
 
@@ -2399,7 +2402,7 @@ fprintf(stderr, "(list with args)\n");
 		linecnt++;
 		if (outpass) {
 			lineptr = linebuf;
-fprintf(stderr, "<%s> linecnt=%d $1=%p\n", linebuf, linecnt, $1);
+fprintf(stderr, "<%s> linecnt=%d $1=%p %p\n", linebuf, linecnt, $1, keytab);
 			switch ($1->i_value) {
 			case 0:	/* list */
 				if (enable < 0) lstoff = 1;
@@ -4412,7 +4415,6 @@ struct	item	keytab[] = {
 	{"outir",	0166663,NOOPERAND,	VERB | Z80 | ZNONSTD },
 	{"outp",	0,	OUTP,		VERB | Z80 | ZNONSTD },
 	{"p",		060,	COND,		Z80 },
-	{"page",	1,	LIST,		VERB },
 	{".page",	1,	LIST,		VERB },
 	{"pchl",	0351,	NOOPERAND,	VERB | I8080 },
 	{"pcix",	0xdde9,	NOOPERAND,	VERB | Z80 | ZNONSTD },
