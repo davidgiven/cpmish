@@ -2369,7 +2369,7 @@ statement:
 	}
 |
 	LIST '\n' {
-fprintf(stderr, "(list)\n");
+fprintf(stderr, "(list %p)\n", $1);
 		goto dolopt; }
 |
 	LIST mras_undecl_on expression mras_undecl_off '\n' {
@@ -5182,7 +5182,6 @@ struct item *keyword(char *name)
 			if (name[0] == '.' && key[0] != '.')
 				break;
 
-fprintf(stderr, "<%s> -> %p\n", name, ip);
 			return ip;
 		}
 		if (r < 0)
