@@ -2396,6 +2396,7 @@ statement:
 		linecnt++;
 		if (outpass) {
 			lineptr = linebuf;
+fprintf(stderr, "linecnt=%d $1=%p\n", linecnt, $1);
 			switch ($1->i_value) {
 			case 0:	/* list */
 				if (enable < 0) lstoff = 1;
