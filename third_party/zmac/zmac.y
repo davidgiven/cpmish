@@ -299,9 +299,6 @@ struct	item	{
 	int	i_pass;
 };
 
-extern struct	item	keytab[];
-
-
 void itemcpy(struct item *dst, struct item *src);
 struct item *keyword(char *name);
 
