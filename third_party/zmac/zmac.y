@@ -638,6 +638,7 @@ void expr_free(struct expr *ex);
 int can_extend_link(struct expr *ex);
 void extend_link(struct expr *ex);
 void putrelop(int op);
+void dolopt(int enable, int op);
 #define RELOP_BYTE	(1)
 #define RELOP_WORD	(2)
 #define RELOP_HIGH	(3)
@@ -2366,9 +2367,11 @@ statement:
 	}
 |
 	LIST '\n' {
-		goto dolopt; }
+		dolopt(1, $1->i_value);
+	}
 |
 	LIST mras_undecl_on expression mras_undecl_off '\n' {
+
 		int enable = $3->e_value;
 
 		enable = $3->e_value;
@@ -2389,53 +2392,8 @@ statement:
 			expr_number_check($3);
 			expr_free($3);
 		}
-		goto doloptA;
-	dolopt:
-		enable = 1;
-	doloptA:
-		linecnt++;
-		if (outpass) {
-			lineptr = linebuf;
-			switch ($1->i_value) {
-			case 0:	/* list */
-				if (enable < 0) lstoff = 1;
-				if (enable > 0) lstoff = 0;
-				break;
-
-			case 1:	/* eject */
-				if (enable) eject();
-				break;
-
-			case 2:	/* space */
-				if ((line + enable) > 60) eject();
-				else space(enable);
-				break;
-
-			case 3:	/* elist */
-				eopt = edef;
-				if (enable < 0) eopt = 0;
-				if (enable > 0) eopt = 1;
-				break;
-
-			case 4:	/* fopt */
-				fopt = fdef;
-				if (enable < 0) fopt = 0;
-				if (enable > 0) fopt = 1;
-				break;
-
-			case 5:	/* gopt */
-				gopt = gdef;
-				if (enable < 0) gopt = 1;
-				if (enable > 0) gopt = 0;
-				break;
-
-			case 6: /* mopt */
-				mopt = mdef;
-				if (enable < 0) mopt = 0;
-				if (enable > 0) mopt = 1;
-			}
-		}
-	dolopt_done: ;
+		dolopt(enable, $1->i_value);
+	dolopt_done:;
 	}
 |
 	JRPROMOTE expression '\n' {
@@ -8448,6 +8406,52 @@ void putrelop(int op)
 	putrelbits(3, 2);
 	putrelbits(8, 'A');
 	putrelbits(8, op);
+}
+
+void dolopt(int enable, int op)
+{
+	linecnt++;
+	if (outpass) {
+		lineptr = linebuf;
+		switch (op) {
+		case 0:	/* list */
+			if (enable < 0) lstoff = 1;
+			if (enable > 0) lstoff = 0;
+			break;
+
+		case 1:	/* eject */
+			if (enable) eject();
+			break;
+
+		case 2:	/* space */
+			if ((line + enable) > 60) eject();
+			else space(enable);
+			break;
+
+		case 3:	/* elist */
+			eopt = edef;
+			if (enable < 0) eopt = 0;
+			if (enable > 0) eopt = 1;
+			break;
+
+		case 4:	/* fopt */
+			fopt = fdef;
+			if (enable < 0) fopt = 0;
+			if (enable > 0) fopt = 1;
+			break;
+
+		case 5:	/* gopt */
+			gopt = gdef;
+			if (enable < 0) gopt = 1;
+			if (enable > 0) gopt = 0;
+			break;
+
+		case 6: /* mopt */
+			mopt = mdef;
+			if (enable < 0) mopt = 0;
+			if (enable > 0) mopt = 1;
+		}
+	}
 }
 
 void write_tap_block(int type, int len, unsigned char *data)
