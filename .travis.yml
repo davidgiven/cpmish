@@ -18,6 +18,7 @@ addons:
         - lua-posix
         - ninja-build
         - libz80ex-dev
+        - valgrind
 
 script:
     - (git clone --depth=1 https://github.com/davidgiven/ack.git && cd ack && make PREFIX=$HOME +ack-cpm && make PREFIX=$HOME install)
