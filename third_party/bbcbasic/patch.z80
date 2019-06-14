@@ -44,18 +44,22 @@ BYE:    JP      REBOOT          ;RETURN TO CP/M
 ;THE CODE WHICH FOLLOWS IS SUITABLE FOR THE CRF/RTR
 ;BOARD. IT SHOULD BE MODIFIED TO SUIT YOUR SYSTEM.
 ;
+; dtrg: I've disabled all of this due to problems with the NC200 and
+; emulator.
+
+;
 ;VECTOR TABLE FOR Z80-CTC:
 ;
         ORG     $+7 AND 0FFF8H
 ;
-VECTOR: DEFW    TIMER
-        DEFW    TIMER
-        DEFW    TIMER
-        DEFW    TIMER
+;VECTOR: DEFW    TIMER
+;        DEFW    TIMER
+;        DEFW    TIMER
+;        DEFW    TIMER
 ;
 ;INIT - Perform hardware initialisation.
 ;
-INIT:   CALL    INTIME          ;INITIALISE TIMER
+INIT:   ;CALL    INTIME          ;INITIALISE TIMER
         JP      COLD
 ;
 ;REBOOT - Stop interrupts and return to CP/M. 
@@ -63,43 +67,44 @@ INIT:   CALL    INTIME          ;INITIALISE TIMER
 REBOOT: LD      A,3
         OUT     (CTC0+3),A
         RST     0
+
 ;
 ;INTIME - Initialise CTC to interrupt every 10 ms.
 ;Also set time to zero.
 ;
-INTIME: DI
-        IM      2
-        LD      A,VECTOR/256
-        LD      I,A
-        LD      A,VECTOR AND 0FFH
-        OUT     (CTC0),A
-        LD      A,10100111B
-        OUT     (CTC0+3),A
-        LD      A,96
-        OUT     (CTC0+3),A
-        LD      HL,0
-        LD      (TIME),HL
-        LD      (TIME+2),HL
-        EI
-        RETI
-;
-;TIMER - Interrupt service routine.
-;Increments elapsed-time clock 100 times per second.
-;
-TIMER:  PUSH    AF
-        PUSH    BC
-        PUSH    HL
-        LD      HL,TIME
-        LD      B,4
-UPT1:   INC     (HL)
-        JR      NZ,EXIT
-        INC     HL
-        DJNZ    UPT1
-EXIT:   POP     HL
-        POP     BC
-        POP     AF
-        EI
-        RETI
+;INTIME: DI
+;        IM      2
+;        LD      A,VECTOR/256
+;        LD      I,A
+;        LD      A,VECTOR AND 0FFH
+;        OUT     (CTC0),A
+;        LD      A,10100111B
+;        OUT     (CTC0+3),A
+;        LD      A,96
+;        OUT     (CTC0+3),A
+;        LD      HL,0
+;        LD      (TIME),HL
+;        LD      (TIME+2),HL
+;        EI
+;        RETI
+;;
+;;TIMER - Interrupt service routine.
+;;Increments elapsed-time clock 100 times per second.
+;;
+;TIMER:  PUSH    AF
+;        PUSH    BC
+;        PUSH    HL
+;        LD      HL,TIME
+;        LD      B,4
+;UPT1:   INC     (HL)
+;        JR      NZ,EXIT
+;        INC     HL
+;        DJNZ    UPT1
+;EXIT:   POP     HL
+;        POP     BC
+;        POP     AF
+;        EI
+;        RETI
 ;
 ;GTIME - Read elapsed-time clock.
 ;  Outputs: DEHL = elapsed time (centiseconds)
