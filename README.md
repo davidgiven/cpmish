@@ -19,6 +19,8 @@ What you get is a working CP/M 2.2 clone consisting of:
   - open source BIOSes for the supported platforms
   - various tools copying the functionality of the standard CP/M tools (some
     of them [written by me](http://cowlark.com/2019-06-01-cpm-asm)
+  - [R.T. Russell's superb BBC Basic](http://www.bbcbasic.co.uk/bbcbasic.html),
+    Z80 edition (with integrated assembler)
   - a build system which provides a turnkey cross-compilation system for
     producing bootable disk images for any of the supported platforms
   - a classic CP/M syntax assembler and linker for cross-compiling ancient
