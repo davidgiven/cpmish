@@ -186,12 +186,12 @@ uint16_t compute_length(const uint8_t* inp, const uint8_t* endp, const uint8_t**
 	return xo;
 }
 
-const uint8_t* draw_line(const uint8_t* startp)
+uint8_t* draw_line(uint8_t* startp)
 {
 	uint16_t xo = 0;
 	uint16_t c;
 	uint16_t starty = screeny;
-	const uint8_t* inp = startp;
+	uint8_t* inp = startp;
 
 	while (screeny != HEIGHT)
 	{
@@ -202,7 +202,8 @@ const uint8_t* draw_line(const uint8_t* startp)
 		}
 		if (inp == buffer_end)
 		{
-			con_puts("<<EOF>>");
+			if (xo == 0)
+				con_putc('~');
 			con_clear_to_eol();
 			break;
 		}
@@ -235,7 +236,7 @@ const uint8_t* draw_line(const uint8_t* startp)
 }
 
 /* inp <= gap_start */
-void render_screen(const uint8_t* inp)
+void render_screen(uint8_t* inp)
 {
 	unsigned i;
 	for (i=screeny; i<HEIGHT; i++)
@@ -246,31 +247,59 @@ void render_screen(const uint8_t* inp)
 		if (inp == current_line)
 			current_line_y = screeny;
 		inp = draw_line(inp);
-		if (inp == buffer_end)
-		{
-			con_clear_to_eos();
-			break;
-		}
 	}
+}
+
+void adjust_scroll_position(void)
+{
+	uint16_t total_height = 0;
+
+	first_line = current_line;
+	while ((first_line != buffer_start) && (total_height < (HEIGHT/2)))
+	{
+		const uint8_t* line_end = first_line--;
+		while ((first_line != buffer_start) && (first_line[-1] != '\n'))
+			first_line--;
+
+		total_height += (compute_length(first_line, line_end, NULL) / WIDTH) + 1;
+	}
+
+	con_goto(0, 0);
+	render_screen(first_line);
 }
 
 void recompute_screen_position(void)
 {
-	const uint8_t* inp = first_line;
+	const uint8_t* inp;
 	uint16_t length;
 
-	current_line_y = 0;
-	while (current_line_y != HEIGHT)
+	if (current_line < first_line)
+		adjust_scroll_position();
+	
+	for (;;)
 	{
-		uint16_t height;
+		inp = first_line;
+		current_line_y = 0;
+		while (current_line_y != HEIGHT)
+		{
+			uint16_t height;
 
-		if (inp == current_line)
+			if (inp == current_line)
+				break;
+
+			height = display_height[current_line_y];
+			inp += line_length[current_line_y];
+
+			current_line_y += height;
+		}
+
+		if ((current_line_y >= HEIGHT) ||
+			((current_line_y + display_height[current_line_y]) > HEIGHT))
+		{
+			adjust_scroll_position();
+		}
+		else
 			break;
-
-		height = display_height[current_line_y];
-		inp += line_length[current_line_y];
-
-		current_line_y += height;
 	}
 
 	length = compute_length(current_line, gap_start, NULL);
@@ -404,7 +433,7 @@ void insert_text(uint16_t count)
 	for (;;)
 	{
 		uint16_t oldheight;
-		const uint8_t* nextp;
+		uint8_t* nextp;
 		uint16_t length;
 		uint16_t c = bios_conin();
 		if (c == 27)
@@ -436,6 +465,15 @@ void insert_text(uint16_t count)
 
 		recompute_screen_position();
 	}
+
+	set_status_line("");
+}
+
+void append_text(uint16_t count)
+{
+	cursor_end(1);
+	recompute_screen_position();
+	insert_text(count);
 }
 
 void goto_line(uint16_t lineno)
@@ -451,7 +489,7 @@ void redraw_screen(uint16_t count)
 	render_screen(first_line);
 }
 
-const char editor_keys[] = "^$hjklbwiG\014";
+const char editor_keys[] = "^$hjklbwiAG\014";
 void (*const editor_cb[])(uint16_t) =
 {
 	cursor_home,
@@ -463,6 +501,7 @@ void (*const editor_cb[])(uint16_t) =
 	cursor_wordleft,
 	cursor_wordright,
 	insert_text,
+	append_text,
 	goto_line,
 	redraw_screen,
 };
