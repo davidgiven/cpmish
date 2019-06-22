@@ -16,7 +16,8 @@ uc physical_screen[HEIGHT][WIDTH];
 uc logical_screen[HEIGHT][WIDTH];
 #define logical_screen_start (logical_screen[0])
 #define logical_screen_end (logical_screen[HEIGHT])
-uc cursorx, cursory;
+uc screenx, screeny;
+uc* screenptr;
 uc status_line_length;
 
 uc* buffer_start;
@@ -24,39 +25,46 @@ uc* gap_start;
 uc* gap_end;
 uc* buffer_end;
 
-uc* first_line;
-uc* cursor;
-uc* current_line;
+uint16_t first_line;
+uint16_t cursor;
+uc cursorx, cursory;
+uint16_t current_line;
 uc current_line_y;
+
+/* ======================================================================= */
+/*                                SCREEN REFRESH                           */
+/* ======================================================================= */
+
+void con_goto(uc x, uc y)
+{
+	screenx = x;
+	screeny = y;
+	screenptr = &logical_screen[screeny][screenx];
+}
 
 void con_clear(void)
 {
 	memset(logical_screen, ' ', sizeof(logical_screen));
-	cursorx = cursory = 0;
+	con_goto(0, 0);
 }
 
 void con_init(void)
 {
 	con_clear();
 	memset(physical_screen, ' ', sizeof(physical_screen));
-	cpm_conout(26);
+	bios_conout(26);
 }
 
 void con_newline(void)
 {
-	cursorx = 0;
-	cursory++;
-}
-
-void con_goto(uc x, uc y)
-{
-	cursorx = x;
-	cursory = y;
+	screenx = 0;
+	screeny++;
+	con_goto(screenx, screeny);
 }
 
 void con_putc(uc c)
 {
-	if (cursory >= HEIGHT)
+	if (screeny >= HEIGHT)
 		return;
 
 	if (c < 32)
@@ -65,9 +73,9 @@ void con_putc(uc c)
 		c += '@';
 	}
 
-	logical_screen[cursory][cursorx] = c;
-	cursorx++;
-	if (cursorx == WIDTH)
+	*screenptr++ = c;
+	screenx++;
+	if (screenx == WIDTH)
 		con_newline();
 }
 
@@ -85,13 +93,13 @@ void con_puts(const char* s)
 void scr_goto(uc x, uc y)
 {
 	if (!x && !y)
-		cpm_conout(30);
+		bios_conout(30);
 	else
 	{
-		cpm_conout(27);
-		cpm_conout('=');
-		cpm_conout(y + ' ');
-		cpm_conout(x + ' ');
+		bios_conout(27);
+		bios_conout('=');
+		bios_conout(y + ' ');
+		bios_conout(x + ' ');
 	}
 }
 
@@ -104,8 +112,8 @@ void con_refresh(void)
 	pptr = physical_screen[0];
 	while (lptr != logical_screen_end)
 	{
-		uint16_t offset;
-		uc x, y;
+		static uint16_t offset;
+		static uc x, y;
 
 		for (;;)
 		{
@@ -130,12 +138,12 @@ void con_refresh(void)
 			lptr++;
 			*pptr++ = c;
 
-			cpm_conout(c);
+			bios_conout(c);
 		}
 	}
 done:;
 
-	scr_goto(cursorx, cursory);
+	scr_goto(screenx, screeny);
 }
 
 void set_status_line(const char* message)
@@ -147,16 +155,35 @@ void set_status_line(const char* message)
 		uc c = *message++;
 		if (!c)
 			break;
-		cpm_conout(c);
+		bios_conout(c);
 		length++;
 	}
 	while (length < status_line_length)
 	{
-		cpm_conout(' ');
+		bios_conout(' ');
 		length++;
 	}
 	status_line_length = length;
-	scr_goto(cursorx, cursory);
+	scr_goto(screenx, screeny);
+}
+
+/* ======================================================================= */
+/*                              BUFFER MANAGEMENT                          */
+/* ======================================================================= */
+
+uc* ptr(uint16_t index)
+{
+	uc* p = buffer_start + index;
+	if (p < gap_start)
+		return p;
+	return gap_end + (gap_start - buffer_start);
+}
+
+uint16_t pos(const uc* ptr)
+{
+	if (ptr < gap_start)
+		return ptr - buffer_start;
+	return (gap_start - buffer_start) + (ptr - gap_end);
 }
 
 void new_file(void)
@@ -164,12 +191,88 @@ void new_file(void)
 	gap_start = buffer_start;
 	gap_end = buffer_end;
 
-	first_line = buffer_start;
-	cursor = first_line;
-	current_line = first_line;
+	first_line = 0;
+	cursor = 0;
+	current_line = 0;
 	current_line_y = 0;
 }
 	
+void render_screen(void)
+{
+	static uc* inp;
+	static uc* cursorp;
+	static uc* currentlinep;
+	static uc xo;
+
+	inp = ptr(first_line);
+	cursorp = ptr(cursor);
+	currentlinep = ptr(current_line);
+	xo = 0;
+
+	con_clear();
+	while (screeny != HEIGHT)
+	{
+		static uc c;
+
+		if (inp == gap_start)
+			inp = gap_end;
+		if (inp == buffer_end)
+		{
+			con_newline();
+			con_puts("<<EOF>>");
+			break;
+		}
+
+		if (inp == cursorp)
+		{
+			cursorx = screenx;
+			cursory = screeny;
+		}
+		c = *inp++;
+		if (c == '\n')
+		{
+			con_newline();
+			xo = 0;
+
+			if (inp == currentlinep)
+				current_line_y = screeny;
+		}
+		else if (c == '\t')
+		{
+			do
+			{
+				con_putc(' ');
+				xo++;
+			}
+			while (xo & 7);
+		}
+		else
+		{
+			con_putc(c);
+			xo++;
+		}
+	}
+
+	con_goto(cursorx, cursory);
+	con_refresh();
+}
+
+/* ======================================================================= */
+/*                            EDITOR OPERATIONS                            */
+/* ======================================================================= */
+
+void cursor_right(void)
+{
+	if (cursor != pos(buffer_end))
+		cursor++;
+}
+
+const char editor_keys[] = "l";
+void (*const editor_cb[])(void) =
+{
+	cursor_right,
+};
+
 void insert_file(const char* filename)
 {
 	int fd = open(filename, O_RDONLY);
@@ -203,61 +306,6 @@ void insert_file(const char* filename)
 	close(fd);
 }
 
-void render_screen(void)
-{
-	uc* inp = first_line;
-	uc screenx = 0;
-	uc screeny = 0;
-	uc xo = 0;
-
-	con_clear();
-	while (cursory != HEIGHT)
-	{
-		uc c;
-
-		if (inp == gap_start)
-			inp = gap_end;
-		if (inp == buffer_end)
-		{
-			con_newline();
-			con_puts("<<EOF>>");
-			break;
-		}
-
-		if (inp == cursor)
-		{
-			screenx = cursorx;
-			screeny = cursory;
-		}
-		c = *inp++;
-		if (c == '\n')
-		{
-			con_newline();
-			xo = 0;
-
-			if (inp == current_line)
-				current_line_y = cursory;
-		}
-		else if (c == '\t')
-		{
-			do
-			{
-				con_putc(' ');
-				xo++;
-			}
-			while (xo & 7);
-		}
-		else
-		{
-			con_putc(c);
-			xo++;
-		}
-	}
-
-	con_goto(screenx, screeny);
-	con_refresh();
-}
-
 void main(int argc, const char* argv[])
 {
 	cpm_overwrite_ccp();
@@ -267,19 +315,29 @@ void main(int argc, const char* argv[])
 	buffer_end = cpm_ramtop;
 	cpm_ram = buffer_start;
 
-	itoa((uint16_t)(buffer_end - buffer_start), cpm_default_dma, 10);
-	strcat(cpm_default_dma, " bytes free");
-	set_status_line(cpm_default_dma);
+	itoa((uint16_t)(buffer_end - buffer_start), (char*)cpm_default_dma, 10);
+	strcat((char*)cpm_default_dma, " bytes free");
+	set_status_line((char*) cpm_default_dma);
 
 	new_file();
 	insert_file("ccp.asm");
 
 	for (;;)
 	{
-		uc c;
+		char c;
+		char* cmdptr;
 		render_screen();
-		c = cpm_conin();
-		break;
+		for (;;) {
+		c = bios_conin();
+		con_putc(c);
+		con_refresh();
+		}
+
+		#if 0
+		cmdptr = strchr(editor_keys, c);
+		if (cmdptr)
+			editor_cb[cmdptr - editor_keys]();
+		#endif
 	}
 }
 
