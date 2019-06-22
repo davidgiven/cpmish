@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include <cpm.h>
 
 #define WIDTH 80
@@ -22,7 +23,7 @@ uint8_t* first_line; /* <= gap_start */
 uint8_t* current_line; /* <= gap_start */
 uint8_t* old_current_line;
 unsigned current_line_y;
-uint8_t display_length[HEIGHT];
+uint8_t display_height[HEIGHT];
 uint8_t line_length[HEIGHT];
 
 /* ======================================================================= */
@@ -228,7 +229,7 @@ const uint8_t* draw_line(const uint8_t* startp)
 		}
 	}
 
-	display_length[starty] = xo;
+	display_height[starty] = (xo / WIDTH) + 1;
 	line_length[starty] = inp - startp;
 	return inp;
 }
@@ -238,7 +239,7 @@ void render_screen(const uint8_t* inp)
 {
 	unsigned i;
 	for (i=screeny; i<HEIGHT; i++)
-		display_length[i] = 0;
+		display_height[i] = 0;
 
 	while (screeny != HEIGHT)
 	{
@@ -256,78 +257,92 @@ void render_screen(const uint8_t* inp)
 void recompute_screen_position(void)
 {
 	const uint8_t* inp = first_line;
+	uint16_t length;
 
 	current_line_y = 0;
 	while (current_line_y != HEIGHT)
 	{
-		uint16_t length;
+		uint16_t height;
 
 		if (inp == current_line)
 			break;
 
-		length = display_length[current_line_y];
+		height = display_height[current_line_y];
 		inp += line_length[current_line_y];
 
-		current_line_y += (length / WIDTH) + 1;
+		current_line_y += height;
 	}
+
+	length = compute_length(current_line, gap_start, NULL);
+	con_goto(length % WIDTH, current_line_y + (length / WIDTH));
 }
 
 /* ======================================================================= */
 /*                            EDITOR OPERATIONS                            */
 /* ======================================================================= */
 
-void cursor_home(void)
+void cursor_home(uint16_t count)
 {
 	while (gap_start != current_line)
 		*--gap_end = *--gap_start;
 }
 
-void cursor_end(void)
+void cursor_end(uint16_t count)
 {
 	while ((gap_end != buffer_end) && (gap_end[0] != '\n'))
 		*gap_start++ = *gap_end++;
 }
 
-void cursor_left(void)
+void cursor_left(uint16_t count)
 {
-	if ((gap_start != buffer_start) && (gap_start[-1] != '\n'))
-		*--gap_end = *--gap_start;
+	while (count--)
+	{
+		if ((gap_start != buffer_start) && (gap_start[-1] != '\n'))
+			*--gap_end = *--gap_start;
+	}
 }
 
-void cursor_right(void)
+void cursor_right(uint16_t count)
 {
-	if ((gap_end != buffer_end) && (gap_end[0] != '\n'))
+	while (count--)
+	{
+		if ((gap_end != buffer_end) && (gap_end[0] != '\n'))
+			*gap_start++ = *gap_end++;
+	}
+}
+
+void cursor_down(uint16_t count)
+{
+	while (count--)
+	{
+		uint16_t offset = gap_start - current_line;
+		cursor_end(1);
+		if (gap_end == buffer_end)
+			return;
+			
 		*gap_start++ = *gap_end++;
+		current_line = gap_start;
+		cursor_right(offset);
+	}
 }
 
-void cursor_down(void)
+void cursor_up(uint16_t count)
 {
-	uint16_t offset = gap_start - current_line;
-	cursor_end();
-	if (gap_end == buffer_end)
-		return;
-		
-	*gap_start++ = *gap_end++;
-	current_line = gap_start;
-	while (offset--)
-		cursor_right();
-}
+	while (count--)
+	{
+		uint16_t offset = gap_start - current_line;
 
-void cursor_up(void)
-{
-	uint16_t offset = gap_start - current_line;
+		cursor_home(1);
+		if (gap_start == buffer_start)
+			return;
 
-	cursor_home();
-	if (gap_start == buffer_start)
-		return;
+		do
+			*--gap_end = *--gap_start;
+		while ((gap_start != buffer_start) && (gap_start[-1] != '\n'));
 
-	do
-		*--gap_end = *--gap_start;
-	while ((gap_start != buffer_start) && (gap_start[-1] != '\n'));
-
-	current_line = gap_start;
-	while (offset--)
-		cursor_right();
+		current_line = gap_start;
+		cursor_right(offset);
+	}
 }
 
 bool word_boundary(uint16_t left, uint16_t right)
@@ -339,51 +354,57 @@ bool word_boundary(uint16_t left, uint16_t right)
 	return 0;
 }
 
-void cursor_wordleft(void)
+void cursor_wordleft(uint16_t count)
 {
-	bool linechanged = false;
-
-	while (gap_start != buffer_start)
+	while (count--)
 	{
-		uint16_t right = *--gap_start = *--gap_end;
-		uint16_t left = gap_start[-1];
-		if (right == '\n')
-			linechanged = true;
+		bool linechanged = false;
 
-		if (word_boundary(left, right))
-			break;
-	}
+		while (gap_start != buffer_start)
+		{
+			uint16_t right = *--gap_start = *--gap_end;
+			uint16_t left = gap_start[-1];
+			if (right == '\n')
+				linechanged = true;
 
-	if (linechanged)
-	{
-		current_line = gap_start;
-		while ((current_line != buffer_start) && (current_line[-1] != '\n'))
-			current_line--;
-	}
-}
+			if (word_boundary(left, right))
+				break;
+		}
 
-void cursor_wordright(void)
-{
-	while (gap_end != buffer_end)
-	{
-		uint16_t left = *gap_start++ = *gap_end++;
-		uint16_t right = *gap_end;
-		if (left == '\n')
+		if (linechanged)
+		{
 			current_line = gap_start;
-
-		if (word_boundary(left, right))
-			break;
+			while ((current_line != buffer_start) && (current_line[-1] != '\n'))
+				current_line--;
+		}
 	}
 }
 
-void insert_text(void)
+void cursor_wordright(uint16_t count)
+{
+	while (count--)
+	{
+		while (gap_end != buffer_end)
+		{
+			uint16_t left = *gap_start++ = *gap_end++;
+			uint16_t right = *gap_end;
+			if (left == '\n')
+				current_line = gap_start;
+
+			if (word_boundary(left, right))
+				break;
+		}
+	}
+}
+
+void insert_text(uint16_t count)
 {
 	set_status_line("Insert mode");
 
 	for (;;)
 	{
 		uint16_t oldheight;
-		uint8_t* nextp;
+		const uint8_t* nextp;
 		uint16_t length;
 		uint16_t c = bios_conin();
 		if (c == 27)
@@ -393,29 +414,45 @@ void insert_text(void)
 			if (gap_start != current_line)
 				gap_start--;
 		}
-		else
+		else if (c == 13)
+		{
+			if (gap_start != gap_end)
+			{
+				*gap_start++ = '\n';
+				con_goto(0, current_line_y);
+				current_line = draw_line(current_line);
+				current_line_y = screeny;
+				display_height[current_line_y] = 0;
+			}
+		}
+		else if (gap_start != gap_end)
 			*gap_start++ = c;
 		
-		oldheight = display_length[current_line_y] / WIDTH;
+		oldheight = display_height[current_line_y];
 		con_goto(0, current_line_y);
 		nextp = draw_line(current_line);
-		if (oldheight != (display_length[current_line_y] / WIDTH))
+		if (oldheight != display_height[current_line_y])
 			render_screen(nextp);
 
-		length = compute_length(current_line, gap_start, NULL);
-		con_goto(length % WIDTH, current_line_y + (length / WIDTH));
+		recompute_screen_position();
 	}
 }
 
-void goto_line(int lineno)
+void goto_line(uint16_t lineno)
 {
 	while (gap_start != buffer_start)
 		*--gap_end = *--gap_start;
 	current_line = buffer_start;
 }
 
-const char editor_keys[] = "^$hjklbwi";
-void (*const editor_cb[])(void) =
+void redraw_screen(uint16_t count)
+{
+	con_clear();
+	render_screen(first_line);
+}
+
+const char editor_keys[] = "^$hjklbwiG\014";
+void (*const editor_cb[])(uint16_t) =
 {
 	cursor_home,
 	cursor_end,
@@ -426,6 +463,8 @@ void (*const editor_cb[])(void) =
 	cursor_wordleft,
 	cursor_wordright,
 	insert_text,
+	goto_line,
+	redraw_screen,
 };
 
 void insert_file(const char* filename)
@@ -482,10 +521,13 @@ void main(int argc, const char* argv[])
 	con_goto(0, 0);
 	render_screen(first_line);
 	old_current_line = current_line;
+
 	for (;;)
 	{
 		const char* cmdp;
 		uint16_t length;
+		unsigned c;
+		uint16_t command_count = 0;
 
 		#if 0
 		itoa((uint16_t)(gap_start - buffer_start), (char*)cpm_default_dma, 10);
@@ -494,16 +536,31 @@ void main(int argc, const char* argv[])
 		set_status_line((char*) cpm_default_dma);
 		#endif
 
-		if (current_line != old_current_line)
-			recompute_screen_position();
+		recompute_screen_position();
 		old_current_line = current_line;
 
-		length = compute_length(current_line, gap_start, NULL);
-		con_goto(length % WIDTH, current_line_y + (length / WIDTH));
-
-		cmdp = strchr(editor_keys, bios_conin());
+		for (;;)
+		{
+			c = bios_conin();
+			if (isdigit(c))
+			{
+				command_count = (command_count*10) + (c-'0');
+				itoa(command_count, (char*)cpm_default_dma, 10);
+				strcat((char*)cpm_default_dma, " repeat");
+				set_status_line((char*)cpm_default_dma);
+			}
+			else
+			{
+				if (command_count == 0)
+					command_count = 1;
+				set_status_line("");
+				break;
+			}
+		}
+			
+		cmdp = strchr(editor_keys, c);
 		if (cmdp)
-			editor_cb[cmdp - editor_keys]();
+			editor_cb[cmdp - editor_keys](command_count);
 	}
 }
 
