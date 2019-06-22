@@ -48,6 +48,9 @@ BOOTE:
 
     call reset_disk_system
 
+	ld a, 8                  ; turn off the annoying keyboard beep
+	out (PORT_BEEPER), a
+
     ld a, (ioconfig)         ; set default IOBYTE
     ld (IOBYTE), a
     
