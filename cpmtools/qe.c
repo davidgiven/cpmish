@@ -12,6 +12,8 @@
 #define WIDTH 80
 #define HEIGHT 23
 
+char filename[16]; /* 0:12345678.abc\n */
+
 uint8_t screenx, screeny;
 uint8_t status_line_length;
 
@@ -19,6 +21,7 @@ uint8_t* buffer_start;
 uint8_t* gap_start;
 uint8_t* gap_end;
 uint8_t* buffer_end;
+bool dirty;
 
 uint8_t* first_line; /* <= gap_start */
 uint8_t* current_line; /* <= gap_start */
@@ -32,6 +35,10 @@ struct command
 	void (*callback)(uint16_t);
 	uint16_t default_count;
 };
+
+#define buffer ((char*)cpm_default_dma)
+
+extern void colon(uint16_t count);
 
 /* ======================================================================= */
 /*                                SCREEN DRAWING                           */
@@ -79,16 +86,6 @@ void con_clear_to_eos(void)
 		con_clear_to_eol();
 }
 
-void con_newline(void)
-{
-	if (screeny >= HEIGHT)
-		return;
-
-	bios_conout('\n');
-	screenx = 0;
-	screeny++;
-}
-
 void con_putc(uint8_t c)
 {
 	if (screeny >= HEIGHT)
@@ -122,19 +119,23 @@ void con_puts(const char* s)
 
 void con_puti(long i)
 {
-	itoa(i, (char*)cpm_default_dma, 10);
-	con_puts((char*) cpm_default_dma);
+	itoa(i, buffer, 10);
+	con_puts(buffer);
+}
+
+void goto_status_line(void)
+{
+	bios_conout(27);
+	bios_conout('=');
+	bios_conout(HEIGHT + ' ');
+	bios_conout(0 + ' ');
 }
 
 void set_status_line(const char* message)
 {
 	uint16_t length = 0;
 
-	bios_conout(27);
-	bios_conout('=');
-	bios_conout(HEIGHT + ' ');
-	bios_conout(0 + ' ');
-
+	goto_status_line();
 	for (;;)
 	{
 		uint16_t c = *message++;
@@ -329,6 +330,123 @@ void redraw_current_line(void)
 }
 
 /* ======================================================================= */
+/*                                LIFECYCLE                                */
+/* ======================================================================= */
+
+void insert_file(const char* filename)
+{
+	int fd;
+	
+	strcpy(buffer, "Reading ");
+	strcat(buffer, filename);
+	set_status_line(buffer);
+
+	fd = open(filename, O_RDONLY);
+	if (fd == -1)
+		return;
+
+	for (;;)
+	{
+		const uint8_t* inptr;
+		if (read(fd, &cpm_default_dma, 128) != 128)
+			break;
+
+		inptr = cpm_default_dma;
+		while (inptr != (cpm_default_dma+128))
+		{
+			uint8_t c = *inptr++;
+			if (c == 26) /* EOF */
+				break;
+			if (c != '\r')
+			{
+				if (gap_start == gap_end)
+				{
+					set_status_line("Out of memory");
+					goto done;
+				}
+				*gap_start++ = c;
+			}
+		}
+	}
+
+	set_status_line("");
+done:
+	close(fd);
+}
+
+bool save_file(const char* filename)
+{
+	int fd;
+	const uint8_t* inp;
+	uint8_t* outp;
+	uint16_t pushed;
+
+	strcpy(buffer, "Writing ");
+	strcat(buffer, filename);
+	set_status_line(buffer);
+
+	fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
+	if (fd == -1)
+	{
+		set_status_line("Could not open output file");
+		return false;
+	}
+
+	inp = buffer_start;
+	outp = cpm_default_dma;
+	pushed = 0;
+	while ((inp != buffer_end) || (outp != cpm_default_dma) || pushed)
+	{
+		uint16_t c;
+
+		if (pushed)
+		{
+			c = pushed;
+			pushed = 0;
+		}
+		else
+		{
+			if (inp == gap_start)
+				inp = gap_end;
+			c = (inp != buffer_end) ? *inp++ : 26;
+
+			if (c == '\n')
+			{
+				pushed = '\n';
+				c = '\r';
+			}
+		}
+		
+		*outp++ = c;
+
+		if (outp == (cpm_default_dma+128))
+		{
+			if (write(fd, cpm_default_dma, 128) != 128)
+			{
+				set_status_line("Error writing output file");
+				goto error;
+			}
+			outp = cpm_default_dma;
+		}
+	}
+	
+	set_status_line("");
+	dirty = false;
+	close(fd);
+	return true;
+
+error:
+	close(fd);
+	return false;
+}
+
+void quit(void)
+{
+	cpm_printstring("\032Goodbye!\r\n$");
+	cpm_exit();
+}
+
+/* ======================================================================= */
 /*                            EDITOR OPERATIONS                            */
 /* ======================================================================= */
 
@@ -483,6 +601,7 @@ void insert_text(uint16_t count)
 	}
 
 	set_status_line("");
+	dirty = true;
 }
 
 void append_text(uint16_t count)
@@ -522,6 +641,7 @@ void delete_right(uint16_t count)
 	}
 
 	redraw_current_line();
+	dirty = true;
 }
 
 void delete_rest_of_line(uint16_t count)
@@ -531,6 +651,7 @@ void delete_rest_of_line(uint16_t count)
 
 	if (count != 0)
 		redraw_current_line();
+	dirty = true;
 }
 
 void delete_multi(uint16_t count)
@@ -538,6 +659,7 @@ void delete_multi(uint16_t count)
 	uint16_t c;
 	set_status_line("Delete?");
 	c = bios_conin();
+	set_status_line("");
 
 	while (count--)
 	{
@@ -558,6 +680,7 @@ void delete_multi(uint16_t count)
 
 					left = right;
 				}
+				dirty = true;
 				break;
 			}
 
@@ -585,7 +708,6 @@ void delete_multi(uint16_t count)
 		}
 	}
 
-	set_status_line("");
 	redraw_current_line();
 }
 
@@ -603,6 +725,7 @@ void join(uint16_t count)
 
 	con_goto(0, current_line_y);
 	render_screen(current_line);
+	dirty = true;
 }
 
 void open_above(uint16_t count)
@@ -627,13 +750,42 @@ void open_below(uint16_t count)
 	open_above(1);
 }
 
+void zed(uint16_t count)
+{
+	uint16_t c;
+	set_status_line(dirty ?
+		"Save (document has changed)?" : "Save (document has not changed)?");
+
+	c = bios_conin();
+	set_status_line("");
+
+	switch (c)
+	{
+		case 'Z':
+			if (!dirty)
+				quit();
+			if (!filename[0])
+			{
+				set_status_line("No filename set");
+				break;
+			}
+			if (save_file(filename))
+				quit();
+			break;
+
+		case 'Q':
+			quit();
+			break;
+	}
+}
+
 void redraw_screen(uint16_t count)
 {
 	con_clear();
 	render_screen(first_line);
 }
 
-const char editor_keys[] = "^$hjklbwiAGxdJOo\014";
+const char editor_keys[] = "^$hjklbwiAGxdJOoZ:\014";
 const struct command editor_cb[] =
 {
 	{ cursor_home,		1 },
@@ -652,44 +804,86 @@ const struct command editor_cb[] =
 	{ join,             1 },
 	{ open_above,       1 },
 	{ open_below,       1 },
+	{ zed,              1 },
+	{ colon,            1 },
 	{ redraw_screen,	1 },
 };
 
-void insert_file(const char* filename)
+/* ======================================================================= */
+/*                             COLON COMMANDS                              */
+/* ======================================================================= */
+
+void colon(uint16_t count)
 {
-	int fd = open(filename, O_RDONLY);
-	if (fd == -1)
-		return;
+	set_status_line("");
 
 	for (;;)
 	{
-		const uint8_t* inptr;
-		if (read(fd, &cpm_default_dma, 128) != 128)
-			break;
+		char* w;
 
-		inptr = cpm_default_dma;
-		while (inptr != (cpm_default_dma+128))
+		goto_status_line();
+		cpm_conout(':');
+		buffer[0] = 126;
+		buffer[1] = 0;
+		cpm_readline((uint8_t*) buffer);
+		cpm_printstring("\r\n$");
+
+		buffer[buffer[1]+2] = '\0';
+
+		w = strtok(buffer+2, " ");
+		if (!w)
+			break;
+		if (*w == 'w')
 		{
-			uint8_t c = *inptr++;
-			if (c == 26) /* EOF */
-				break;
-			if (c != '\r')
+			char* arg = strtok(NULL, " ");
+			if (arg)
 			{
-				if (gap_start == gap_end)
-				{
-					set_status_line("Out of memory");
-					break;
-				}
-				*gap_start++ = c;
+				strncpy(filename, arg, sizeof(filename));
+				filename[sizeof(filename)-1] = '\0';
+				dirty = true;
+			}
+			if (!filename[0])
+				cpm_printstring("No filename\r\n$");
+			else if (save_file(filename))
+			{
+				if (w[1] == 'q')
+					quit();
 			}
 		}
+		else if (*w == 'q')
+		{
+			if (!dirty || (w[1] == '!'))
+				quit();
+			else
+				cpm_printstring("Document not saved\r\n$");
+		}
+		else
+			cpm_printstring("Unknown command\r\n$");
 	}
 
-	close(fd);
+	con_clear();
+	render_screen(first_line);
 }
+
+/* ======================================================================= */
+/*                            EDITOR OPERATIONS                            */
+/* ======================================================================= */
 
 void main(int argc, const char* argv[])
 {
+	if (argc > 2)
+	{
+		cpm_printstring("Syntax: qe [<filename>]\r\n$");
+		cpm_exit();
+	}
+	else if (argc == 2)
+	{
+		strncpy(filename, argv[1], sizeof(filename));
+		filename[sizeof(filename)-1] = '\0';
+	}
+	else
+		filename[0] = '\0';
+
 	cpm_overwrite_ccp();
 	con_clear();
 
@@ -703,7 +897,10 @@ void main(int argc, const char* argv[])
 	set_status_line((char*) cpm_default_dma);
 
 	new_file();
-	insert_file("ccp.asm");
+	if (filename[0])
+		insert_file(filename);
+
+	dirty = false;
 	goto_line(1);
 
 	con_goto(0, 0);
@@ -716,13 +913,6 @@ void main(int argc, const char* argv[])
 		uint16_t length;
 		unsigned c;
 		uint16_t command_count = 0;
-
-		#if 0
-		itoa((uint16_t)(gap_start - buffer_start), (char*)cpm_default_dma, 10);
-		strcat((char*)cpm_default_dma, " ");
-		itoa((uint16_t)(buffer_end - gap_end), (char*)cpm_default_dma + strlen(cpm_default_dma), 10);
-		set_status_line((char*) cpm_default_dma);
-		#endif
 
 		recompute_screen_position();
 		old_current_line = current_line;
