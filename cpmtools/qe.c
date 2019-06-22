@@ -16,6 +16,8 @@ uc logical_screen[HEIGHT][WIDTH];
 #define logical_screen_end (logical_screen[HEIGHT])
 uc cursorx, cursory;
 
+uc status_line_length;
+
 void con_init(void)
 {
 	memset(physical_screen, ' ', sizeof(physical_screen));
@@ -115,17 +117,45 @@ void con_refresh(void)
 		}
 	}
 done:;
+
+	scr_goto(cursorx, cursory);
+}
+
+void set_status_line(const char* message)
+{
+	uc length = 0;
+	scr_goto(0, HEIGHT);
+	for (;;)
+	{
+		uc c = *message++;
+		if (!c)
+			break;
+		cpm_conout(c);
+		length++;
+	}
+	while (length < status_line_length)
+	{
+		cpm_conout(' ');
+		length++;
+	}
+	status_line_length = length;
+	scr_goto(cursorx, cursory);
 }
 
 void main(int argc, const char* argv[])
 {
+	uc i;
+
 	con_init();
-	con_puts("Foo bar");
+	for (i=0; i<10; i++)
+	{
+		con_goto(70, i);
+		con_puts("This is some text");
+	}
+	con_goto(0, HEIGHT-1);
+	con_puts("This is the last line");
 	con_refresh();
-	cpm_conin();
-	con_goto(40, 20);
-	con_puts("(40, 20)");
-	con_refresh();
+	set_status_line("This is status!");
 	cpm_conin();
 }
 
