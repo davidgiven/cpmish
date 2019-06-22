@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <limits.h>
 #include <cpm.h>
 
 #define WIDTH 80
@@ -24,7 +25,13 @@ uint8_t* current_line; /* <= gap_start */
 uint8_t* old_current_line;
 unsigned current_line_y;
 uint8_t display_height[HEIGHT];
-uint8_t line_length[HEIGHT];
+uint16_t line_length[HEIGHT];
+
+struct command
+{
+	void (*callback)(uint16_t);
+	uint16_t default_count;
+};
 
 /* ======================================================================= */
 /*                                SCREEN DRAWING                           */
@@ -232,6 +239,7 @@ uint8_t* draw_line(uint8_t* startp)
 
 	display_height[starty] = (xo / WIDTH) + 1;
 	line_length[starty] = inp - startp;
+
 	return inp;
 }
 
@@ -239,10 +247,10 @@ uint8_t* draw_line(uint8_t* startp)
 void render_screen(uint8_t* inp)
 {
 	unsigned i;
-	for (i=screeny; i<HEIGHT; i++)
+	for (i=screeny; i != HEIGHT; i++)
 		display_height[i] = 0;
 
-	while (screeny != HEIGHT)
+	while (screeny < HEIGHT)
 	{
 		if (inp == current_line)
 			current_line_y = screeny;
@@ -280,7 +288,7 @@ void recompute_screen_position(void)
 	{
 		inp = first_line;
 		current_line_y = 0;
-		while (current_line_y != HEIGHT)
+		while (current_line_y < HEIGHT)
 		{
 			uint16_t height;
 
@@ -489,6 +497,19 @@ void goto_line(uint16_t lineno)
 	while (gap_start != buffer_start)
 		*--gap_end = *--gap_start;
 	current_line = buffer_start;
+
+	while ((gap_end != buffer_end) && --lineno)
+	{
+		while (gap_end != buffer_end)
+		{
+			uint16_t c = *gap_start++ = *gap_end++;
+			if (c == '\n')
+			{
+				current_line = gap_start;
+				break;
+			}
+		}
+	}
 }
 
 void delete_right(uint16_t count)
@@ -568,29 +589,70 @@ void delete_multi(uint16_t count)
 	redraw_current_line();
 }
 
+void join(uint16_t count)
+{
+	while (count--)
+	{
+		uint8_t* ptr = gap_end;
+		while ((ptr != buffer_end) && (*ptr != '\n'))
+			ptr++;
+
+		if (ptr != buffer_end)
+			*ptr = ' ';
+	}
+
+	con_goto(0, current_line_y);
+	render_screen(current_line);
+}
+
+void open_above(uint16_t count)
+{
+	if (gap_start == gap_end)
+		return;
+
+	cursor_home(1);
+	*--gap_end = '\n';
+
+	recompute_screen_position();
+	con_goto(0, current_line_y);
+	render_screen(current_line);
+	recompute_screen_position();
+
+	insert_text(count);
+}
+
+void open_below(uint16_t count)
+{
+	cursor_down(1);
+	open_above(1);
+}
+
 void redraw_screen(uint16_t count)
 {
 	con_clear();
 	render_screen(first_line);
 }
 
-const char editor_keys[] = "^$hjklbwiAGxd\014";
-void (*const editor_cb[])(uint16_t) =
+const char editor_keys[] = "^$hjklbwiAGxdJOo\014";
+const struct command editor_cb[] =
 {
-	cursor_home,
-	cursor_end,
-	cursor_left,
-	cursor_down,
-	cursor_up,
-	cursor_right,
-	cursor_wordleft,
-	cursor_wordright,
-	insert_text,
-	append_text,
-	goto_line,
-	delete_right,
-	delete_multi,
-	redraw_screen,
+	{ cursor_home,		1 },
+	{ cursor_end,		1 },
+	{ cursor_left,		1 },
+	{ cursor_down,		1 },
+	{ cursor_up,		1 },
+	{ cursor_right,		1 },
+	{ cursor_wordleft,	1 },
+	{ cursor_wordright,	1 },
+	{ insert_text,		1 },
+	{ append_text,		1 },
+	{ goto_line,		UINT_MAX },
+	{ delete_right,		1 },
+	{ delete_multi,		1 },
+	{ join,             1 },
+	{ open_above,       1 },
+	{ open_below,       1 },
+	{ redraw_screen,	1 },
 };
 
 void insert_file(const char* filename)
@@ -642,7 +704,7 @@ void main(int argc, const char* argv[])
 
 	new_file();
 	insert_file("ccp.asm");
-	goto_line(0);
+	goto_line(1);
 
 	con_goto(0, 0);
 	render_screen(first_line);
@@ -677,8 +739,6 @@ void main(int argc, const char* argv[])
 			}
 			else
 			{
-				if (command_count == 0)
-					command_count = 1;
 				set_status_line("");
 				break;
 			}
@@ -686,7 +746,12 @@ void main(int argc, const char* argv[])
 			
 		cmdp = strchr(editor_keys, c);
 		if (cmdp)
-			editor_cb[cmdp - editor_keys](command_count);
+		{
+			const struct command* cmd = &editor_cb[cmdp - editor_keys];
+			if (command_count == 0)
+				command_count = cmd->default_count;
+			cmd->callback(command_count);
+		}
 	}
 }
 
