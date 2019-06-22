@@ -306,6 +306,20 @@ void recompute_screen_position(void)
 	con_goto(length % WIDTH, current_line_y + (length / WIDTH));
 }
 
+void redraw_current_line(void)
+{
+	uint8_t* nextp;
+	uint16_t oldheight;
+	
+	oldheight = display_height[current_line_y];
+	con_goto(0, current_line_y);
+	nextp = draw_line(current_line);
+	if (oldheight != display_height[current_line_y])
+		render_screen(nextp);
+
+	recompute_screen_position();
+}
+
 /* ======================================================================= */
 /*                            EDITOR OPERATIONS                            */
 /* ======================================================================= */
@@ -457,13 +471,7 @@ void insert_text(uint16_t count)
 		else if (gap_start != gap_end)
 			*gap_start++ = c;
 		
-		oldheight = display_height[current_line_y];
-		con_goto(0, current_line_y);
-		nextp = draw_line(current_line);
-		if (oldheight != display_height[current_line_y])
-			render_screen(nextp);
-
-		recompute_screen_position();
+		redraw_current_line();
 	}
 
 	set_status_line("");
@@ -483,13 +491,90 @@ void goto_line(uint16_t lineno)
 	current_line = buffer_start;
 }
 
+void delete_right(uint16_t count)
+{
+	while (count--)
+	{
+		if (gap_end == buffer_end)
+			break;
+		gap_end++;
+	}
+
+	redraw_current_line();
+}
+
+void delete_rest_of_line(uint16_t count)
+{
+	while ((gap_end != buffer_end) && (*++gap_end != '\n'))
+		;
+
+	if (count != 0)
+		redraw_current_line();
+}
+
+void delete_multi(uint16_t count)
+{
+	uint16_t c;
+	set_status_line("Delete?");
+	c = bios_conin();
+
+	while (count--)
+	{
+		switch (c)
+		{
+			case 'w': /* Delete word */
+			{
+				uint16_t left = (gap_start == buffer_start) ? '\n' : gap_start[-1];
+
+				while (gap_end != buffer_end)
+				{
+					uint16_t right = *++gap_end;
+
+					if ((gap_end == buffer_end) || (right == '\n'))
+						break;
+					if (word_boundary(left, right))
+						break;
+
+					left = right;
+				}
+				break;
+			}
+
+			case 'd': /* Delete line */
+			{
+				cursor_home(1);
+				delete_rest_of_line(0);
+				if (gap_end != buffer_end)
+				{
+					gap_end++;
+					display_height[current_line_y] = 0;
+				}
+				break;
+			}
+
+			case '$': /* Delete rest of line */
+			{
+				delete_rest_of_line(0);
+				break;
+			}
+
+			default:
+				set_status_line("Invalid delete modifier");
+				return;
+		}
+	}
+
+	set_status_line("");
+	redraw_current_line();
+}
+
 void redraw_screen(uint16_t count)
 {
 	con_clear();
 	render_screen(first_line);
 }
 
-const char editor_keys[] = "^$hjklbwiAG\014";
+const char editor_keys[] = "^$hjklbwiAGxd\014";
 void (*const editor_cb[])(uint16_t) =
 {
 	cursor_home,
@@ -503,6 +588,8 @@ void (*const editor_cb[])(uint16_t) =
 	insert_text,
 	append_text,
 	goto_line,
+	delete_right,
+	delete_multi,
 	redraw_screen,
 };
 
