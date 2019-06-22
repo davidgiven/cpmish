@@ -12,6 +12,8 @@ typedef uint8_t uc;
 
 uc physical_screen[HEIGHT][WIDTH];
 uc logical_screen[HEIGHT][WIDTH];
+#define logical_screen_start (logical_screen[0])
+#define logical_screen_end (logical_screen[HEIGHT])
 uc cursorx, cursory;
 
 void con_init(void)
@@ -76,35 +78,43 @@ void scr_goto(uc x, uc y)
 
 void con_refresh(void)
 {
-	uc x, y;
-	for (y=0; y<HEIGHT; y++)
+	static uc* lptr;
+	static uc* pptr;
+
+	lptr = logical_screen[0];
+	pptr = physical_screen[0];
+	while (lptr != logical_screen_end)
 	{
-		uc* pptr = physical_screen[y];
-		const uc* lptr = logical_screen[y];
-		bool drawing = false;
+		uint16_t offset;
+		uc x, y;
 
-		x = 0;
-		while (x<WIDTH)
+		for (;;)
 		{
-			uc lc = *lptr;
-			uc pc = *pptr;
-			bool different = (lc != pc);
-
-			if (different && !drawing)
-				scr_goto(x, y);
-			drawing = different;
-
-			if (drawing)
-			{
-				*pptr = lc;
-				cpm_conout(lc);
-			}
-
+			if (*lptr != *pptr)
+				break;
 			lptr++;
 			pptr++;
-			x++;
+			if (lptr == logical_screen_end)
+				goto done;
+		}
+
+		offset = lptr - logical_screen[0];
+		y = offset / WIDTH;
+		x = offset % WIDTH;
+
+		scr_goto(x, y);
+		for (;;)
+		{
+			uc c = *lptr;
+			if (c == *pptr)
+				break;
+			lptr++;
+			*pptr++ = c;
+
+			cpm_conout(c);
 		}
 	}
+done:;
 }
 
 void main(int argc, const char* argv[])
