@@ -22,3 +22,8 @@ ackprogram {
     name = "submit",
     srcs = { "./submit.c" },
 }
+
+ackprogram {
+    name = "qe",
+    srcs = { "./qe.c" },
+}
