@@ -10,7 +10,10 @@ uint8_t* buffer_start;
 bool erase_destination = false;
 bool only_one_record = false;
 
+uint8_t olduser;
+uint8_t srcuser;
 FCB src_fcb;
+uint8_t destuser;
 FCB dest_fcb;
 
 static void printn(const char* s, unsigned len)
@@ -50,6 +53,7 @@ void fatal(const char* s)
 {
     print("Error: ");
 	printx(s);
+    cpm_set_user(olduser);
 	cpm_exit();
 }
 
@@ -138,59 +142,6 @@ void print_fcb(const FCB* fcb)
     }
 }
 
-void read_fcb(const uint8_t* inp, FCB* fcb)
-{
-    uint8_t* outp;
-    uint8_t b;
-
-    memset(fcb, 0, sizeof(FCB));
-    memset(fcb->f, ' ', sizeof(fcb->f));
-    if (inp[1] == ':')
-    {
-        /* There's a drive letter. */
-        fcb->dr = inp[0] - '@'; /* inp[0] cannot be \0 */
-        inp += 2;
-    }
-    else
-        fcb->dr = cpm_get_current_drive() + 1;
-
-    /* Read left side of filename. */
-
-    outp = fcb->f;
-    for (;;)
-    {
-        b = *inp++;
-        if (!b)
-            return;
-        if (b == '.')
-            break;
-        if (b == '*')
-        {
-            while (outp != (fcb->f + 8))
-                *outp++ = '?';
-        }
-        if (outp != (fcb->f + 8))
-            *outp++ = b;
-    }
-
-    /* Read right side of filename. */
-
-    outp = fcb->f + 8;
-    for (;;)
-    {
-        b = *inp++;
-        if (!b)
-            return;
-        if (b == '*')
-        {
-            while (outp != (fcb->f + 11))
-                *outp++ = '?';
-        }
-        if (outp != (fcb->f + 11))
-            *outp++ = b;
-    }
-}
-
 bool does_fcb_have_wildcards(const FCB* fcb)
 {
     uint8_t i = 11;
@@ -218,6 +169,7 @@ void copy_one_file(FCB* src, FCB* dest)
     print_fcb(dest);
     print(": ");
 
+    cpm_set_user(destuser);
     destexists = cpm_findfirst(dest) != 0xff;
     if (destexists)
     {
@@ -250,6 +202,7 @@ void copy_one_file(FCB* src, FCB* dest)
         while (readp != maxp)
         {
             cpm_set_dma(readp);
+            cpm_set_user(srcuser);
             i = cpm_read_sequential(src);
             if (i == 1) /* EOF */
             {
@@ -275,6 +228,7 @@ void copy_one_file(FCB* src, FCB* dest)
         while (writep != readp)
         {
             cpm_set_dma(writep);
+            cpm_set_user(destuser);
             i = cpm_write_sequential(dest);
             if (i != 0)
                 fatal("error on write");
@@ -305,7 +259,7 @@ void multicopy(void)
 
     while (first_arg != last_arg)
     {
-        read_fcb(gargv[first_arg++], &cpm_fcb);
+        srcuser = cpm_parse_filename(&cpm_fcb, gargv[first_arg++]);
         cpm_set_dma(dmabuf);
         i = cpm_findfirst(&cpm_fcb);
         while (i != 0xff)
@@ -338,7 +292,7 @@ void singlecopy(void)
     if (last_arg != (first_arg + 1))
         fatal("only one source allowed if a filename is specified as destination");
 
-    read_fcb(gargv[first_arg], &src_fcb);
+    srcuser = cpm_parse_filename(&src_fcb, gargv[first_arg]);
     if (does_fcb_have_wildcards(&src_fcb) || does_fcb_have_wildcards(&dest_fcb))
         cant_use_wildcards();
 
@@ -354,12 +308,13 @@ void main(int argc, const char* argv[])
     first_arg = 1;
     last_arg = argc - 1;
     buffer_start = cpm_ram;
+    olduser = cpm_get_user();
 
     parse_options();
     if (last_arg <= first_arg)
         syntax_error();
 
-    read_fcb(gargv[last_arg], &dest_fcb);
+    destuser = cpm_parse_filename(&dest_fcb, gargv[last_arg]);
     if (dest_fcb.f[0] == ' ')
     {
         /* Destination is a drive spec. */
@@ -370,4 +325,6 @@ void main(int argc, const char* argv[])
         /* Copy a single file. */
         singlecopy();
     }
+
+    cpm_set_user(olduser);
 }
