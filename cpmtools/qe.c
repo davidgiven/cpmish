@@ -17,6 +17,7 @@ char filename[FILENAME_LEN];
 
 uint16_t screenx, screeny;
 uint16_t status_line_length;
+void (*print_status)(const char*);
 
 uint8_t* buffer_start;
 uint8_t* gap_start;
@@ -44,6 +45,7 @@ const struct bindings* bindings;
 
 extern const struct bindings delete_bindings;
 extern const struct bindings zed_bindings;
+extern const struct bindings change_bindings;
 
 #define buffer ((char*)cpm_default_dma)
 
@@ -352,7 +354,7 @@ void insert_file(const char* filename)
 	
 	strcpy(buffer, "Reading ");
 	strcat(buffer, filename);
-	set_status_line(buffer);
+	print_status(buffer);
 
 	fd = open(filename, O_RDONLY);
 	if (fd == -1)
@@ -374,7 +376,7 @@ void insert_file(const char* filename)
 			{
 				if (gap_start == gap_end)
 				{
-					set_status_line("Out of memory");
+					print_status("Out of memory");
 					goto done;
 				}
 				*gap_start++ = c;
@@ -382,7 +384,6 @@ void insert_file(const char* filename)
 		}
 	}
 
-	set_status_line("");
 done:
 	close(fd);
 	dirty = true;
@@ -407,14 +408,11 @@ bool save_file(const char* filename)
 
 	strcpy(buffer, "Writing ");
 	strcat(buffer, filename);
-	set_status_line(buffer);
+	print_status(buffer);
 
 	fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
 	if (fd == -1)
-	{
-		set_status_line("Could not open output file");
-		return false;
-	}
+		goto error;
 
 	inp = buffer_start;
 	outp = cpm_default_dma;
@@ -446,21 +444,19 @@ bool save_file(const char* filename)
 		if (outp == (cpm_default_dma+128))
 		{
 			if (write(fd, cpm_default_dma, 128) != 128)
-			{
-				set_status_line("Error writing output file");
 				goto error;
-			}
 			outp = cpm_default_dma;
 		}
 	}
 	
-	set_status_line("");
 	dirty = false;
 	close(fd);
 	return true;
 
 error:
-	close(fd);
+	print_status("Error writing output file");
+	if (fd != -1)
+		close(fd);
 	return false;
 }
 
@@ -637,7 +633,6 @@ void insert_mode(bool replacing)
 		redraw_current_line();
 	}
 
-	set_status_line("");
 	dirty = true;
 }
 
@@ -734,6 +729,18 @@ void delete_word(uint16_t count)
 
 	redraw_current_line();
 	dirty = true;
+}
+
+void change_word(uint16_t count)
+{
+	delete_word(1);
+	insert_text(count);
+}
+
+void change_rest_of_line(uint16_t count)
+{
+	delete_rest_of_line(1);
+	insert_text(count);
 }
 
 void join(uint16_t count)
@@ -834,7 +841,12 @@ void enter_zed_mode(uint16_t count)
 	bindings = &zed_bindings;
 }
 
-const char normal_keys[] = "^$hjkl\010\012\013\014bwiAGxJOorR:\022dZ";
+void enter_change_mode(uint16_t count)
+{
+	bindings = &change_bindings;
+}
+
+const char normal_keys[] = "^$hjkl\010\012\013\014bwiAGxJOorR:\022dZc";
 command_t* const normal_cbs[] =
 {
 	cursor_home,
@@ -862,6 +874,7 @@ command_t* const normal_cbs[] =
 	redraw_screen,	
 	enter_delete_mode,
 	enter_zed_mode,
+	enter_change_mode,
 };
 
 const struct bindings normal_bindings =
@@ -884,6 +897,20 @@ const struct bindings delete_bindings =
 	"Delete",
 	delete_keys,
 	delete_cbs
+};
+
+const char change_keys[] = "w$";
+command_t* const change_cbs[] =
+{
+	change_word,         
+	change_rest_of_line,
+};
+
+const struct bindings change_bindings =
+{
+	"Change",
+	change_keys,
+	change_cbs
 };
 
 const char zed_keys[] = "ZQ";
@@ -911,6 +938,11 @@ void set_current_filename(const char* f)
 	dirty = true;
 }
 
+void print_newline(void)
+{
+	cpm_printstring0("\r\n");
+}
+
 void print_no_filename(void)
 {
 	cpm_printstring0("No filename set\r\n");
@@ -921,9 +953,15 @@ void print_document_not_saved(void)
 	cpm_printstring0("Document not saved (use ! to confirm)\r\n");
 }
 
+void print_colon_status(const char* s)
+{
+	cpm_printstring0(s);
+	print_newline();
+}
+
 void colon(uint16_t count)
 {
-	set_status_line("");
+	print_status = print_colon_status;
 
 	for (;;)
 	{
@@ -1002,6 +1040,7 @@ void colon(uint16_t count)
 	}
 
 	con_clear();
+	print_status = set_status_line;
 	render_screen(first_line);
 }
 
@@ -1028,10 +1067,11 @@ void main(int argc, const char* argv[])
 	buffer_end = cpm_ramtop-1;
 	*buffer_end = '\n';
 	cpm_ram = buffer_start;
+	print_status = set_status_line;
 
 	itoa((uint16_t)(buffer_end - buffer_start), buffer, 10);
 	strcat(buffer, " bytes free");
-	set_status_line(buffer);
+	print_status(buffer);
 
 	load_file(filename);
 
@@ -1080,6 +1120,7 @@ void main(int argc, const char* argv[])
 			}
 
 			bindings = &normal_bindings;
+			set_status_line("");
 			cmd(command_count);
 			if (bindings->name)
 				set_status_line(bindings->name);
