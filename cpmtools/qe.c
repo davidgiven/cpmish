@@ -12,9 +12,6 @@
 #define WIDTH 80
 #define HEIGHT 23
 
-#define FILENAME_LEN 16 /* 0:12345678.abc\n */
-char filename[FILENAME_LEN];
-
 uint16_t screenx, screeny;
 uint16_t status_line_length;
 void (*print_status)(const char*);
@@ -51,6 +48,43 @@ extern const struct bindings change_bindings;
 
 extern void colon(uint16_t count);
 extern void goto_line(uint16_t lineno);
+
+/* ======================================================================= */
+/*                                MISCELLANEOUS                            */
+/* ======================================================================= */
+
+char* write_filename_element(char* outptr, const uint8_t* inptr, uint16_t count)
+{
+	while (count--)
+	{
+		int i = *inptr++ & 0x7f;
+		if (i == ' ')
+			break;
+		*outptr++ = i;
+	}
+
+	return outptr;
+}
+
+char* render_fcb(char* ptr, FCB* fcb)
+{
+	char* inp;
+
+	while (*ptr)
+		ptr++;
+
+	if (fcb->dr)
+	{
+		*ptr++ = '@' + fcb->dr;
+		*ptr++ = ':';
+	}
+
+	ptr = write_filename_element(ptr, &fcb->f[0], 8);
+	*ptr++ = '.';
+	ptr = write_filename_element(ptr, &fcb->f[8], 3);
+	*ptr++ = '\0';
+	return ptr;
+}
 
 /* ======================================================================= */
 /*                                SCREEN DRAWING                           */
@@ -348,23 +382,26 @@ void redraw_current_line(void)
 /*                                LIFECYCLE                                */
 /* ======================================================================= */
 
-void insert_file(const char* filename)
+
+void insert_file(void)
 {
-	int fd;
-	
 	strcpy(buffer, "Reading ");
-	strcat(buffer, filename);
+	render_fcb(buffer, &cpm_fcb);
 	print_status(buffer);
 
-	fd = open(filename, O_RDONLY);
-	if (fd == -1)
-		return;
+	cpm_fcb.ex = cpm_fcb.s1 = cpm_fcb.s2 = cpm_fcb.rc = 0;
+	if (cpm_open_file(&cpm_fcb) == 0xff)
+		goto error;
 
 	for (;;)
 	{
-		const uint8_t* inptr;
-		if (read(fd, &cpm_default_dma, 128) != 128)
-			break;
+		uint8_t* inptr;
+
+		int i = cpm_read_sequential(&cpm_fcb);
+		if (i == 1) /* EOF */
+			goto done;
+		if (i != 0)
+			goto error;
 
 		inptr = cpm_default_dma;
 		while (inptr != (cpm_default_dma+128))
@@ -384,35 +421,38 @@ void insert_file(const char* filename)
 		}
 	}
 
+error:
+	print_status("Could not read file");
 done:
-	close(fd);
+	cpm_close_file(&cpm_fcb);
 	dirty = true;
+	return;
 }
 
-void load_file(const char* filename)
+void load_file(void)
 {
 	new_file();
-	if (filename[0])
-		insert_file(filename);
+	if (cpm_fcb.f[0])
+		insert_file();
 
 	dirty = false;
 	goto_line(1);
 }
 
-bool save_file(const char* filename)
+bool really_save_file(FCB* fcb)
 {
-	int fd;
 	const uint8_t* inp;
 	uint8_t* outp;
 	uint16_t pushed;
 
 	strcpy(buffer, "Writing ");
-	strcat(buffer, filename);
+	render_fcb(buffer, fcb);
 	print_status(buffer);
 
-	fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
-	if (fd == -1)
-		goto error;
+	fcb->ex = fcb->s1 = fcb->s2 = fcb->rc = 0;
+	if (cpm_make_file(fcb) == 0xff)
+		return false;
+	fcb->cr = 0;
 
 	inp = buffer_start;
 	outp = cpm_default_dma;
@@ -443,20 +483,65 @@ bool save_file(const char* filename)
 
 		if (outp == (cpm_default_dma+128))
 		{
-			if (write(fd, cpm_default_dma, 128) != 128)
+			if (cpm_write_sequential(fcb) == 0xff)
 				goto error;
 			outp = cpm_default_dma;
 		}
 	}
 	
 	dirty = false;
-	close(fd);
-	return true;
+	return cpm_close_file(fcb) != 0xff;
 
 error:
-	print_status("Error writing output file");
-	if (fd != -1)
-		close(fd);
+	cpm_close_file(fcb);
+	return false;
+}
+
+bool save_file(void)
+{
+	FCB tempfcb;
+
+	if (cpm_open_file(&cpm_fcb) == 0xff)
+	{
+		/* The file does not exist. */
+		if (really_save_file(&cpm_fcb))
+		{
+			dirty = false;
+			return true;
+		}
+		else
+		{
+			print_status("Failed to save file");
+			return false;
+		}
+	}
+
+	/* Write to a temporary file. */
+
+	strcpy(tempfcb.f, "QETEMP  $$$");
+	tempfcb.dr = cpm_fcb.dr;
+	if (really_save_file(&tempfcb) == 0xff)
+		goto tempfile;
+
+	strcpy(buffer, "Renaming ");
+	render_fcb(buffer, &tempfcb);
+	strcat(buffer, " to ");
+	render_fcb(buffer, &cpm_fcb);
+	print_status(buffer);
+
+	if (cpm_delete_file(&cpm_fcb) == 0xff)
+		goto commit;
+	memcpy(((uint8_t*) &tempfcb) + 16, &cpm_fcb, 16);
+	if (cpm_rename_file((RCB*) &tempfcb) == 0xff)
+		goto commit;
+	return true;
+
+tempfile:
+	print_status("Cannot create QETEMP.$$$ file (it may exist)");
+	return false;
+
+commit:
+	print_status("Cannot commit file; your data may be in QETEMP.$$$");
 	return false;
 }
 
@@ -811,12 +896,12 @@ void zed_save_and_quit(uint16_t count)
 {
 	if (!dirty)
 		quit();
-	if (!filename[0])
+	if (!cpm_fcb.f[0])
 	{
 		set_status_line("No filename set");
 		return;
 	}
-	if (save_file(filename))
+	if (save_file())
 		quit();
 }
 
@@ -933,8 +1018,7 @@ const struct bindings zed_bindings =
 
 void set_current_filename(const char* f)
 {
-	strncpy(filename, f, sizeof(filename));
-	filename[sizeof(filename)-1] = '\0';
+	cpm_parse_filename(&cpm_fcb, f);
 	dirty = true;
 }
 
@@ -986,9 +1070,9 @@ void colon(uint16_t count)
 			bool quitting = w[1] == 'q';
 			if (arg)
 				set_current_filename(arg);
-			if (!filename[0])
+			if (!cpm_fcb.f[0])
 				print_no_filename();
-			else if (save_file(filename))
+			else if (save_file())
 			{
 				if (quitting)
 					quit();
@@ -998,10 +1082,12 @@ void colon(uint16_t count)
 		{
 			if (arg)
 			{
-				/* insert_file uses buffer, which is where arg is pointed. */
-				char argcopy[FILENAME_LEN];
-				strcpy(argcopy, arg);
-				insert_file(argcopy);
+				FCB backupfcb;
+
+				memcpy(&backupfcb, &cpm_fcb, sizeof(FCB));
+				cpm_parse_filename(&cpm_fcb, arg);
+				insert_file();
+				memcpy(&cpm_fcb, &backupfcb, sizeof(FCB));
 			}
 			else
 				print_no_filename();
@@ -1015,7 +1101,7 @@ void colon(uint16_t count)
 			else
 			{
 				set_current_filename(arg);
-				load_file(filename);
+				load_file();
 			}
 		}
 		else if (*w == 'n')
@@ -1025,7 +1111,7 @@ void colon(uint16_t count)
 			else
 			{
 				new_file();
-				filename[0] = 0; /* no filename */
+				cpm_fcb.f[0] = 0; /* no filename */
 			}
 		}
 		else if (*w == 'q')
@@ -1050,15 +1136,8 @@ void colon(uint16_t count)
 
 void main(int argc, const char* argv[])
 {
-	if (argc > 2)
-	{
-		cpm_printstring0("Syntax: qe [<filename>]\r\n");
-		cpm_exit();
-	}
-	else if (argc == 2)
-		set_current_filename(argv[1]);
-	else
-		filename[0] = '\0';
+	if (cpm_fcb.f[0] == ' ')
+		cpm_fcb.f[0] = 0;
 
 	cpm_overwrite_ccp();
 	con_clear();
@@ -1073,7 +1152,7 @@ void main(int argc, const char* argv[])
 	strcat(buffer, " bytes free");
 	print_status(buffer);
 
-	load_file(filename);
+	load_file();
 
 	con_goto(0, 0);
 	render_screen(first_line);
