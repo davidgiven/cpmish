@@ -14,27 +14,35 @@
 
 char filename[16]; /* 0:12345678.abc\n */
 
-uint8_t screenx, screeny;
-uint8_t status_line_length;
+uint16_t screenx, screeny;
+uint16_t status_line_length;
 
 uint8_t* buffer_start;
 uint8_t* gap_start;
 uint8_t* gap_end;
 uint8_t* buffer_end;
-bool dirty;
+uint16_t dirty;
 
 uint8_t* first_line; /* <= gap_start */
 uint8_t* current_line; /* <= gap_start */
 uint8_t* old_current_line;
-unsigned current_line_y;
+uint16_t current_line_y;
 uint8_t display_height[HEIGHT];
 uint16_t line_length[HEIGHT];
 
-struct command
+typedef void command_t(uint16_t);
+
+struct bindings
 {
-	void (*callback)(uint16_t);
-	uint16_t default_count;
+	const char* name;
+	const char* keys;
+	command_t* const* callbacks;
 };
+
+const struct bindings* bindings;
+
+extern const struct bindings delete_bindings;
+extern const struct bindings zed_bindings;
 
 #define buffer ((char*)cpm_default_dma)
 
@@ -264,7 +272,7 @@ void adjust_scroll_position(void)
 	uint16_t total_height = 0;
 
 	first_line = current_line;
-	while ((first_line != buffer_start) && (total_height < (HEIGHT/2)))
+	while ((first_line != buffer_start) && (total_height <= (HEIGHT/2)))
 	{
 		const uint8_t* line_end = first_line--;
 		while ((first_line != buffer_start) && (first_line[-1] != '\n'))
@@ -442,7 +450,7 @@ error:
 
 void quit(void)
 {
-	cpm_printstring("\032Goodbye!\r\n$");
+	cpm_printstring0("\032Goodbye!\r\n");
 	cpm_exit();
 }
 
@@ -672,61 +680,44 @@ void delete_rest_of_line(uint16_t count)
 	dirty = true;
 }
 
-void delete_multi(uint16_t count)
+void delete_line(uint16_t count)
 {
-	uint16_t c;
-	set_status_line("Delete?");
-	c = bios_conin();
-	set_status_line("");
-
 	while (count--)
 	{
-		switch (c)
+		cursor_home(1);
+		delete_rest_of_line(0);
+		if (gap_end != buffer_end)
 		{
-			case 'w': /* Delete word */
-			{
-				uint16_t left = (gap_start == buffer_start) ? '\n' : gap_start[-1];
-
-				while (gap_end != buffer_end)
-				{
-					uint16_t right = *++gap_end;
-
-					if ((gap_end == buffer_end) || (right == '\n'))
-						break;
-					if (word_boundary(left, right))
-						break;
-
-					left = right;
-				}
-				dirty = true;
-				break;
-			}
-
-			case 'd': /* Delete line */
-			{
-				cursor_home(1);
-				delete_rest_of_line(0);
-				if (gap_end != buffer_end)
-				{
-					gap_end++;
-					display_height[current_line_y] = 0;
-				}
-				break;
-			}
-
-			case '$': /* Delete rest of line */
-			{
-				delete_rest_of_line(0);
-				break;
-			}
-
-			default:
-				set_status_line("Invalid delete modifier");
-				return;
+			gap_end++;
+			display_height[current_line_y] = 0;
 		}
 	}
 
 	redraw_current_line();
+	dirty = true;
+}
+
+void delete_word(uint16_t count)
+{
+	while (count--)
+	{
+		uint16_t left = (gap_start == buffer_start) ? '\n' : gap_start[-1];
+
+		while (gap_end != buffer_end)
+		{
+			uint16_t right = *++gap_end;
+
+			if ((gap_end == buffer_end) || (right == '\n'))
+				break;
+			if (word_boundary(left, right))
+				break;
+
+			left = right;
+		}
+	}
+
+	redraw_current_line();
+	dirty = true;
 }
 
 void join(uint16_t count)
@@ -793,33 +784,22 @@ void replace_line(uint16_t count)
 	insert_mode(true);
 }
 
-void zed(uint16_t count)
+void zed_save_and_quit(uint16_t count)
 {
-	uint16_t c;
-	set_status_line(dirty ?
-		"Save (document has changed)?" : "Save (document has not changed)?");
-
-	c = bios_conin();
-	set_status_line("");
-
-	switch (c)
+	if (!dirty)
+		quit();
+	if (!filename[0])
 	{
-		case 'Z':
-			if (!dirty)
-				quit();
-			if (!filename[0])
-			{
-				set_status_line("No filename set");
-				break;
-			}
-			if (save_file(filename))
-				quit();
-			break;
-
-		case 'Q':
-			quit();
-			break;
+		set_status_line("No filename set");
+		return;
 	}
+	if (save_file(filename))
+		quit();
+}
+
+void zed_force_quit(uint16_t count)
+{
+	quit();
 }
 
 void redraw_screen(uint16_t count)
@@ -828,34 +808,80 @@ void redraw_screen(uint16_t count)
 	render_screen(first_line);
 }
 
-const char editor_keys[] = "^$hjkl\010\012\013\014bwiAGxdJOorRZ:\022";
-const struct command editor_cb[] =
+void enter_delete_mode(uint16_t count)
 {
-	{ cursor_home,		1 },
-	{ cursor_end,		1 },
-	{ cursor_left,		1 },
-	{ cursor_down,		1 },
-	{ cursor_up,		1 },
-	{ cursor_right,		1 },
-	{ cursor_left,		1 },
-	{ cursor_down,		1 },
-	{ cursor_up,		1 },
-	{ cursor_right,		1 },
-	{ cursor_wordleft,	1 },
-	{ cursor_wordright,	1 },
-	{ insert_text,		1 },
-	{ append_text,		1 },
-	{ goto_line,		UINT_MAX },
-	{ delete_right,		1 },
-	{ delete_multi,		1 },
-	{ join,             1 },
-	{ open_above,       1 },
-	{ open_below,       1 },
-	{ replace_char,     1 },
-	{ replace_line,     1 },
-	{ zed,              1 },
-	{ colon,            1 },
-	{ redraw_screen,	1 },
+	bindings = &delete_bindings;
+}
+
+void enter_zed_mode(uint16_t count)
+{
+	bindings = &zed_bindings;
+}
+
+const char normal_keys[] = "^$hjkl\010\012\013\014bwiAGxJOorR:\022dZ";
+command_t* const normal_cbs[] =
+{
+	cursor_home,
+	cursor_end,	
+	cursor_left,
+	cursor_down,
+	cursor_up,		
+	cursor_right,
+	cursor_left,
+	cursor_down,	
+	cursor_up,		
+	cursor_right,		
+	cursor_wordleft,
+	cursor_wordright,
+	insert_text,
+	append_text,	
+	goto_line,	
+	delete_right,	
+	join,      
+	open_above, 
+	open_below,  
+	replace_char, 
+	replace_line,  
+	colon,         
+	redraw_screen,	
+	enter_delete_mode,
+	enter_zed_mode,
+};
+
+struct bindings normal_bindings =
+{
+	NULL,
+	normal_keys,
+	normal_cbs
+};
+
+const char delete_keys[] = "dw$";
+command_t* const delete_cbs[] =
+{
+	delete_line,   	  
+	delete_word,         
+	delete_rest_of_line,
+};
+
+struct bindings delete_bindings =
+{
+	"Delete",
+	delete_keys,
+	delete_cbs
+};
+
+const char zed_keys[] = "ZQ";
+command_t* const zed_cbs[] =
+{
+	zed_save_and_quit, 
+	zed_force_quit,	
+};
+
+struct bindings zed_bindings =
+{
+	"Zed",
+	zed_keys,
+	zed_cbs
 };
 
 /* ======================================================================= */
@@ -875,7 +901,7 @@ void colon(uint16_t count)
 		buffer[0] = 126;
 		buffer[1] = 0;
 		cpm_readline((uint8_t*) buffer);
-		cpm_printstring("\r\n$");
+		cpm_printstring0("\r\n");
 
 		buffer[buffer[1]+2] = '\0';
 
@@ -892,7 +918,7 @@ void colon(uint16_t count)
 				dirty = true;
 			}
 			if (!filename[0])
-				cpm_printstring("No filename\r\n$");
+				cpm_printstring0("No filename\r\n");
 			else if (save_file(filename))
 			{
 				if (w[1] == 'q')
@@ -904,10 +930,10 @@ void colon(uint16_t count)
 			if (!dirty || (w[1] == '!'))
 				quit();
 			else
-				cpm_printstring("Document not saved\r\n$");
+				cpm_printstring0("Document not saved\r\n");
 		}
 		else
-			cpm_printstring("Unknown command\r\n$");
+			cpm_printstring0("Unknown command\r\n");
 	}
 
 	con_clear();
@@ -922,7 +948,7 @@ void main(int argc, const char* argv[])
 {
 	if (argc > 2)
 	{
-		cpm_printstring("Syntax: qe [<filename>]\r\n$");
+		cpm_printstring0("Syntax: qe [<filename>]\r\n");
 		cpm_exit();
 	}
 	else if (argc == 2)
@@ -955,6 +981,7 @@ void main(int argc, const char* argv[])
 	con_goto(0, 0);
 	render_screen(first_line);
 	old_current_line = current_line;
+	bindings = &normal_bindings;
 
 	for (;;)
 	{
@@ -983,14 +1010,27 @@ void main(int argc, const char* argv[])
 			}
 		}
 			
-		cmdp = strchr(editor_keys, c);
+		cmdp = strchr(bindings->keys, c);
 		if (cmdp)
 		{
-			const struct command* cmd = &editor_cb[cmdp - editor_keys];
+			command_t* cmd = bindings->callbacks[cmdp - bindings->keys];
 			if (command_count == 0)
-				command_count = cmd->default_count;
-			cmd->callback(command_count);
+			{
+				if (cmd == goto_line)
+					command_count = UINT_MAX;
+				else
+					command_count = 1;
+			}
+
+			bindings = &normal_bindings;
+			cmd(command_count);
+			if (bindings->name)
+				set_status_line(bindings->name);
+		}
+		else
+		{
+			set_status_line("Unknown key");
+			bindings = &normal_bindings;
 		}
 	}
 }
-
