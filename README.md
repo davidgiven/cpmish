@@ -75,6 +75,7 @@ install the dependencies. These are the names of the Debian packages:
   - lua-posix
   - ninja-build
   - libz80ex-dev
+  - libreadline-dev
 
 You _also_ need to install [the Amsterdam Compiler
 Kit](https://github.com/davidgiven/ack), which is used as the C compiler
