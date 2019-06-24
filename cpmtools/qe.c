@@ -12,7 +12,8 @@
 #define WIDTH 80
 #define HEIGHT 23
 
-char filename[16]; /* 0:12345678.abc\n */
+#define FILENAME_LEN 16 /* 0:12345678.abc\n */
+char filename[FILENAME_LEN];
 
 uint16_t screenx, screeny;
 uint16_t status_line_length;
@@ -47,6 +48,7 @@ extern const struct bindings zed_bindings;
 #define buffer ((char*)cpm_default_dma)
 
 extern void colon(uint16_t count);
+extern void goto_line(uint16_t lineno);
 
 /* ======================================================================= */
 /*                                SCREEN DRAWING                           */
@@ -58,10 +60,10 @@ void con_goto(uint8_t x, uint8_t y)
 		bios_conout(30);
 	else
 	{
-		bios_conout(27);
-		bios_conout('=');
-		bios_conout(y + ' ');
-		bios_conout(x + ' ');
+		static uint8_t gotoseq[] = "\033=xx";
+		gotoseq[2] = y + ' ';
+		gotoseq[3] = x + ' ';
+		cpm_printstring0((char*) gotoseq);
 	}
 	screenx = x;
 	screeny = y;
@@ -171,6 +173,7 @@ void new_file(void)
 	gap_end = buffer_end;
 
 	first_line = current_line = buffer_start;
+	dirty = true;
 }
 	
 uint16_t compute_length(const uint8_t* inp, const uint8_t* endp, const uint8_t** nextp)
@@ -280,6 +283,8 @@ void adjust_scroll_position(void)
 
 		total_height += (compute_length(first_line, line_end, NULL) / WIDTH) + 1;
 	}
+	if (total_height > (HEIGHT/2))
+		first_line = current_line;
 
 	con_goto(0, 0);
 	render_screen(first_line);
@@ -380,6 +385,17 @@ void insert_file(const char* filename)
 	set_status_line("");
 done:
 	close(fd);
+	dirty = true;
+}
+
+void load_file(const char* filename)
+{
+	new_file();
+	if (filename[0])
+		insert_file(filename);
+
+	dirty = false;
+	goto_line(1);
 }
 
 bool save_file(const char* filename)
@@ -848,7 +864,7 @@ command_t* const normal_cbs[] =
 	enter_zed_mode,
 };
 
-struct bindings normal_bindings =
+const struct bindings normal_bindings =
 {
 	NULL,
 	normal_keys,
@@ -863,7 +879,7 @@ command_t* const delete_cbs[] =
 	delete_rest_of_line,
 };
 
-struct bindings delete_bindings =
+const struct bindings delete_bindings =
 {
 	"Delete",
 	delete_keys,
@@ -877,7 +893,7 @@ command_t* const zed_cbs[] =
 	zed_force_quit,	
 };
 
-struct bindings zed_bindings =
+const struct bindings zed_bindings =
 {
 	"Zed",
 	zed_keys,
@@ -888,6 +904,23 @@ struct bindings zed_bindings =
 /*                             COLON COMMANDS                              */
 /* ======================================================================= */
 
+void set_current_filename(const char* f)
+{
+	strncpy(filename, f, sizeof(filename));
+	filename[sizeof(filename)-1] = '\0';
+	dirty = true;
+}
+
+void print_no_filename(void)
+{
+	cpm_printstring0("No filename set\r\n");
+}
+
+void print_document_not_saved(void)
+{
+	cpm_printstring0("Document not saved (use ! to confirm)\r\n");
+}
+
 void colon(uint16_t count)
 {
 	set_status_line("");
@@ -895,6 +928,7 @@ void colon(uint16_t count)
 	for (;;)
 	{
 		char* w;
+		char* arg;
 
 		goto_status_line();
 		cpm_conout(':');
@@ -908,21 +942,52 @@ void colon(uint16_t count)
 		w = strtok(buffer+2, " ");
 		if (!w)
 			break;
+		arg = strtok(NULL, " ");
 		if (*w == 'w')
 		{
-			char* arg = strtok(NULL, " ");
+			bool quitting = w[1] == 'q';
 			if (arg)
-			{
-				strncpy(filename, arg, sizeof(filename));
-				filename[sizeof(filename)-1] = '\0';
-				dirty = true;
-			}
+				set_current_filename(arg);
 			if (!filename[0])
-				cpm_printstring0("No filename\r\n");
+				print_no_filename();
 			else if (save_file(filename))
 			{
-				if (w[1] == 'q')
+				if (quitting)
 					quit();
+			}
+		}
+		else if (*w == 'r')
+		{
+			if (arg)
+			{
+				/* insert_file uses buffer, which is where arg is pointed. */
+				char argcopy[FILENAME_LEN];
+				strcpy(argcopy, arg);
+				insert_file(argcopy);
+			}
+			else
+				print_no_filename();
+		}
+		else if (*w == 'e')
+		{
+			if (!arg)
+				print_no_filename();
+			else if (dirty && (w[1] != '!'))
+				print_document_not_saved();
+			else
+			{
+				set_current_filename(arg);
+				load_file(filename);
+			}
+		}
+		else if (*w == 'n')
+		{
+			if (dirty && (w[1] != '!'))
+				print_document_not_saved();
+			else
+			{
+				new_file();
+				filename[0] = 0; /* no filename */
 			}
 		}
 		else if (*w == 'q')
@@ -930,7 +995,7 @@ void colon(uint16_t count)
 			if (!dirty || (w[1] == '!'))
 				quit();
 			else
-				cpm_printstring0("Document not saved\r\n");
+				print_document_not_saved();
 		}
 		else
 			cpm_printstring0("Unknown command\r\n");
@@ -952,10 +1017,7 @@ void main(int argc, const char* argv[])
 		cpm_exit();
 	}
 	else if (argc == 2)
-	{
-		strncpy(filename, argv[1], sizeof(filename));
-		filename[sizeof(filename)-1] = '\0';
-	}
+		set_current_filename(argv[1]);
 	else
 		filename[0] = '\0';
 
@@ -971,12 +1033,7 @@ void main(int argc, const char* argv[])
 	strcat(buffer, " bytes free");
 	set_status_line(buffer);
 
-	new_file();
-	if (filename[0])
-		insert_file(filename);
-
-	dirty = false;
-	goto_line(1);
+	load_file(filename);
 
 	con_goto(0, 0);
 	render_screen(first_line);
