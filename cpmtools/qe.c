@@ -566,9 +566,21 @@ void cursor_wordright(uint16_t count)
 	}
 }
 
-void insert_text(uint16_t count)
+void insert_newline(void)
 {
-	set_status_line("Insert mode");
+	if (gap_start != gap_end)
+	{
+		*gap_start++ = '\n';
+		con_goto(0, current_line_y);
+		current_line = draw_line(current_line);
+		current_line_y = screeny;
+		display_height[current_line_y] = 0;
+	}
+}
+
+void insert_mode(bool replacing)
+{
+	set_status_line(replacing ? "Replace mode" : "Insert mode");
 
 	for (;;)
 	{
@@ -583,25 +595,31 @@ void insert_text(uint16_t count)
 			if (gap_start != current_line)
 				gap_start--;
 		}
-		else if (c == 13)
+		else if (gap_start == gap_end)
 		{
-			if (gap_start != gap_end)
-			{
-				*gap_start++ = '\n';
-				con_goto(0, current_line_y);
-				current_line = draw_line(current_line);
-				current_line_y = screeny;
-				display_height[current_line_y] = 0;
-			}
+			/* Do nothing, out of memory */
 		}
-		else if (gap_start != gap_end)
-			*gap_start++ = c;
+		else
+		{
+			if (replacing && (gap_end != buffer_end) && (*gap_end != '\n'))
+				gap_end++;
+
+			if (c == 13)
+				insert_newline();
+			else
+				*gap_start++ = c;
+		}
 		
 		redraw_current_line();
 	}
 
 	set_status_line("");
 	dirty = true;
+}
+
+void insert_text(uint16_t count)
+{
+	insert_mode(false);
 }
 
 void append_text(uint16_t count)
@@ -750,6 +768,31 @@ void open_below(uint16_t count)
 	open_above(1);
 }
 
+void replace_char(uint16_t count)
+{
+	uint16_t c = bios_conin();
+
+	if (gap_end == buffer_end)
+		return;
+	if (c == '\n')
+	{
+		gap_end++;
+		/* The cursor ends up *after* the newline. */
+		insert_newline();
+	}
+	else if (isprint(c))
+	{
+		*gap_end = c;
+		/* The cursor ends on *on* the replace character. */
+		redraw_current_line();
+	}
+}
+
+void replace_line(uint16_t count)
+{
+	insert_mode(true);
+}
+
 void zed(uint16_t count)
 {
 	uint16_t c;
@@ -785,11 +828,15 @@ void redraw_screen(uint16_t count)
 	render_screen(first_line);
 }
 
-const char editor_keys[] = "^$hjklbwiAGxdJOoZ:\014";
+const char editor_keys[] = "^$hjkl\010\012\013\014bwiAGxdJOorRZ:\022";
 const struct command editor_cb[] =
 {
 	{ cursor_home,		1 },
 	{ cursor_end,		1 },
+	{ cursor_left,		1 },
+	{ cursor_down,		1 },
+	{ cursor_up,		1 },
+	{ cursor_right,		1 },
 	{ cursor_left,		1 },
 	{ cursor_down,		1 },
 	{ cursor_up,		1 },
@@ -804,6 +851,8 @@ const struct command editor_cb[] =
 	{ join,             1 },
 	{ open_above,       1 },
 	{ open_below,       1 },
+	{ replace_char,     1 },
+	{ replace_line,     1 },
 	{ zed,              1 },
 	{ colon,            1 },
 	{ redraw_screen,	1 },
@@ -892,9 +941,9 @@ void main(int argc, const char* argv[])
 	*buffer_end = '\n';
 	cpm_ram = buffer_start;
 
-	itoa((uint16_t)(buffer_end - buffer_start), (char*)cpm_default_dma, 10);
-	strcat((char*)cpm_default_dma, " bytes free");
-	set_status_line((char*) cpm_default_dma);
+	itoa((uint16_t)(buffer_end - buffer_start), buffer, 10);
+	strcat(buffer, " bytes free");
+	set_status_line(buffer);
 
 	new_file();
 	if (filename[0])
@@ -923,9 +972,9 @@ void main(int argc, const char* argv[])
 			if (isdigit(c))
 			{
 				command_count = (command_count*10) + (c-'0');
-				itoa(command_count, (char*)cpm_default_dma, 10);
-				strcat((char*)cpm_default_dma, " repeat");
-				set_status_line((char*)cpm_default_dma);
+				itoa(command_count, buffer, 10);
+				strcat(buffer, " repeat");
+				set_status_line(buffer);
 			}
 			else
 			{
