@@ -1,6 +1,6 @@
 vars.cflags = { "-g", "-Og" }
 vars.ldflags = { "-lm" }
-vars.cpmcflags = { "--opt-code-size" }
+vars.cpmcflags = { "-O6" }
 vars.cpmldflags = {}
 
 installable {
