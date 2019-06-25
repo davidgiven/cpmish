@@ -34,6 +34,7 @@ uint16_t current_line_y;
 uint8_t display_height[HEIGHT];
 uint16_t line_length[HEIGHT];
 
+uint16_t command_count;
 typedef void command_t(uint16_t);
 
 struct bindings
@@ -855,16 +856,19 @@ void redraw_screen(uint16_t count)
 void enter_delete_mode(uint16_t count)
 {
 	bindings = &delete_bindings;
+	command_count = count;
 }
 
 void enter_zed_mode(uint16_t count)
 {
 	bindings = &zed_bindings;
+	command_count = count;
 }
 
 void enter_change_mode(uint16_t count)
 {
 	bindings = &change_bindings;
+	command_count = count;
 }
 
 const char normal_keys[] =
@@ -1105,12 +1109,12 @@ void main(int argc, const char* argv[])
 	render_screen(first_line);
 	bindings = &normal_bindings;
 
+	command_count = 0;
 	for (;;)
 	{
 		const char* cmdp;
 		uint16_t length;
 		unsigned c;
-		uint16_t command_count = 0;
 
 		recompute_screen_position();
 
@@ -1135,17 +1139,19 @@ void main(int argc, const char* argv[])
 		if (cmdp)
 		{
 			command_t* cmd = bindings->callbacks[cmdp - bindings->keys];
-			if (command_count == 0)
+			uint16_t count = command_count;
+			if (count == 0)
 			{
 				if (cmd == goto_line)
-					command_count = UINT_MAX;
+					count = UINT_MAX;
 				else
-					command_count = 1;
+					count = 1;
 			}
+			command_count = 0;
 
 			bindings = &normal_bindings;
 			set_status_line("");
-			cmd(command_count);
+			cmd(count);
 			if (bindings->name)
 				set_status_line(bindings->name);
 		}
@@ -1153,6 +1159,7 @@ void main(int argc, const char* argv[])
 		{
 			set_status_line("Unknown key");
 			bindings = &normal_bindings;
+			command_count = 0;
 		}
 	}
 }
