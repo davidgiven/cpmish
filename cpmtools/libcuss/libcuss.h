@@ -26,6 +26,7 @@ extern void con_clear_to_eol(void);
 #elif defined LIBCUSS_NC200
     #define SCREENWIDTH 80
     #define SCREENHEIGHT 18
+    #define LIBCUSS_CLEAREOL "\030"
     #define LIBCUSS_ADM3
 #else
     #error "No libcuss configuration specified."
