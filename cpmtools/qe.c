@@ -311,16 +311,18 @@ void adjust_scroll_position(void)
 	uint16_t total_height = 0;
 
 	first_line = current_line;
-	while ((first_line != buffer_start) && (total_height <= (HEIGHT/2)))
+	while (first_line != buffer_start)
 	{
-		const uint8_t* line_end = first_line--;
-		while ((first_line != buffer_start) && (first_line[-1] != '\n'))
-			first_line--;
+		const uint8_t* line_start = first_line;
+		const uint8_t* line_end = line_start--;
+		while ((line_start != buffer_start) && (line_start[-1] != '\n'))
+			line_start--;
 
-		total_height += (compute_length(first_line, line_end, NULL) / WIDTH) + 1;
+		total_height += (compute_length(line_start, line_end, NULL) / WIDTH) + 1;
+		if (total_height > (HEIGHT/2))
+			break;
+		first_line = line_start;
 	}
-	if (total_height > (HEIGHT/2))
-		first_line = current_line;
 
 	con_goto(0, 0);
 	render_screen(first_line);
