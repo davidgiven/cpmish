@@ -53,17 +53,24 @@ extern void goto_line(uint16_t lineno);
 /*                                MISCELLANEOUS                            */
 /* ======================================================================= */
 
-char* render_fcb(char* ptr, FCB* fcb)
+void print_newline(void)
+{
+	cpm_printstring0("\r\n");
+}
+
+/* Appends a string representation of the FCB to buffer. */
+void render_fcb(FCB* fcb)
 {
 	const uint8_t* inp;
+	char* outp = buffer;
 
-	while (*ptr)
-		ptr++;
+	while (*outp)
+		outp++;
 
 	if (fcb->dr)
 	{
-		*ptr++ = '@' + fcb->dr;
-		*ptr++ = ':';
+		*outp++ = '@' + fcb->dr;
+		*outp++ = ':';
 	}
 
 	inp = &fcb->f[0];
@@ -71,14 +78,13 @@ char* render_fcb(char* ptr, FCB* fcb)
 	{
 		uint8_t c;
 		if (inp == &fcb->f[8])
-			*ptr++ = '.';
+			*outp++ = '.';
 		c = *inp++;
 		if (c != ' ')
-			*ptr++ = c;
+			*outp++ = c;
 	}
 
-	*ptr++ = '\0';
-	return ptr;
+	*outp++ = '\0';
 }
 
 /* ======================================================================= */
@@ -166,10 +172,9 @@ void con_puti(int i)
 
 void goto_status_line(void)
 {
-	bios_conout(27);
-	bios_conout('=');
-	bios_conout(HEIGHT + ' ');
-	bios_conout(0 + ' ');
+	static uint8_t gotoseq[] = "\033=x ";
+	gotoseq[2] = HEIGHT + ' ';
+	cpm_printstring0((char*) gotoseq);
 }
 
 void set_status_line(const char* message)
@@ -381,7 +386,7 @@ void redraw_current_line(void)
 void insert_file(void)
 {
 	strcpy(buffer, "Reading ");
-	render_fcb(buffer, &cpm_fcb);
+	render_fcb(&cpm_fcb);
 	print_status(buffer);
 
 	cpm_fcb.ex = cpm_fcb.s1 = cpm_fcb.s2 = cpm_fcb.rc = 0;
@@ -438,10 +443,10 @@ bool really_save_file(FCB* fcb)
 {
 	const uint8_t* inp;
 	uint8_t* outp;
-	uint16_t pushed;
+	static uint16_t pushed;
 
 	strcpy(buffer, "Writing ");
-	render_fcb(buffer, fcb);
+	render_fcb(fcb);
 	print_status(buffer);
 
 	fcb->ex = fcb->s1 = fcb->s2 = fcb->rc = 0;
@@ -454,7 +459,7 @@ bool really_save_file(FCB* fcb)
 	pushed = 0;
 	while ((inp != buffer_end) || (outp != cpm_default_dma) || pushed)
 	{
-		uint16_t c;
+		static uint16_t c;
 
 		if (pushed)
 		{
@@ -494,7 +499,7 @@ error:
 
 bool save_file(void)
 {
-	FCB tempfcb;
+	static FCB tempfcb;
 
 	if (cpm_open_file(&cpm_fcb) == 0xff)
 	{
@@ -519,9 +524,9 @@ bool save_file(void)
 		goto tempfile;
 
 	strcpy(buffer, "Renaming ");
-	render_fcb(buffer, &tempfcb);
+	render_fcb(&tempfcb);
 	strcat(buffer, " to ");
-	render_fcb(buffer, &cpm_fcb);
+	render_fcb(&cpm_fcb);
 	print_status(buffer);
 
 	if (cpm_delete_file(&cpm_fcb) == 0xff)
@@ -1017,11 +1022,6 @@ void set_current_filename(const char* f)
 	dirty = true;
 }
 
-void print_newline(void)
-{
-	cpm_printstring0("\r\n");
-}
-
 void print_no_filename(void)
 {
 	cpm_printstring0("No filename set\r\n");
@@ -1052,7 +1052,7 @@ void colon(uint16_t count)
 		buffer[0] = 126;
 		buffer[1] = 0;
 		cpm_readline((uint8_t*) buffer);
-		cpm_printstring0("\r\n");
+		print_newline();
 
 		buffer[buffer[1]+2] = '\0';
 
