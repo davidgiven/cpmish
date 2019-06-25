@@ -1,3 +1,8 @@
+/* qe © 2019 David Given
+ * This library is distributable under the terms of the 2-clause BSD license.
+ * See COPYING.cpmish in the distribution root directory for more information.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -8,9 +13,10 @@
 #include <ctype.h>
 #include <limits.h>
 #include <cpm.h>
+#include "libcuss.h"
 
-#define WIDTH 80
-#define HEIGHT 23
+#define WIDTH SCREENWIDTH
+#define HEIGHT (SCREENHEIGHT-1)
 
 uint16_t screenx, screeny;
 uint16_t status_line_length;
@@ -24,7 +30,6 @@ uint16_t dirty;
 
 uint8_t* first_line; /* <= gap_start */
 uint8_t* current_line; /* <= gap_start */
-uint8_t* old_current_line;
 uint16_t current_line_y;
 uint8_t display_height[HEIGHT];
 uint16_t line_length[HEIGHT];
@@ -90,79 +95,6 @@ void render_fcb(FCB* fcb)
 /* ======================================================================= */
 /*                                SCREEN DRAWING                           */
 /* ======================================================================= */
-
-void con_goto(uint16_t x, uint16_t y)
-{
-	if (!x && !y)
-		bios_conout(30);
-	else
-	{
-		static uint8_t gotoseq[] = "\033=xx";
-		gotoseq[2] = y + ' ';
-		gotoseq[3] = x + ' ';
-		cpm_printstring0((char*) gotoseq);
-	}
-	screenx = x;
-	screeny = y;
-}
-
-void con_clear(void)
-{
-	bios_conout(26);
-	screenx = screeny = 0;
-}
-
-/* Leaves cursor at the beginning of the *next* line. */
-void con_clear_to_eol(void)
-{
-	if (screeny >= HEIGHT)
-		return;
-
-	while (screenx != WIDTH)
-	{
-		bios_conout(' ');
-		screenx++;
-	}
-	screenx = 0;
-	screeny++;
-}
-
-void con_clear_to_eos(void)
-{
-	while (screeny < HEIGHT)
-		con_clear_to_eol();
-}
-
-void con_putc(uint16_t c)
-{
-	if (screeny >= HEIGHT)
-		return;
-
-	if (c < 32)
-	{
-		con_putc('^');
-		c += '@';
-	}
-
-	bios_conout(c);
-	screenx++;
-	if (screenx == WIDTH)
-	{
-		screenx = 0;
-		screeny++;
-	}
-}
-
-void con_puts(const char* s)
-{
-	for (;;)
-	{
-		uint16_t c = *s++;
-		if (!c)
-			break;
-		con_putc(c);
-	}
-}
 
 void con_puti(int i)
 {
@@ -260,6 +192,7 @@ uint8_t* draw_line(uint8_t* startp)
 			if (xo == 0)
 				con_putc('~');
 			con_clear_to_eol();
+			con_newline();
 			break;
 		}
 
@@ -267,6 +200,7 @@ uint8_t* draw_line(uint8_t* startp)
 		if (c == '\n')
 		{
 			con_clear_to_eol();
+			con_newline();
 			break;
 		}
 		else if (c == '\t')
@@ -313,7 +247,7 @@ void adjust_scroll_position(void)
 	first_line = current_line;
 	while (first_line != buffer_start)
 	{
-		const uint8_t* line_start = first_line;
+		uint8_t* line_start = first_line;
 		const uint8_t* line_end = line_start--;
 		while ((line_start != buffer_start) && (line_start[-1] != '\n'))
 			line_start--;
@@ -933,19 +867,22 @@ void enter_change_mode(uint16_t count)
 	bindings = &change_bindings;
 }
 
-const char normal_keys[] = "^$hjkl\010\012\013\014bwiAGxJOorR:\022dZc";
+const char normal_keys[] =
+	LIBCUSS_KEY_LEFT LIBCUSS_KEY_DOWN LIBCUSS_KEY_UP LIBCUSS_KEY_RIGHT
+	"^$hjklbwiAGxJOorR:\022dZc";
+
 command_t* const normal_cbs[] =
 {
+	cursor_left,
+	cursor_down,	
+	cursor_up,		
+	cursor_right,		
 	cursor_home,
 	cursor_end,	
 	cursor_left,
 	cursor_down,
 	cursor_up,		
 	cursor_right,
-	cursor_left,
-	cursor_down,	
-	cursor_up,		
-	cursor_right,		
 	cursor_wordleft,
 	cursor_wordright,
 	insert_text,
@@ -1166,7 +1103,6 @@ void main(int argc, const char* argv[])
 
 	con_goto(0, 0);
 	render_screen(first_line);
-	old_current_line = current_line;
 	bindings = &normal_bindings;
 
 	for (;;)
@@ -1177,7 +1113,6 @@ void main(int argc, const char* argv[])
 		uint16_t command_count = 0;
 
 		recompute_screen_position();
-		old_current_line = current_line;
 
 		for (;;)
 		{

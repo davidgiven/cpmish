@@ -1,3 +1,5 @@
+include "cpmtools/libcuss/build.lua"
+
 ackprogram {
     name = "dump",
     srcs = { "./dump.c" },
@@ -23,7 +25,7 @@ ackprogram {
     srcs = { "./submit.c" },
 }
 
-ackprogram {
+libcussprogram {
     name = "qe",
     srcs = { "./qe.c" },
 }
