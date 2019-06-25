@@ -53,22 +53,9 @@ extern void goto_line(uint16_t lineno);
 /*                                MISCELLANEOUS                            */
 /* ======================================================================= */
 
-char* write_filename_element(char* outptr, const uint8_t* inptr, uint16_t count)
-{
-	while (count--)
-	{
-		int i = *inptr++ & 0x7f;
-		if (i == ' ')
-			break;
-		*outptr++ = i;
-	}
-
-	return outptr;
-}
-
 char* render_fcb(char* ptr, FCB* fcb)
 {
-	char* inp;
+	const uint8_t* inp;
 
 	while (*ptr)
 		ptr++;
@@ -79,9 +66,17 @@ char* render_fcb(char* ptr, FCB* fcb)
 		*ptr++ = ':';
 	}
 
-	ptr = write_filename_element(ptr, &fcb->f[0], 8);
-	*ptr++ = '.';
-	ptr = write_filename_element(ptr, &fcb->f[8], 3);
+	inp = &fcb->f[0];
+	while (inp != &fcb->f[12])
+	{
+		uint8_t c;
+		if (inp == &fcb->f[8])
+			*ptr++ = '.';
+		c = *inp++;
+		if (c != ' ')
+			*ptr++ = c;
+	}
+
 	*ptr++ = '\0';
 	return ptr;
 }
@@ -518,7 +513,7 @@ bool save_file(void)
 
 	/* Write to a temporary file. */
 
-	strcpy(tempfcb.f, "QETEMP  $$$");
+	strcpy((char*)tempfcb.f, "QETEMP  $$$");
 	tempfcb.dr = cpm_fcb.dr;
 	if (really_save_file(&tempfcb) == 0xff)
 		goto tempfile;
@@ -1065,64 +1060,77 @@ void colon(uint16_t count)
 		if (!w)
 			break;
 		arg = strtok(NULL, " ");
-		if (*w == 'w')
+		switch (*w)
 		{
-			bool quitting = w[1] == 'q';
-			if (arg)
-				set_current_filename(arg);
-			if (!cpm_fcb.f[0])
-				print_no_filename();
-			else if (save_file())
+			case 'w':
 			{
-				if (quitting)
-					quit();
+				bool quitting = w[1] == 'q';
+				if (arg)
+					set_current_filename(arg);
+				if (!cpm_fcb.f[0])
+					print_no_filename();
+				else if (save_file())
+				{
+					if (quitting)
+						quit();
+				}
+				break;
 			}
-		}
-		else if (*w == 'r')
-		{
-			if (arg)
-			{
-				FCB backupfcb;
 
-				memcpy(&backupfcb, &cpm_fcb, sizeof(FCB));
-				cpm_parse_filename(&cpm_fcb, arg);
-				insert_file();
-				memcpy(&cpm_fcb, &backupfcb, sizeof(FCB));
-			}
-			else
-				print_no_filename();
-		}
-		else if (*w == 'e')
-		{
-			if (!arg)
-				print_no_filename();
-			else if (dirty && (w[1] != '!'))
-				print_document_not_saved();
-			else
+			case 'r':
 			{
-				set_current_filename(arg);
-				load_file();
+				if (arg)
+				{
+					FCB backupfcb;
+
+					memcpy(&backupfcb, &cpm_fcb, sizeof(FCB));
+					cpm_parse_filename(&cpm_fcb, arg);
+					insert_file();
+					memcpy(&cpm_fcb, &backupfcb, sizeof(FCB));
+				}
+				else
+					print_no_filename();
+				break;
 			}
-		}
-		else if (*w == 'n')
-		{
-			if (dirty && (w[1] != '!'))
-				print_document_not_saved();
-			else
+
+			case 'e':
 			{
-				new_file();
-				cpm_fcb.f[0] = 0; /* no filename */
+				if (!arg)
+					print_no_filename();
+				else if (dirty && (w[1] != '!'))
+					print_document_not_saved();
+				else
+				{
+					set_current_filename(arg);
+					load_file();
+				}
+				break;
 			}
+
+			case 'n':
+			{
+				if (dirty && (w[1] != '!'))
+					print_document_not_saved();
+				else
+				{
+					new_file();
+					cpm_fcb.f[0] = 0; /* no filename */
+				}
+				break;
+			}
+
+			case 'q':
+			{
+				if (!dirty || (w[1] == '!'))
+					quit();
+				else
+					print_document_not_saved();
+				break;
+			}
+
+			default:
+				cpm_printstring0("Unknown command\r\n");
 		}
-		else if (*w == 'q')
-		{
-			if (!dirty || (w[1] == '!'))
-				quit();
-			else
-				print_document_not_saved();
-		}
-		else
-			cpm_printstring0("Unknown command\r\n");
 	}
 
 	con_clear();
