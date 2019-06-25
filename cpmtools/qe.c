@@ -85,7 +85,7 @@ char* render_fcb(char* ptr, FCB* fcb)
 /*                                SCREEN DRAWING                           */
 /* ======================================================================= */
 
-void con_goto(uint8_t x, uint8_t y)
+void con_goto(uint16_t x, uint16_t y)
 {
 	if (!x && !y)
 		bios_conout(30);
@@ -127,7 +127,7 @@ void con_clear_to_eos(void)
 		con_clear_to_eol();
 }
 
-void con_putc(uint8_t c)
+void con_putc(uint16_t c)
 {
 	if (screeny >= HEIGHT)
 		return;
@@ -151,14 +151,14 @@ void con_puts(const char* s)
 {
 	for (;;)
 	{
-		char c = *s++;
+		uint16_t c = *s++;
 		if (!c)
 			break;
-		con_putc((uint8_t) c);
+		con_putc(c);
 	}
 }
 
-void con_puti(long i)
+void con_puti(int i)
 {
 	itoa(i, buffer, 10);
 	con_puts(buffer);
