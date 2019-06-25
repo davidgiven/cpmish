@@ -25,6 +25,7 @@ What you get is a working CP/M 2.2 clone consisting of:
     producing bootable disk images for any of the supported platforms
   - a classic CP/M syntax assembler and linker for cross-compiling ancient
     source
+  - a simple but useful vi-adjacent editor called qe (written by myself)
   - an emulator for testing CP/M binaries
   - source for _everything_; no binaries are in this distribution
   - bugs
