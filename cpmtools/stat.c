@@ -1,3 +1,12 @@
+/* dump © 2019 David Given
+ * This program is distributable under the terms of the 2-clause BSD license.
+ * See COPYING.cpmish in the distribution root directory for more information.
+ * 
+ * A traditional CP/M stat.com clone. This implements the unbelievably baroque
+ * and poorly-thought-out stat user interface as closely as possible, because
+ * traditions.
+ */
+
 #include <cpm.h>
 #include <stdlib.h>
 #include <stdio.h>

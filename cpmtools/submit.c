@@ -1,3 +1,11 @@
+/* dump © 2019 David Given
+ * This program is distributable under the terms of the 2-clause BSD license.
+ * See COPYING.cpmish in the distribution root directory for more information.
+ * 
+ * A CP/M submit.com clone. It should support all the features of the 197x
+ * original.
+ */
+
 #include <cpm.h>
 #include <stdint.h>
 #include <stdbool.h>

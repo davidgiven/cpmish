@@ -1,3 +1,10 @@
+/* dump © 2019 David Given
+ * This program is distributable under the terms of the 2-clause BSD license.
+ * See COPYING.cpmish in the distribution root directory for more information.
+ * 
+ * A simple and very stupid dump.com clone.
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>

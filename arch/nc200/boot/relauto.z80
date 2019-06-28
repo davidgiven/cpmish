@@ -1,3 +1,7 @@
+; Amstrad NC200 cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
 ; The 1kB of code here gets loaded at 0x4000 as part of the boot process.
 ; At this point we take over from the NC200 OS, disable interupts, reshuffle
 ; the things, and load the supervisor proper.

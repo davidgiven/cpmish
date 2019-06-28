@@ -1,3 +1,7 @@
+; Amstrad NC200 cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
 ; The NC200 has eight 16kB RAM banks.
 ;
 ; On entry to and exit from a system call, SUPERVISOR_BANK and USER3_BANK are

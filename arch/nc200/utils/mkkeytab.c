@@ -1,3 +1,8 @@
+/* Amstrad NC200 cpmish BIOS © 2019 David Given
+ * This file is distributable under the terms of the 2-clause BSD license.
+ * See COPYING.cpmish in the distribution root directory for more information.
+ */
+
 #include <stdio.h>
 
 static unsigned char normaltab[80] = {};

@@ -1,3 +1,7 @@
+; Amstrad NC200 cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
 ; BIOS parameter block 1, appearing in the real boot sector at 0x00b.
 
 	dw 512  ; bytes per sector

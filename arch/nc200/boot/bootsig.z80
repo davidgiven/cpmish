@@ -1,3 +1,7 @@
+; Amstrad NC200 cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
 ; The PC boot signature at 0x1fe.
 
 	db 0x55, 0xaa

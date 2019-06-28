@@ -1,3 +1,18 @@
+/* copy © 2019 David Given
+ * This program is distributable under the terms of the 2-clause BSD license.
+ * See COPYING.cpmish in the distribution root directory for more information.
+ * 
+ * This is a simple and rather stupid copy utility for CP/M. It does buffered
+ * reads and writes, so it's reasonably quick, and it understands wildcards,
+ * but it only supports disk-to- disk copies unlike PIP. It also doesn't know
+ * about user areas, so.
+ * 
+ * Syntax: copy <inputfilespec> <outputfilespec>
+ * 
+ * The right hand side can be a drive name ('c:'). It has to be a drive name if
+ * the left hand side is a wildcard.
+ */
+
 #include <cpm.h>
 #include <stdlib.h>
 #include <stdbool.h>
