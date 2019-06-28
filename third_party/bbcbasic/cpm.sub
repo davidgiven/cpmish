@@ -1,7 +1,0 @@
-era bbcbasic.hex
-link bbcbasic=patch,main,exec,eval,fpp,sorry,cmos,/p:3B00,ram
-hexbin bbcbasic
-fixsum bbcbasic.bin
-era bbcbasic.com
-ren bbcbasic.com=bbcbasic.bin
-
