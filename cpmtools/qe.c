@@ -801,7 +801,7 @@ void open_above(uint16_t count)
 void open_below(uint16_t count)
 {
 	cursor_down(1);
-	open_above(1);
+	open_above(count);
 }
 
 void replace_char(uint16_t count)
