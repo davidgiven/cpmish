@@ -82,6 +82,7 @@ diskimage {
         ["submit.com"] = "cpmtools+submit",
         ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
         ["qe.com"] = "cpmtools+qe_NC200",
+        ["flash.com"] = "arch/nc200/tools+flash",
     },
 }
     
