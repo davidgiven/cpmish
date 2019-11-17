@@ -35,6 +35,26 @@ read_byte:
     ret
 
 .sect .text
+write_byte:
+    ! HL = card offset, B = common/attribute, C = byte to write
+    
+    dad h                   ! hl = hl * 2
+    lxi d, 0xc000
+    dad d                   ! hl = absolute address
+
+    di
+    mvi a, CARD0_BANK
+    out PORT_BANK3          ! 0xc000 is now pointing at card memory
+    mov a, b
+    out PORT_BAUDRATE       ! PCMCIA reading attribute memory
+    mov m, c                ! write byte
+    mvi a, USER3_BANK
+    out PORT_BANK3          ! 0xc000 is now pointing at user space
+    ei
+
+    ret
+
+.sect .text
 .define _read_attr_byte
 _read_attr_byte:
     pop d                   ! pop return address
@@ -60,6 +80,26 @@ _read_common_byte:
 
     mvi b, 0x80
     call read_byte
+
+    pop b
+    ret
+
+.sect .text
+.define _write_common_byte
+_write_common_byte:
+    pop d                   ! pop return address
+    pop h                   ! hl = card offset
+    xthl                    ! hl = byte to write, card offset stacked
+    mov a, l                ! a = byte to write
+    pop h                   ! hl = card offset
+    push h
+    push h
+    push d
+    push b                  ! save frame pointer
+
+    mvi b, 0x80
+    mov c, a
+    call write_byte
 
     pop b
     ret
