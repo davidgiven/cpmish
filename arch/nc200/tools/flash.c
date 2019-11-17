@@ -46,6 +46,16 @@ void print(const char* s)
     }
 }
 
+void printn_swapped(const uint8_t* s, uint8_t count)
+{
+    while (count -= 2)
+    {
+        uint8_t a = *s++;
+        cpm_conout(*s++);
+        cpm_conout(a);
+    }
+}
+
 void crlf(void)
 {
     print("\r\n");
@@ -71,6 +81,48 @@ void printhex8(uint8_t b)
 {
     printhex4(b >> 4);
     printhex4(b);
+}
+
+void printhex16(uint16_t w)
+{
+    printhex8(w >> 8);
+    printhex8(w);
+}
+
+void printhex32(uint32_t q)
+{
+    printhex16(q >> 16);
+    printhex16(q);
+}
+
+/* 
+ * Prints a 32-bit decimal number with optional left padding and configurable
+ * precision. *.
+ */
+void printip(uint32_t v, bool pad, uint32_t precision)
+{
+    bool zerosup = true;
+    while (precision)
+    {
+        uint8_t d = v / precision;
+        v %= precision;
+        precision /= 10;
+        if (precision && zerosup && !d)
+        {
+            if (pad)
+                cpm_conout(' ');
+        }
+        else
+        {
+            zerosup = false;
+            cpm_conout('0' + d);
+        }
+    }
+}
+
+void printi(uint32_t v)
+{
+    printip(v, false, 1000000000LU);
 }
 
 bool read_attr(void)
@@ -110,7 +162,7 @@ void bad_card(void)
 
 void delay(void)
 {
-    volatile int i = 0x100;
+    volatile int i = 0x1000;
     while (i)
         i--;
 }
@@ -151,12 +203,12 @@ void main(void)
 
     if (find_attr(CISTPL_VERS_1))
     {
-        print("Found: ");
+        print("Card found: ");
         print((char*)buffer + 4);
         print(" V");
-        printhex8(buffer[2]);
+        printi(buffer[2]);
         cpm_conout('.');
-        printhex8(buffer[3]);
+        printi(buffer[3]);
         crlf();
     }
 
@@ -186,22 +238,38 @@ void main(void)
     delay();
     write_common_byte(REGIDE_CONTROL, 0x02); /* release reset, no interrupts */
     delay();
-    printx("done reset");
 
     ide_wait(IDE_STATUS_READY);
     write_common_byte(REGIDE_DEVHEAD, 0xe0); /* select master */
     write_common_byte(REGIDE_FEATURES, 0x01); /* 8-bit mode */
-    printx("selected 8-bit mode");
 
     ide_wait(IDE_STATUS_READY);
     write_common_byte(REGIDE_DEVHEAD, 0xe0); /* select master */
     write_common_byte(REGIDE_COMMAND, IDE_CMD_IDENTIFY);
+    if (read_common_byte(REGIDE_STATUS) == 0)
+        bad_card();
     ide_read_data();
 
-    for (i=0; i<512; i++)
-    {
-        printhex8(buffer[i]);
-        print(" ");
-    }
+    print("Serial number: ");
+    printn_swapped(buffer+20, 20);
     crlf();
+
+    print("Firmware revision: ");
+    printn_swapped(buffer+46, 8);
+    crlf();
+
+    print("Model: ");
+    printn_swapped(buffer+54, 40);
+    crlf();
+
+    {
+        /* CP/M is little endian! */
+        uint32_t capacity = *(uint32_t*)&buffer[120];
+
+        print("Capacity: 0x");
+        printhex32(capacity);
+        print(" sectors; ");
+        printi(capacity / 2048);
+        print(" MB\n");
+    }
 }

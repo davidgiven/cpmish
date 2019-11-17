@@ -17,7 +17,6 @@ CARD0_BANK      = 0x80 ! bank number
 read_byte:
     ! HL = card offset, B = common/attribute
     
-    dad h                   ! hl = hl * 2
     lxi d, 0xc000
     dad d                   ! hl = absolute address
 
@@ -38,7 +37,6 @@ read_byte:
 write_byte:
     ! HL = card offset, B = common/attribute, C = byte to write
     
-    dad h                   ! hl = hl * 2
     lxi d, 0xc000
     dad d                   ! hl = absolute address
 
@@ -63,6 +61,7 @@ _read_attr_byte:
     push d
     push b                  ! save frame pointer
 
+    dad h                   ! hl = hl * 2
     mvi b, 0x00
     call read_byte
 
