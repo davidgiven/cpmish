@@ -67,6 +67,47 @@ tty_puthex8_conv:
     pop hl
     ret
 
+; --- Prints the decimal number in HL ---------------------------------------
+
+tty_putdec16:
+    ld d, 0             ; suppress zeroes
+    ld bc, -10000
+    call .1
+    ld bc, -1000
+    call .1
+    ld bc, -100
+    call .1
+    ld bc, -10
+    call .1
+    dec d               ; don't suppress this zero
+    ld bc, -1
+.1                      ; loop which prints one digit
+    ld a, '0'-1
+.2
+    inc a
+    add hl, bc
+    jr c, .2            ; keep subtracting bc to get one digit
+    sbc hl, bc          ; under last subtraction (carry is known to be clear)
+
+    ; Did we get a zero?
+    cp '0'
+    jr z, .3
+    ; Not a zero.
+    dec d               ; don't suppress zeroes any more
+.4
+    push hl             ; print the digit
+    push de
+    call tty_putc
+    pop de
+    pop hl
+    ret
+
+    ; We got a zero.
+.3
+    bit 7, d            ; are we suppressing zeroes?
+    ret z               ; yes.
+    jr .4               ; no, so print it anyway.
+
 ; --- Calculates the address of the cursor ----------------------------------
 
 ; Sets cursor_screen_address to the address of the current char.
@@ -281,6 +322,9 @@ tty_clear_to_eos:
 
 ; --- Performs a carriage return --------------------------------------------
 
+tty_newline:
+    call tty_cursor_down
+    ; fall through
 tty_carriagereturn:
     xor a
     ld (cursorx), a
