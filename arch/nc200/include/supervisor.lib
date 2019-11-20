@@ -16,6 +16,7 @@ USER0_BANK      equ 0x44 ; -> 0x0000
 USER1_BANK      equ 0x45 ; -> 0x4000
 USER2_BANK      equ 0x46 ; -> 0x8000
 USER3_BANK      equ 0x47 ; -> 0xc000
+CARD0_BANK      equ 0x80
 
 ; System calls.
 

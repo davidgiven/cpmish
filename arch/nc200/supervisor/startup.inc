@@ -11,6 +11,7 @@ label STARTUP
     call tty_init
     ld hl, str.banner
     call tty_puts
+    call pcmcia_init
     ; fall through
 coldboot:
     ; Initialise CP/M-y things in the base of userspace.
@@ -28,8 +29,10 @@ warmboot:
     ld a, USER3_BANK            ; Map user space 0xc000 to 0xc000.
     out (PORT_BANK3), a
     ld b, 1
-    ld de, 6*1024
-    ld hl, 0x10000 - (6*1024)
+    ld de, 0xffff - CBASE       ; amount to read
+    inc de                      ; ideally we'd use 0x10000 in the previous line but
+                                ; the assembler doesn't like it
+    ld hl, CBASE
     call fd765_read_track
     jr z, bootfailure
 
@@ -55,6 +58,10 @@ warmboot:
 
     ld hl, 0x0080
     ld (BDMA), hl
+
+    ld hl, (ata_blocks)
+    dec hl                      ; actually want maximum block number
+    ld (BHDSIZE), hl
     
     ; Now jump to the BIOS so it can page in the rest of userspace
     ; and start the CCP.

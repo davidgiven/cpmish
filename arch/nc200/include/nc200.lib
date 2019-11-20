@@ -24,3 +24,9 @@ PORT_MC146818_ADDRESS       equ 0xd0
 PORT_MC146818_DATA          equ 0xd1
 PORT_NEC765_STATUS          equ 0xe0
 PORT_NEC765_DATA            equ 0xe1
+
+DRIVE_A_SIZE = 720                          ; kB
+DRIVE_A_BLOCKS = (DRIVE_A_SIZE - (2*9)) / 2 ; 2kB blocks, one reserved track
+
+DRIVE_B_SIZE = 32*1024             ; kB; this is the *maximum* size
+DRIVE_B_BLOCKS = DRIVE_B_SIZE / 16 ; 16kB blocks, no reserved tracks

@@ -32,3 +32,12 @@ zmac {
         "+font_inc",
     },
 }
+
+zmac {
+    name = "variables",
+    srcs = { "./variables.z80" },
+    deps = {
+        "include/*.lib",
+        "arch/nc200/include/*.lib",
+    },
+}

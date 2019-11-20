@@ -53,14 +53,14 @@ L_continue:
 L_no_card:
     ; If we get here, no card was found.
     ld hl, 0
-    ld (ata_tracks), hl
+    ld (ata_blocks), hl
     ld hl, str.no_card
     jp tty_puts
 
 L_bad_card:
     ; If we get here, a bad card was found.
     ld hl, 0
-    ld (ata_tracks), hl
+    ld (ata_blocks), hl
     ld hl, str.not_ata
     jp tty_puts
 
@@ -135,23 +135,45 @@ L_found_ata_card:
     ld hl, str.capacity1
     call tty_puts
 
-    ld hl, 0xffff           ; maximum number of tracks
-    ld a, (ATABUF+123)      ; high byte of LBA size
-    or a
-    jr nz, .1               ; special case for big disk
-    ld hl, (ATABUF+121)
+    ; ATABUF+120 contains the 32-bit number of 512-byte sectors in the disk.
+    ; The BIOS wants to know the number of 16384-byte blocks. As there are
+    ; 32 physical sectors per block, we need to shift this right by five
+    ; bits. Oh, boy.
+
+    ld b, 5
 .1
-    ld (ata_tracks), hl
-    ; hl contains the track count, at 128kB per track. There are 8 tracks per
-    ; megabyte. 11-byte shift by 3 from http://www.chilliant.com/z80shift.html:
-    ld a, l
-    srl h
-    rra
-    srl h
-    rra
-    srl h
-    rra
-    ld l, a
+    xor a
+    ld hl, ATABUF+123
+    rr (hl)
+    dec hl
+    rr (hl)
+    dec hl
+    rr (hl)
+    dec hl
+    rr (hl)
+    djnz .1
+
+    ld de, DRIVE_B_BLOCKS   ; maximum number of blocks
+    ld hl, (ATABUF+122)     ; high word of LBA size
+    ld a, h
+    or l
+    jr nz, .2               ; disk is too big
+    ld hl, (ATABUF+120)     ; low word of LBA size
+    ld a, d
+    cp h                    ; compare with high byte of maximum number of blocks
+    jr nc, .2               ; disk is still too big
+    xchg                    ; computed number of blocks is valid; de->hl
+.2
+    ld (ata_blocks), hl     ; save the number of blocks
+    ; There are 64 blocks per megabyte. 6-bit right shift from
+    ; http://www.chilliant.com/z80shift.html:
+    xor a
+    add hl, hl
+    rla
+    add hl, hl
+    rla
+    ld l, h
+    ld h, a
     call tty_putdec16
     ld hl, str.capacity2
     jp tty_puts
@@ -185,7 +207,7 @@ hdd_read128:
     cp a                    ; set z
     ret
 
-ata_tracks: dw 0
+ata_blocks: dw 0
 
 str.capacity1: db "Card is ATA with ", 0
 str.capacity2: db " MB", 13, 10, 0

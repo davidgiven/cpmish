@@ -50,12 +50,13 @@ ld80 {
         "-P01fe", "+bootsig.z80",
         "-P020b", "+bpb2.z80",
         "-P0400", "+fat.z80",
-        "arch/nc200/supervisor+supervisor",
+        "arch/nc200/supervisor+variables",
         "-P1000", "+rootdir.z80",
+        "arch/nc200/supervisor+supervisor",
         "-P1e00", "+relauto.z80",
-        "-Pe800", "third_party/zcpr1+zcpr",
-        "-Pf000", "third_party/zsdos+zsdos",
-        "-Pfe00", "+bios",
+        "-Pe700", "third_party/zcpr1+zcpr",
+        "-Pef00", "third_party/zsdos+zsdos",
+        "-Pfd00", "+bios",
     }
 }
 
@@ -66,7 +67,7 @@ normalrule {
     outleaves = { "bootfile.img" },
     commands = {
         "dd if=%{ins[1]} of=%{outs} status=none bs=256 count=36",
-        "dd if=%{ins[1]} of=%{outs} status=none bs=256 seek=36 skip=232 count=24"
+        "dd if=%{ins[1]} of=%{outs} status=none bs=256 seek=36 skip=231 count=25"
     }
 }
 
@@ -83,6 +84,7 @@ diskimage {
         ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
         ["qe.com"] = "cpmtools+qe_NC200",
         ["flash.com"] = "arch/nc200/tools+flash",
+        ["mkfs.com"] = "cpmtools+mkfs",
     },
 }
     

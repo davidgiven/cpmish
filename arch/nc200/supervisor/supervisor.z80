@@ -16,6 +16,8 @@
 	extern BTRACK
 	extern FBASE
 	extern SYSOUT
+	extern ATABUF
+	extern BHDSIZE
 
 	include "interrupts.inc"
 	include "keyboard.inc"
@@ -24,4 +26,5 @@
 	include "floppy.inc"
 	include "cache.inc"
 	include "tty.inc"
+	include "pcmcia.inc"
 

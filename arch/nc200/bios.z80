@@ -139,12 +139,18 @@ READERE:
 SELDSKE:
     ld a, c
     ld (BDISK), a
-    or a
-    jr z, select_drive_a
     ld hl, 0
-    ret
-select_drive_a:
+    cp 2
+    ret nc                  ; return an error if the disk number is >=2
+    add a                   ; a = disk number * 2
+    add a                   ; a = disk number * 4
+    add a                   ; a = disk number * 8
+    add a                   ; a = disk number * 16
     ld hl, drive_a_dph
+    add l
+    ld l, a
+    ret nc
+    inc h
     ret
 
 HOMEE:
@@ -217,6 +223,7 @@ label SYSOUT
 saved_stack:
     dw 0
 
+; These must be contiguous.
 drive_a_dph:
     dw 0            ; Sector translation vector
     dw 0, 0, 0      ; BDOS scratchpad
@@ -224,22 +231,42 @@ drive_a_dph:
     dw drive_a_dpb  ; Drive parameter block
     dw drive_a_check_vector ; Disk change check vector
     dw drive_a_bitmap ; Allocation bitmap
-
-DRIVE_A_SIZE = 720
-DRIVE_A_BLOCKS = (DRIVE_A_SIZE - (2*9)) / 2
+drive_b_dph:
+    dw 0            ; Sector translation vector
+    dw 0, 0, 0      ; BDOS scratchpad
+    dw dirbuf       ; Directory scratchpad
+    dw drive_b_dpb  ; Drive parameter block
+    dw 0            ; Disk change check vector: none as this is a fixed disk
+    dw drive_b_bitmap ; Allocation bitmap
 
 drive_a_dpb:
     dw 18*4         ; Number of CP/M sectors per track
     db 4, 15        ; BSH/BLM for 2048-byte blocks
     db 0            ; EXM for 2048-byte allocation units and >255 blocks
     dw DRIVE_A_BLOCKS-1 ; DSM
-    dw 127          ; DRM, one less than the number of directory entries
+    dw 127          ; DRM, one fewer than the number of directory entries
     db 0xc0, 0x00   ; Initial allocation vector for two directory blocks
     dw 32           ; Size of disk change check vector: (DRM+1)/4
     dw 2            ; Number of reserved tracks
 
+; The drive is sized so that each CP/M track occupies 256 physical sectors.
+; This makes the supervisor maths easier as we can just drop the bottom byte
+; from the LBA sector count. Each track is therefore 128kB.
+drive_b_dpb:
+    dw 256*4        ; Number of CP/M sectors per track
+    db 7, 127       ; BSH/BLM for 16384-byte blocks
+    db 7            ; EXM for 16384-byte allocation units and >255 blocks
+label BHDSIZE
+    dw DRIVE_B_BLOCKS-1 ; DSM
+    dw 127          ; DRM, one fewer than the number of directory entries
+    db 0xc0, 0x00   ; Initial allocation vector for two directory blocks
+    dw 0            ; Size of disk change check vector: zero as this is a fixed disk
+    dw 0            ; Number of reserved tracks
+
 drive_a_bitmap:
     ds (DRIVE_A_BLOCKS+7) / 8
+drive_b_bitmap:
+    ds (DRIVE_B_BLOCKS+7) / 8
 drive_a_check_vector:
     ds 32
 dirbuf:
