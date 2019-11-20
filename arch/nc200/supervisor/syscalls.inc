@@ -96,8 +96,7 @@ label SREAD
     
     ld hl, disk_activity_flag
     ld (hl), 1
-    ld hl, BTRACK
-    ld d, (hl)
+    ld bc, (BTRACK)
 
     if SREAD_DEBUG
         ld a, d
@@ -108,8 +107,7 @@ label SREAD
         pop de
     endif
 
-    ld hl, BSECTOR
-    ld e, (hl)
+    ld de, (BSECTOR)
 
     if SREAD_DEBUG
         ld a, e
@@ -155,10 +153,8 @@ label SWRITE
 
     ld hl, disk_activity_flag
     ld (hl), 1
-    ld hl, BTRACK
-    ld d, (hl)
-    ld hl, BSECTOR
-    ld e, (hl)
+    ld bc, (BTRACK)
+    ld de, (BSECTOR)
     ld hl, (BDMA)
     call cache_write128
     ld l, 0

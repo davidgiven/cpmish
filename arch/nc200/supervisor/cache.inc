@@ -59,8 +59,8 @@ cache_evict_all:
 ; necessary.
 ;
 ; On entry:
-;   D = zero-based track to load
-;   E = zero-based sector to load
+;   BC = zero-based track to load
+;   DE = zero-based sector to load
 ;   HL = userspace address for data
 ;
 ; Returns nz on success, z on error.
@@ -116,7 +116,7 @@ cache_write128:
 		ret
 
 setup_read_or_write:
-		ld a, d
+		ld a, c
 		cp 80
 		jr nc, out_of_bounds
 		ld (current_track), a
