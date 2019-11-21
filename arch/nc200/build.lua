@@ -85,6 +85,7 @@ diskimage {
         ["qe.com"] = "cpmtools+qe_NC200",
         ["flash.com"] = "arch/nc200/tools+flash",
         ["mkfs.com"] = "cpmtools+mkfs",
+        ["rawdisk.com"] = "cpmtools+rawdisk",
     },
 }
     

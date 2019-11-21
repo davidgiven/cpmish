@@ -66,7 +66,7 @@ cache_evict_all:
 ; Returns nz on success, z on error.
 
 cache_read128:
-		call setup_read_or_write
+		call setup_cache_read_or_write
 		ret z
 		push ix
 		push iy
@@ -91,7 +91,7 @@ cache_read128:
 		ret
 
 cache_write128:
-		call setup_read_or_write
+		call setup_cache_read_or_write
 		ret z
 		push ix
 		push iy
@@ -115,18 +115,18 @@ cache_write128:
 		or 1                    ; set nz
 		ret
 
-setup_read_or_write:
-		ld a, c
+setup_cache_read_or_write:
+		ld hl, disk_activity_flag
+		ld (hl), 1
+
+		ld a, (current_track)
 		cp 80
 		jr nc, out_of_bounds
-		ld (current_track), a
 
-		ld a, e
+		ld a, (current_sector)
 		cp 18*4
 		jr nc, out_of_bounds
-		ld (current_sector), a
 
-		ld (current_dma), hl
 		or 1                    ; set nz
 		ret
 
@@ -372,9 +372,5 @@ buffer_descriptors:
 		count = count + 1
 	endm
 
-current_sector: db 0
-current_track:  db 0
-buffer_address: dw 0
-current_dma:    dw 0
 retries:        db 10
     

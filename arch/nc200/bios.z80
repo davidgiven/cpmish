@@ -157,20 +157,15 @@ HOMEE:
     ld c, 0
     ; fall through
 SETTRKE:
-    ld a, c
-    ld (BTRACK), a
+    ld (BTRACK), bc
     ret
 
 SETSECE:
-    ld a, c
-    ld (BSECTOR), a
+    ld (BSECTOR), bc
     ret
 
 SETDMAE:
-    ld hl, BDMA
-    ld (hl), c
-    inc hl
-    ld (hl), b
+    ld (BDMA), bc
     ret
 
 READE:
@@ -273,11 +268,11 @@ dirbuf:
     ds 128
 
 label BDISK
-    db 0
+    dw 0
 label BTRACK
-    db 0
+    dw 0
 label BSECTOR
-    db 0
+    dw 0
 label BDMA
     dw 0
     

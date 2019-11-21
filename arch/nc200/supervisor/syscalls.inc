@@ -85,81 +85,51 @@ label SCONST
 
 ; Read 128-byte CP/M sector.
 label SREAD
+    call setup_read_or_write
+
+    ld hl, .1
+    push hl
     ld a, (BDISK)
     or a
-    jr nz, general_purpose_failure
-
-    if SREAD_DEBUG
-        ld a, '{'
-        call tty_putc
-    endif
-    
-    ld hl, disk_activity_flag
-    ld (hl), 1
-    ld bc, (BTRACK)
-
-    if SREAD_DEBUG
-        ld a, d
-        push de
-        call tty_puthex8
-        ld a, ' '
-        call tty_putc
-        pop de
-    endif
-
-    ld de, (BSECTOR)
-
-    if SREAD_DEBUG
-        ld a, e
-        push de
-        call tty_puthex8
-        ld a, ' '
-        call tty_putc
-        pop de
-    endif
-
-    ld hl, (BDMA)
-
-    if SREAD_DEBUG
-        push hl
-        push de
-        call tty_puthex16
-        pop de
-        pop hl
-    endif
-    
-    call cache_read128
-
-    if SREAD_DEBUG
-        push af
-        ld a, '}'
-        call tty_putc
-        pop af
-    endif
-
+    jp z, cache_read128
+    jp ata_read128
+.1
     ld l, 0
     jr z, general_purpose_failure
     jp syscall_exit
+
+; Write 128-byte CP/M sector.
+label SWRITE
+    call setup_read_or_write
+    
+    ld hl, .1
+    push hl
+    ld a, (BDISK)
+    or a
+    jp z, cache_write128
+    jp ata_write128
+.1
+    ld l, 0
+    jr z, general_purpose_failure
+    jp syscall_exit
+
+setup_read_or_write:
+    ld a, (BDISK)
+    and 0xfe                    ; 0 or 1 are valid
+    jr nz, general_purpose_failure
+
+    ld hl, (BTRACK)             ; copy the transfer data into supervisor storage
+    ld (current_track), hl
+    ld hl, (BSECTOR)
+    ld (current_sector), hl
+    ld hl, (BDMA)
+    ld (current_dma), hl
+    ret
 
 general_purpose_failure:
     ld l, 1
     jp syscall_exit
     
-; Write 128-byte CP/M sector.
-label SWRITE
-    ld a, (BDISK)
-    or a
-    jr nz, general_purpose_failure
-
-    ld hl, disk_activity_flag
-    ld (hl), 1
-    ld bc, (BTRACK)
-    ld de, (BSECTOR)
-    ld hl, (BDMA)
-    call cache_write128
-    ld l, 0
-    jr z, general_purpose_failure
-    jp syscall_exit
 
 ; Miscellaneous unsupported system calls.
 label SLIST
@@ -169,5 +139,8 @@ label SREADER
     ld l, 0
     jp syscall_exit
 
-disk_activity_flag:
-    db 0
+disk_activity_flag: db 0
+current_sector:     dw 0
+current_track:      dw 0
+buffer_address:     dw 0
+current_dma:        dw 0

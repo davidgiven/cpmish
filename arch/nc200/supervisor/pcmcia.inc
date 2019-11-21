@@ -6,10 +6,10 @@ IDEREG_DATA            = 0xc000
 IDEREG_ERROR           = 0xc001
 IDEREG_FEATURES        = 0xc001
 IDEREG_SECCOUNT        = 0xc002
-IDEREG_SECNUMBER       = 0xc003
-IDEREG_CYLLO           = 0xc004
-IDEREG_CYLHI           = 0xc005
-IDEREG_DEVHEAD         = 0xc006
+IDEREG_LBA0            = 0xc003
+IDEREG_LBA1            = 0xc004
+IDEREG_LBA2            = 0xc005
+IDEREG_DEVLBA3         = 0xc006
 IDEREG_STATUS          = 0xc007
 IDEREG_COMMAND         = 0xc007
 IDEREG_CONTROL         = 0xc00e
@@ -20,6 +20,8 @@ IDE_STATUS_DATAREQUEST = 0x08
 IDE_STATUS_READY       = 0x40
 IDE_STATUS_BUSY        = 0x80
 
+IDE_CMD_READ_SECTOR    = 0x20
+IDE_CMD_WRITE_SECTOR   = 0x30
 IDE_CMD_IDENTIFY       = 0xEC
 
 pcmcia_init:
@@ -94,7 +96,7 @@ L_found_ata_card:
     ; Reset the card.
 
     ld a, 0xe0
-    ld (IDEREG_DEVHEAD), a  ; select master
+    ld (IDEREG_DEVLBA3), a  ; select master
     ld a, 0x06
     ld (IDEREG_CONTROL), a  ; reset, no interrupts
     halt
@@ -109,7 +111,7 @@ L_found_ata_card:
     ld a, IDE_STATUS_READY
     call ide_wait
     ld a, 0xe0
-    ld (IDEREG_DEVHEAD), a  ; select master
+    ld (IDEREG_DEVLBA3), a  ; select master
     ld a, 0x02
     ld (IDEREG_FEATURES), a ; 8-bit mode
 
@@ -118,7 +120,7 @@ L_found_ata_card:
     ld a, IDE_STATUS_READY
     call ide_wait
     ld a, 0xe0
-    ld (IDEREG_DEVHEAD), a  ; select master
+    ld (IDEREG_DEVLBA3), a  ; select master
     ld a, IDE_CMD_IDENTIFY
     ld (IDEREG_COMMAND), a
     ld a, (IDEREG_STATUS)
@@ -188,12 +190,12 @@ ide_wait:
     or IDE_STATUS_BUSY|IDE_STATUS_ERROR
     and b
     cp c
-    ret z
+    jr z, .2                ; successful exit
 
     ld a, IDE_STATUS_BUSY|IDE_STATUS_ERROR
     and b
     cp IDE_STATUS_ERROR
-    jr nz, .1
+    jr nz, .1               ; retry if busy but no error
 
     push bc
     ld hl, str.ide_error
@@ -201,10 +203,99 @@ ide_wait:
     pop af
     call tty_puthex8
     call tty_newline
+
+    cp a                    ; set z (failed)
+    ret
+.2
+    or a                    ; set nz (success)
     ret
 
-hdd_read128:
+; Reads/writes a CP/M 128-byte sector, with deblocking etc.
+;
+; On entry:
+;   BC = zero-based track to load
+;   DE = zero-based sector to load
+;   HL = userspace address for data
+;
+; Returns nz on success, z on error.
+
+ata_read128:
+    call setup_ata_read_or_write
+    ret z
+
+    ld a, IDE_CMD_READ_SECTOR
+    ld (IDEREG_COMMAND), a
+
+    ld a, IDE_STATUS_DATAREQUEST
+    call ide_wait
+    ret z
+
+    ; Copy the block from the IDE interface into the ATA buffer.
+
+    ld de, ATABUF           ; DE = destination address
+    ld hl, IDEREG_DATABLOCK ; HL = source address
+    ld bc, 512
+    ldir
+
+    ; Now copy the CP/M sector from the ATA buffer into userspace.
+
+    ld hl, (current_dma)
+    call map_userspace_dma
+    ex de, hl               ; DE = destination address
+
+    ld a, (current_sector)
+    and 3                   ; get 0, 1, 2, 3 offset
+    rra                     ; HL = A<<7
+    ld h, a
+    ld l, 0
+    rr l
+    ld bc, ATABUF
+    add hl, bc              ; HL = address of sector
+
+    ld bc, 128
+    ldir
+
+    or 1                    ; set nz
+    ret
+
+ata_write128:
+    call setup_ata_read_or_write
+    ret z
     cp a                    ; set z
+    ret
+
+setup_ata_read_or_write:
+    ld a, (current_sector+1) ; check that the sector count <0x400
+    cp 4
+    jp nc, out_of_bounds
+
+    ld a, CARD0_BANK
+    out (PORT_BANK3), a     ; map card to 0xc000
+    ld a, 0x80
+    out (PORT_BAUDRATE), a  ; read common space
+
+    ld a, 0xe0              ; top LBA byte is 0 (plus drive sector)
+    ld (IDEREG_DEVLBA3), a
+
+    ld hl, (current_track)  ; load the track number
+    ld (IDEREG_LBA1), hl
+
+    ld hl, (current_sector) ; load the sector number / 4
+    srl h
+    rr l
+    srl h
+    rr l
+    ld a, l
+    ld (IDEREG_LBA0), a     ; corrupts DEVLBA1, but we fix that next
+
+    ld a, IDE_STATUS_READY
+    call ide_wait
+    ret z
+
+    ld a, 1
+    ld (IDEREG_SECCOUNT), a ; number of sectors to transfer
+
+    or 1                    ; set nz
     ret
 
 ata_blocks: dw 0
