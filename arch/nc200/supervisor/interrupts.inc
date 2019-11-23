@@ -113,4 +113,5 @@ init_interrupts:
 		ld (data.keyboard_rdptr), a ; flush the keyboard event buffer
 		ld (data.keyboard_wrptr), a
 		ei
+		ld (PBAUD), a		; BAUDCONTROL port shadow copy
 		ret

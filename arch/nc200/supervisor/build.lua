@@ -39,5 +39,6 @@ zmac {
     deps = {
         "include/*.lib",
         "arch/nc200/include/*.lib",
+        "+font_inc",
     },
 }

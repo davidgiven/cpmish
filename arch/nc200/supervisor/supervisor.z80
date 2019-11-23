@@ -18,6 +18,8 @@
 	extern SYSOUT
 	extern ATABUF
 	extern BHDSIZE
+	extern PBAUD
+	extern FONT
 
 	include "interrupts.inc"
 	include "keyboard.inc"

@@ -253,8 +253,8 @@ drive_b_dpb:
     db 7            ; EXM for 16384-byte allocation units and >255 blocks
 label BHDSIZE
     dw DRIVE_B_BLOCKS-1 ; DSM
-    dw 127          ; DRM, one fewer than the number of directory entries
-    db 0xc0, 0x00   ; Initial allocation vector for two directory blocks
+    dw 511          ; DRM, one fewer than the number of directory entries
+    db 0x80, 0x00   ; Initial allocation vector for one directory blocks
     dw 0            ; Size of disk change check vector: zero as this is a fixed disk
     dw 0            ; Number of reserved tracks
 

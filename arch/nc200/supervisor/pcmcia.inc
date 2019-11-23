@@ -20,6 +20,15 @@ IDE_STATUS_DATAREQUEST = 0x08
 IDE_STATUS_READY       = 0x40
 IDE_STATUS_BUSY        = 0x80
 
+IDE_STATUS_BIT_ERR     = 0
+IDE_STATUS_BIT_IDX     = 1
+IDE_STATUS_BIT_CORR    = 2
+IDE_STATUS_BIT_DRQ     = 3
+IDE_STATUS_BIT_SRV     = 4
+IDE_STATUS_BIT_DF      = 5
+IDE_STATUS_BIT_RDY     = 6
+IDE_STATUS_BIT_BSY     = 7
+
 IDE_CMD_READ_SECTOR    = 0x20
 IDE_CMD_WRITE_SECTOR   = 0x30
 IDE_CMD_IDENTIFY       = 0xEC
@@ -27,8 +36,12 @@ IDE_CMD_IDENTIFY       = 0xEC
 pcmcia_init:
     ld a, CARD0_BANK
     out (PORT_BANK3), a     ; map card to 0xc000
-    xor a
-    out (PORT_BAUDRATE), a  ; read attribute space
+    ld hl, PBAUD
+    di
+    res 7, (hl)             ; read attribute space
+    ld a, (hl)
+    out (PORT_BAUDRATE), a
+    ei
 
     ; IX is our pointer to the attribute space.
     ld ix, 0xc000
@@ -90,8 +103,12 @@ L_print_ata_banner:
     jr L_continue
 
 L_found_ata_card:
-    ld a, 0x80
+    ld hl, PBAUD
+    di
+    set 7, (hl)
+    ld a, (hl)
     out (PORT_BAUDRATE), a  ; access common space (with the IDE registers)
+    ei
 
     ; Reset the card.
 
@@ -110,10 +127,13 @@ L_found_ata_card:
 
     ld a, IDE_STATUS_READY
     call ide_wait
-    ld a, 0xe0
-    ld (IDEREG_DEVLBA3), a  ; select master
     ld a, 0x02
     ld (IDEREG_FEATURES), a ; 8-bit mode
+
+    ld a, IDE_STATUS_READY
+    call ide_wait
+    ld a, 0x82
+    ld (IDEREG_FEATURES), a ; disable disk cache
 
     ; Query the card capacity (and verify it is a card).
 
@@ -125,7 +145,7 @@ L_found_ata_card:
     ld (IDEREG_COMMAND), a
     ld a, (IDEREG_STATUS)
     or a
-    jr z, L_bad_card
+    jp z, L_bad_card
 
     ld a, IDE_STATUS_DATAREQUEST
     call ide_wait
@@ -180,34 +200,32 @@ L_found_ata_card:
     ld hl, str.capacity2
     jp tty_puts
 
+; Waits for a specific IDE status, in A (or failure). Sets z on error.
 ide_wait:
     ld c, a                 ; c = mask
 .1
-    ld a, (IDEREG_STATUS)
-    ld b, a                 ; b = IDE status
+    ld a, (IDEREG_STATUS)   ; a = IDE status
 
-    ld a, c
-    or IDE_STATUS_BUSY|IDE_STATUS_ERROR
-    and b
-    cp c
-    jr z, .2                ; successful exit
+    bit IDE_STATUS_BIT_BSY, a ; wait until not busy
+    jr nz, .1
 
-    ld a, IDE_STATUS_BUSY|IDE_STATUS_ERROR
-    and b
-    cp IDE_STATUS_ERROR
-    jr nz, .1               ; retry if busy but no error
+    bit IDE_STATUS_BIT_ERR, a ; did an error occur?
+    jr nz, .2
 
-    push bc
+    and c
+    cp c                    ; response the user asked for?
+    jr nz, .1
+
+    or 1                    ; set nz (success)
+    ret
+.2
     ld hl, str.ide_error
     call tty_puts
-    pop af
+    ld a, (IDEREG_ERROR)
     call tty_puthex8
     call tty_newline
 
     cp a                    ; set z (failed)
-    ret
-.2
-    or a                    ; set nz (success)
     ret
 
 ; Reads/writes a CP/M 128-byte sector, with deblocking etc.
@@ -220,6 +238,52 @@ ide_wait:
 ; Returns nz on success, z on error.
 
 ata_read128:
+    call ata_read256
+    ret z
+
+    ; Now copy the CP/M sector from the ATA buffer into userspace.
+
+    ld hl, (current_dma)
+    call map_userspace_dma
+    ex de, hl               ; DE = destination address
+    call calculate_ata_buffer_address ; HL = source address
+    ld bc, 128
+    ldir
+
+    or 1                    ; set nz
+    ret
+
+ata_write128:
+    call ata_read256
+    ret z
+
+    ; Now copy the CP/M sector from userspace into the ATA buffer.
+
+    ld hl, (current_dma)
+    call map_userspace_dma
+    push hl
+    call calculate_ata_buffer_address
+    ex de, hl               ; DE = destination address
+    pop hl                  ; HL = source address
+    ld bc, 128
+    ldir
+
+    call ata_write256
+    ret
+
+; Returns the address of a CP/M sector in the ATA buffer in HL. Corrupts BC.
+calculate_ata_buffer_address:
+    ld a, (current_sector)
+    and 3                   ; get 0, 1, 2, 3 offset
+    rra                     ; HL = A<<7
+    ld h, a
+    ld l, 0
+    rr l
+    ld bc, ATABUF
+    add hl, bc              ; HL = address of sector
+    ret
+
+ata_read256:
     call setup_ata_read_or_write
     ret z
 
@@ -236,32 +300,25 @@ ata_read128:
     ld hl, IDEREG_DATABLOCK ; HL = source address
     ld bc, 512
     ldir
-
-    ; Now copy the CP/M sector from the ATA buffer into userspace.
-
-    ld hl, (current_dma)
-    call map_userspace_dma
-    ex de, hl               ; DE = destination address
-
-    ld a, (current_sector)
-    and 3                   ; get 0, 1, 2, 3 offset
-    rra                     ; HL = A<<7
-    ld h, a
-    ld l, 0
-    rr l
-    ld bc, ATABUF
-    add hl, bc              ; HL = address of sector
-
-    ld bc, 128
-    ldir
-
-    or 1                    ; set nz
     ret
 
-ata_write128:
+ata_write256:
     call setup_ata_read_or_write
     ret z
-    cp a                    ; set z
+
+    ld a, IDE_CMD_WRITE_SECTOR
+    ld (IDEREG_COMMAND), a
+
+    ld a, IDE_STATUS_DATAREQUEST
+    call ide_wait
+    ret z
+
+    ; Copy the block from the ATA buffer interface into the IDE interface.
+
+    ld de, IDEREG_DATABLOCK ; DE = destination address
+    ld hl, ATABUF           ; HL = source address
+    ld bc, 512
+    ldir
     ret
 
 setup_ata_read_or_write:
@@ -269,16 +326,13 @@ setup_ata_read_or_write:
     cp 4
     jp nc, out_of_bounds
 
-    ld a, CARD0_BANK
-    out (PORT_BANK3), a     ; map card to 0xc000
-    ld a, 0x80
-    out (PORT_BAUDRATE), a  ; read common space
+    ; Calculate the LBA address of the block.
 
     ld a, 0xe0              ; top LBA byte is 0 (plus drive sector)
-    ld (IDEREG_DEVLBA3), a
+    ld (ata_lba+3), a
 
     ld hl, (current_track)  ; load the track number
-    ld (IDEREG_LBA1), hl
+    ld (ata_lba+1), hl
 
     ld hl, (current_sector) ; load the sector number / 4
     srl h
@@ -286,7 +340,23 @@ setup_ata_read_or_write:
     srl h
     rr l
     ld a, l
-    ld (IDEREG_LBA0), a     ; corrupts DEVLBA1, but we fix that next
+    ld (ata_lba+0), a
+
+    ; Page in the ATA drive and set up the command.
+
+    ld a, CARD0_BANK
+    out (PORT_BANK3), a     ; map card to 0xc000
+    di
+    ld hl, PBAUD
+    set 7, (hl)
+    ld a, (hl)
+    out (PORT_BAUDRATE), a  ; read common space
+    ei
+
+    ld hl, (ata_lba+0)
+    ld (IDEREG_LBA0), hl
+    ld hl, (ata_lba+2)
+    ld (IDEREG_LBA2), hl
 
     ld a, IDE_STATUS_READY
     call ide_wait
@@ -299,6 +369,7 @@ setup_ata_read_or_write:
     ret
 
 ata_blocks: dw 0
+ata_lba: dw 0, 0
 
 str.capacity1: db "Card is ATA with ", 0
 str.capacity2: db " MB", 13, 10, 0

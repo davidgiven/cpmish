@@ -606,7 +606,7 @@ tty_rawwrite:
     ld e, a
     ld d, 0
     add hl, de          ; hl = a*4 + a = a*5
-    ld de, font_data
+    ld de, FONT
     add hl, de
     ; hl points at font data
 
@@ -726,9 +726,3 @@ tty_scroll:
     ld (hl), 0
     ldir
     ret
-
-; The font.
-
-font_data:
-	include "font.inc"
-

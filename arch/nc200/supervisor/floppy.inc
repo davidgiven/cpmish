@@ -3,7 +3,6 @@
 ; See COPYING.cpmish in the distribution root directory for more information.
 
 WAITSTATE_PORT:   equ 0x20
-BAUDCONTROL_PORT: equ 0x30
 FD_ST_PORT:       equ 0xe0
 FD_DT_PORT:       equ 0xe1
 
@@ -22,8 +21,10 @@ fd765_motor_interrupt_handler:
 		ld (data.fd765_motor_on_time), hl
 		ret
 fd765_irq_motor_off:
-		ld a, 0x3f 
-		out (BAUDCONTROL_PORT), a
+		ld hl, PBAUD
+		set 5, (hl)
+		ld a, (hl)
+		out (PORT_BAUDRATE), a
 		ret
 
 data.fd765_motor_on_time:
@@ -33,8 +34,10 @@ data.fd765_motor_on_time:
 
 fd765_motor_on:
 		di
-		ld a, 0x1f ; bit is active low
-		out (BAUDCONTROL_PORT), a
+		ld hl, PBAUD
+		res 5, (hl)			; bit is active low
+		ld a, (hl)
+		out (PORT_BAUDRATE), a
 		ld hl, FD_MOTOR_ON_TIME
 		ld (data.fd765_motor_on_time), hl
 		ei
