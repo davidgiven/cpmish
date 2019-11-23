@@ -20,7 +20,7 @@ void con_clear_to_eol(void)
             i--;
 
         while (i--)
-            bios_conout(' ');
+            cpm_bios_conout(' ');
         con_goto(screenx, screeny);
     }
     #endif

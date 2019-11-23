@@ -17,7 +17,7 @@ void con_putc(uint16_t c)
             c += '@';
     }
 
-    bios_conout(c);
+    cpm_bios_conout(c);
     screenx++;
     if (screenx == SCREENWIDTH)
     {

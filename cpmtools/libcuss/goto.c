@@ -10,7 +10,7 @@ void con_goto(uint16_t x, uint16_t y)
 {
     #if defined LIBCUSS_ADM3
         if (!x && !y)
-            bios_conout(30);
+            cpm_bios_conout(30);
         else
         {
             static uint8_t gotoseq[] = "\033=xx";

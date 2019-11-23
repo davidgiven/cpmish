@@ -120,12 +120,12 @@ void set_status_line(const char* message)
 		uint16_t c = *message++;
 		if (!c)
 			break;
-		bios_conout(c);
+		cpm_bios_conout(c);
 		length++;
 	}
 	while (length < status_line_length)
 	{
-		bios_conout(' ');
+		cpm_bios_conout(' ');
 		length++;
 	}
 	status_line_length = length;
@@ -629,7 +629,7 @@ void insert_mode(bool replacing)
 		uint16_t oldheight;
 		uint8_t* nextp;
 		uint16_t length;
-		uint16_t c = bios_conin();
+		uint16_t c = cpm_bios_conin();
 		if (c == 27)
 			break;
 		else if (c == 8)
@@ -806,7 +806,7 @@ void open_below(uint16_t count)
 
 void replace_char(uint16_t count)
 {
-	uint16_t c = bios_conin();
+	uint16_t c = cpm_bios_conin();
 
 	if (gap_end == buffer_end)
 		return;
@@ -1120,7 +1120,7 @@ void main(int argc, const char* argv[])
 
 		for (;;)
 		{
-			c = bios_conin();
+			c = cpm_bios_conin();
 			if (isdigit(c))
 			{
 				command_count = (command_count*10) + (c-'0');
