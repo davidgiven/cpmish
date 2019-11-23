@@ -25,6 +25,16 @@ ackprogram {
     srcs = { "./submit.c" },
 }
 
+ackprogram {
+    name = "mkfs",
+    srcs = { "./mkfs.c" },
+}
+
+ackprogram {
+    name = "rawdisk",
+    srcs = { "./rawdisk.c" },
+}
+
 libcussprogram {
     name = "qe",
     srcs = { "./qe.c" },
