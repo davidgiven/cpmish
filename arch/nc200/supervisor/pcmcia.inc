@@ -198,7 +198,14 @@ L_found_ata_card:
     ld h, a
     call tty_putdec16
     ld hl, str.capacity2
-    jp tty_puts
+    call tty_puts
+
+    ld hl, 0xffff
+    ld (ata_lba_current+0), hl
+    ld (ata_lba_current+2), hl
+    xor a
+    ld (ata_dirty), a
+    ret
 
 ; Waits for a specific IDE status, in A (or failure). Sets z on error.
 ide_wait:
@@ -238,7 +245,9 @@ ide_wait:
 ; Returns nz on success, z on error.
 
 ata_read128:
-    call ata_read256
+    call calculate_lba
+    ret z
+    call ata_change_block
     ret z
 
     ; Now copy the CP/M sector from the ATA buffer into userspace.
@@ -254,7 +263,9 @@ ata_read128:
     ret
 
 ata_write128:
-    call ata_read256
+    call calculate_lba
+    ret z
+    call ata_change_block
     ret z
 
     ; Now copy the CP/M sector from userspace into the ATA buffer.
@@ -268,7 +279,15 @@ ata_write128:
     ld bc, 128
     ldir
 
-    call ata_write256
+    jr ata_write256
+    ld hl, ata_dirty
+    ld (hl), 0              ; mark block as *clean*...
+    ld a, (BDEBLOCK)
+    cp 1
+    jr z, ata_write256      ; ...because we might be asked to write it back.
+
+    inc (hl)                ; otherwise it's dirty.
+    or 1                    ; set nz (success)
     ret
 
 ; Returns the address of a CP/M sector in the ATA buffer in HL. Corrupts BC.
@@ -300,6 +319,8 @@ ata_read256:
     ld hl, IDEREG_DATABLOCK ; HL = source address
     ld bc, 512
     ldir
+
+    or 1                    ; set nz (success)
     ret
 
 ata_write256:
@@ -319,9 +340,12 @@ ata_write256:
     ld hl, ATABUF           ; HL = source address
     ld bc, 512
     ldir
+
+    or 1                    ; set nz (success)
     ret
 
-setup_ata_read_or_write:
+; Calculates the LBA address of the NEXT block.
+calculate_lba:
     ld a, (current_sector+1) ; check that the sector count <0x400
     cp 4
     jp nc, out_of_bounds
@@ -329,19 +353,68 @@ setup_ata_read_or_write:
     ; Calculate the LBA address of the block.
 
     ld a, 0xe0              ; top LBA byte is 0 (plus drive sector)
-    ld (ata_lba+3), a
-
-    ld hl, (current_track)  ; load the track number
-    ld (ata_lba+1), hl
+    ld (ata_lba_next+3), a
 
     ld hl, (current_sector) ; load the sector number / 4
     srl h
     rr l
     srl h
     rr l
-    ld a, l
-    ld (ata_lba+0), a
+    ld (ata_lba_next+0), hl ; corrupts +1, which we fix next
 
+    ld hl, (current_track)  ; load the track number
+    ld (ata_lba_next+1), hl
+
+    ; Determine whether the LBA block has changed.
+    
+    ld c, 1
+    ld hl, ata_lba_current
+    ld de, ata_lba_next
+    ld b, 4
+.1
+    ld a, (de)
+    cp (hl)
+    jr nz, .2               ; bytes different, exit loop
+    inc hl
+    inc de
+    djnz .1
+    ld c, 0                 ; bytes all the same, don't change
+.2 
+    ld hl, ata_lba_changed
+    ld (hl), c
+
+    or 1                    ; set nz (success)
+    ret
+
+; Changes the block in the buffer. Returns z/nz 
+ata_change_block:
+    ld a, (ata_lba_changed)
+    or a
+    jr z, .2                ; block number hasn't changed, do nothing
+
+    ld a, (ata_dirty)
+    or a
+    jr z, .1
+    call ata_write256       ; the previous block was dirty, write it back
+    ret z
+    xor a
+    ld (ata_dirty), a
+.1
+    ld hl, (ata_lba_next+0)
+    ld (ata_lba_current+0), hl
+    ld hl, (ata_lba_next+2)
+    ld (ata_lba_current+2), hl
+
+    ld a, (BDEBLOCK)
+    cp 2                    ; looking at new block?
+    jr z, .2                ; if so, skip read
+    jp ata_read256          ; read new block
+.2
+    or 1                    ; set nz (success)
+    ret
+
+; Prepares to read and write the CURRENT block.
+setup_ata_read_or_write:
     ; Page in the ATA drive and set up the command.
 
     ld a, CARD0_BANK
@@ -353,9 +426,9 @@ setup_ata_read_or_write:
     out (PORT_BAUDRATE), a  ; read common space
     ei
 
-    ld hl, (ata_lba+0)
+    ld hl, (ata_lba_current+0)
     ld (IDEREG_LBA0), hl
-    ld hl, (ata_lba+2)
+    ld hl, (ata_lba_current+2)
     ld (IDEREG_LBA2), hl
 
     ld a, IDE_STATUS_READY
@@ -368,8 +441,11 @@ setup_ata_read_or_write:
     or 1                    ; set nz
     ret
 
-ata_blocks: dw 0
-ata_lba: dw 0, 0
+ata_blocks:      dw 0
+ata_lba_current: dw 0, 0
+ata_lba_next:    dw 0, 0
+ata_lba_changed: db 0
+ata_dirty:       db 0
 
 str.capacity1: db "Card is ATA with ", 0
 str.capacity2: db " MB", 13, 10, 0

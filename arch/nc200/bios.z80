@@ -169,10 +169,14 @@ SETDMAE:
     ret
 
 READE:
+    xor a
+    ld (BDEBLOCK), a
     ld hl, SREAD
     jr syscall
 
 WRITEE:
+    ld hl, BDEBLOCK
+    ld (hl), c
     ld hl, SWRITE
     jr syscall
 
@@ -275,4 +279,6 @@ label BSECTOR
     dw 0
 label BDMA
     dw 0
+label BDEBLOCK
+    db 0
     

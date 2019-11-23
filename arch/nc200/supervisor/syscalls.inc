@@ -124,12 +124,13 @@ setup_read_or_write:
     ld (current_sector), hl
     ld hl, (BDMA)
     ld (current_dma), hl
+    ld a, (BDEBLOCK)
+    ld (deblock_flag), a
     ret
 
 general_purpose_failure:
     ld l, 1
     jp syscall_exit
-    
 
 ; Miscellaneous unsupported system calls.
 label SLIST
@@ -144,3 +145,4 @@ current_sector:     dw 0
 current_track:      dw 0
 buffer_address:     dw 0
 current_dma:        dw 0
+deblock_flag:       db 0
