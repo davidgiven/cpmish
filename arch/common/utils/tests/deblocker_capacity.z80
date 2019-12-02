@@ -1,0 +1,82 @@
+; cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+set8 macro VAR, VAL
+    ld a, VAL
+    ld (VAR), a
+    endm
+
+set16 macro VAR, VAL
+    ld hl, VAL
+    ld (VAR), hl
+    endm
+
+cp8 macro VAR, VAL
+    ld a, (VAR)
+    cp VAL
+    jp nz, fail
+    endm
+
+cp16 macro VAR, VAL
+    ld hl, (VAR)
+    ld bc, VAL
+    or a
+    sbc hl, bc
+    jp nz, fail
+    endm
+
+    jp main
+    include "../deblocker.z80"
+main:
+
+    ; 1kB blocks
+    if 1
+        set16 sector_count, 18
+        set16 track_count, 80
+        set8 bsh, 3
+        ld ix, disk_dat
+        ld iy, dpb_dat
+        call DB_CAP
+        cp16 spt, 72
+        cp16 dsm, 719
+    endif
+    
+    ; 16kB blocks
+    if 1
+        set16 sector_count, 18
+        set16 track_count, 80
+        set8 bsh, 7
+        ld ix, disk_dat
+        ld iy, dpb_dat
+        call DB_CAP
+        cp16 spt, 72
+        cp16 dsm, 44
+    endif
+    
+    ret
+
+disk_dat:
+sector_count:
+    dw 10       ; sector count
+track_count:
+    dw 1        ; track count
+    ; rest of the buffer is unused
+
+dpb_dat:
+spt:
+    defw 0      ; SPT, number of 128-byte records per track
+bsh:
+    defb 0      ; BSH, block size, 3 => 1kB, 4 => 2kB, etc
+    defb 0      ; BLM, block mask, unused
+    defb 0      ; EXM, extent mask, unused
+dsm:
+    defw 0      ; DSM, number of blocks - 1
+    
+fail:
+    ld de, .str
+    ld c, 9
+    jp 5
+.str: db "FAILED", 13, 10, '$'
+    
+

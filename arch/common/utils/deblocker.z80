@@ -1,0 +1,219 @@
+; cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+IMPL = not 0
+    maclib deblocker
+    
+DB_R128:
+    ld (buffer), hl     ; save buffer address
+    call calculate_physical
+    ret z
+    ld a, 0             ; reset deblock mode
+    ld (mode), a
+    call change_block
+    ret z
+    jr calculate_buffer_address
+
+DB_W128:
+    ld (mode), a        ; save deblock mode
+    call calculate_physical
+    ret z
+    call change_block
+    ret z
+calculate_buffer_address:
+    ld a, (offset)
+    rra
+    ld h, a
+    ld l, 0
+    rr l
+    ld b, ixh
+    ld c, ixl
+    add hl, bc
+    ld bc, DBS_BUFFER
+    add hl, bc
+    or a                ; set nz (success)
+    ret
+
+; On entry:
+;   BC = CP/M sector
+;   DE = CP/M track
+; On exit:
+;   BC = physical sector
+;   DE = physical track
+calculate_physical:
+    ld a, c             ; save CP/M sector offset
+    and 3
+    ld (offset), a
+
+    srl b               ; divide sector count by four
+    rr c
+    srl b
+    rr c
+
+    ; Check sector number is in bounds.
+
+    ld a, (ix+DBS_NUM_SECTORS+1)
+    cp b
+    jr c, error         ; high byte bigger, out of bounds
+    jr nz, .1           ; high byte smaller, in bounds
+    ld a, c
+    cp (ix+DBS_NUM_SECTORS+0)
+    jr nc, error        ; low byte equal or bigger, out of bounds
+.1
+
+    ; Check track number is in bounds.
+
+    ld a, (ix+DBS_NUM_TRACKS+1)
+    cp d
+    jr c, error         ; high byte bigger, out of bounds
+    jr nz, .2           ; high byte smaller, in bounds
+    ld a, e
+    cp (ix+DBS_NUM_TRACKS+0)
+    jr nc, error        ; low byte equal or bigger, out of bounds
+.2
+
+    ; Determine whether the address has changed.
+
+    ld hl, changed
+    ld (hl), 0
+
+    ld a, (ix+DBS_CUR_SECTOR+0)
+    cp b
+    jr nz, .3
+    ld a, (ix+DBS_CUR_SECTOR+1)
+    cp c
+    jr nz, .3
+    ld a, (ix+DBS_CUR_TRACK+0)
+    cp d
+    jr nz, .3
+    ld a, (ix+DBS_CUR_TRACK+1)
+    cp e
+    jr z, success
+
+.3
+    ld (hl), 1          ; addressed sector has changed
+success:
+    ora 1               ; set nz (success)
+    ret
+
+error:
+    xor a               ; set z (error)
+    ret
+    
+change_block:
+    ld a, (changed)
+    or a
+    jr z, success       ; sector number hasn't changed, do nothing
+
+    ld a, (ix+DBS_DIRTY)
+    or a                ; was the previous sector dirty?
+    jr z, .1
+
+    ld l, (ix+DBS_W512+0) ; yes, write it back
+    ld h, (ix+DBS_W512+1)
+    call calli
+    ret z
+    xor a
+    ld (ix+DBS_DIRTY), a ; clear dirty flag
+
+.1
+    ld (ix+DBS_CUR_SECTOR+1), b
+    ld (ix+DBS_CUR_SECTOR+0), c
+    ld (ix+DBS_CUR_TRACK+1), d
+    ld (ix+DBS_CUR_TRACK+0), e
+
+    ld a, (mode)
+    cp 2                ; looking at new block?
+    jr z, success       ; if so, don't read
+    ld l, (ix+DBS_R512+0)
+    ld h, (ix+DBS_R512+1)
+    jp calli
+
+calli:
+    push ix
+    push bc
+    push de
+    call pchl
+    pop de
+    pop bc
+    pop ix
+    ret
+
+pchl:
+    jp (hl)
+
+DB_FLUSH:
+    ld a, (ix+DBS_DIRTY)
+    or a
+    jr z, success
+
+    xor a
+    ld (ix+DBS_DIRTY), a
+    ld l, (ix+DBS_W512+0) ; yes, write it back
+    ld h, (ix+DBS_W512+1)
+    jr calli
+
+DB_CAP:
+    ld e, (ix+DBS_NUM_SECTORS+0)
+    ld d, (ix+DBS_NUM_SECTORS+1)
+    ld c, (ix+DBS_NUM_TRACKS+0)
+    ld b, (ix+DBS_NUM_TRACKS+1)
+
+    ; Convert DE to CP/M sectors.
+    sla e
+    rl d
+    sla e
+    rl d
+    ld (iy+DPB_SPT+0), e        ; write to SPT
+    ld (iy+DPB_SPT+1), d
+
+    ; BC*DE = DE:HL
+    ld hl, 0            ; result
+    ld a, 16            ; number of bits
+.1
+    add hl, hl
+    rl e
+    rl d                ; de:hl = de:hl*2, overflow to c
+    jr nc, .2
+    add hl, bc
+    jr nc, .2
+    inc de
+.2
+    dec a
+    jr nz, .1
+
+    ; We have the total number of physical sectors in DE:HL. Divide
+    ; by the block size to get the number of blocks.
+    ld a, (iy+DPB_BSH)
+    ; The block shift is n where n is the number of bits to shift
+    ; a CP/M sector count to get a block count.
+    ; So, we want to shift DEHL right by A bits to get the block count.
+.3
+    srl d
+    rr e
+    rr h
+    rr l
+    dec a
+    jr nz, .3
+
+    ; If DE is set, the disk is too big. Use the maximum possible size.
+    or d                ; A is 0, remember
+    or e
+    jr z, .4            ; jump if disk fits
+    ld a, 0xff
+    ld (iy+DPB_DSM+0), a ; 0x10000 blocks, maximum size
+    ld (iy+DPB_DSM+1), a
+    ret
+
+.4
+    dec hl              ; actually want count-1
+    ld (iy+DPB_DSM+0), l
+    ld (iy+DPB_DSM+1), h
+    ret
+
+mode:        db 0
+offset:      db 0
+changed:     db 0
+buffer:      dw 0

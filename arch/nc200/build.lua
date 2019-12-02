@@ -53,6 +53,7 @@ ld80 {
         "arch/nc200/supervisor+variables",
         "-P1000", "+rootdir.z80",
         "arch/nc200/supervisor+supervisor",
+        "arch/common/utils+deblocker",
         "-P1e00", "+relauto.z80",
         "-Pe700", "third_party/zcpr1+zcpr",
         "-Pef00", "third_party/zsdos+zsdos",

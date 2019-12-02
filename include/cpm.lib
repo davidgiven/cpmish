@@ -2,6 +2,18 @@ IOBYTE   equ 0x0003
 CDISK    equ 0x0004
 BDOSCALL equ 0x0005
 
+DPB_SPT = 0
+DPB_BSH = 2
+DPB_BLM = 3
+DPB_EXM = 4
+DPB_DSM = 5
+DPB_DRM = 7
+DPB_AL0 = 9
+DPB_AL1 = 10
+DPB_CKS = 11
+DPB_OFF = 13
+DPB__SIZE = 15
+
     extern FBASE
     extern CBASE
 

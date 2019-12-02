@@ -1,0 +1,158 @@
+; cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+PHYSICAL_SECTORS = 10
+PHYSICAL_TRACKS = 5
+
+    jp main
+    include "../deblocker.z80"
+main:
+    ; Successful bounds check
+    if 1
+        ld ix, disk_dat
+        ld bc, 0
+        ld de, 0
+        call calculate_physical
+        jp z, fail
+    endif
+
+    ; Sector count too big
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 256 * 4              ; high byte of physical count set
+        ld de, 0
+        call calculate_physical
+        jp nz, fail                 ; must fail
+    endif
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 255 * 4              ; high byte of physical count not set
+        ld de, 0
+        call calculate_physical
+        jp nz, fail                 ; must fail
+    endif
+
+    ; Sector count equal
+
+    if 1
+        ld ix, disk_dat
+        ld bc, PHYSICAL_SECTORS*4
+        ld de, 0
+        call calculate_physical
+        jp nz, fail                 ; must fail
+    endif
+
+    ; Track count too big
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 0
+        ld de, 256                  ; high byte of count set
+        call calculate_physical
+        jp nz, fail                 ; must fail
+    endif
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 0
+        ld de, 255                  ; high byte of count not set
+        call calculate_physical
+        jp nz, fail                 ; must fail
+    endif
+
+    ; Track count equal
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 0
+        ld de, PHYSICAL_TRACKS
+        call calculate_physical
+        jp nz, fail                 ; must fail
+    endif
+
+    ; Sector has not changed
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 3                    ; = physical sector 0
+        ld de, 0
+        call calculate_physical
+        ld a, (changed)
+        or a
+        jp nz, fail
+    ret
+
+    ; Sector has changed
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 4                    ; = physical sector 1
+        ld de, 0
+        call calculate_physical
+        ld a, (changed)
+        cp 1
+        jp nz, fail
+    ret
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 256*4                ; = physical sector 256
+        ld de, 0
+        call calculate_physical
+        ld a, (changed)
+        cp 1
+        jp nz, fail
+    ret
+
+    ; Track has not changed
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 0
+        ld de, 0
+        call calculate_physical
+        ld a, (changed)
+        or a
+        jp nz, fail
+    ret
+
+    ; Track has changed
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 0
+        ld de, 1
+        call calculate_physical
+        ld a, (changed)
+        cp 1
+        jp nz, fail
+    ret
+
+    if 1
+        ld ix, disk_dat
+        ld bc, 0
+        ld de, 256
+        call calculate_physical
+        ld a, (changed)
+        cp 1
+        jp nz, fail
+    ret
+
+disk_dat:
+    dw PHYSICAL_SECTORS
+    dw PHYSICAL_TRACKS
+    dw fail     ; R512
+    dw fail     ; W512
+    dw 0        ; current sector
+    dw 0        ; current track
+    ; the rest of the buffer is unused
+    
+fail:
+    ld de, .str
+    ld c, 9
+    jp 5
+.str: db "FAILED", 13, 10, '$'
+    
