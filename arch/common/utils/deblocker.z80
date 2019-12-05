@@ -71,16 +71,16 @@ calculate_physical:
     ld (hl), 0
 
     ld a, (ix+DBS_CUR_SECTOR+0)
-    cp b
-    jr nz, .3
-    ld a, (ix+DBS_CUR_SECTOR+1)
     cp c
     jr nz, .3
+    ld a, (ix+DBS_CUR_SECTOR+1)
+    cp b
+    jr nz, .3
     ld a, (ix+DBS_CUR_TRACK+0)
-    cp d
+    cp e
     jr nz, .3
     ld a, (ix+DBS_CUR_TRACK+1)
-    cp e
+    cp d
     jr z, success
 
 .3
