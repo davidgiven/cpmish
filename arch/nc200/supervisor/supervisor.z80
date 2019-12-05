@@ -21,6 +21,7 @@
 	extern BTRACK
 	extern DRVBDPB
 	extern FBASE
+	extern FDBUF
 	extern FONT
 	extern PBAUD
 	extern SYSOUT
@@ -30,7 +31,7 @@
 	include "syscalls.inc"
 	include "startup.inc"
 	include "floppy.inc"
-	include "cache.inc"
+	include "io.inc"
 	include "tty.inc"
 	include "pcmcia.inc"
 

@@ -40,7 +40,6 @@ label SWBOOT
         call tty_puts
     endif
     
-    call cache_evict_all
     jp warmboot
     ; does not return
 
@@ -52,10 +51,6 @@ label SWBOOT
 ; Read console: returns char in A.
 
 label SCONIN
-    call cache_flush_unwritten
-    ld hl, disk_activity_flag
-    ld (hl), 0
-
     call tty_draw_cursor
     call kbd_get_next_key
     ld l, a
@@ -73,17 +68,10 @@ label SCONOUT
 
 ; Test console: returns 0xff in A if console has characters to read.
 label SCONST
-    ld hl, disk_activity_flag
-    bit 0, (hl)
-    ld (hl), 0
-    jr nz, .1                   ; only flush buffers if there *hasn't* been activity
-    call cache_flush_unwritten
-.1:
     call tty_draw_cursor
     call kbd_test_pending_key
     ld l, 0
     jr z, syscall_exit
-    call cache_flush_unwritten  ; or if the user pressed a key
     ld l, 0xff
     jr syscall_exit
 
@@ -95,7 +83,7 @@ label SREAD
     push hl
     ld a, (BDISK)
     or a
-    jp z, cache_read128         ; drive 0
+    jp z, fd_read128            ; drive 0
     dec a
     jp z, ata_read128           ; drive 1
     jr general_purpose_failure
@@ -108,7 +96,7 @@ label SWRITE
     push hl
     ld a, (BDISK)
     or a
-    jp z, cache_write128        ; drive 0
+    jp z, fd_write128           ; drive 0
     dec a
     jp z, ata_write128          ; drive 1
     ; fall through
