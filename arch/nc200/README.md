@@ -15,6 +15,8 @@ What you get with this port:
 
 - standard PC 720kB floppy disks (with the CP/M file system, of course, but
 they're writeable from ordinary PC drives with normal sector skew)
+- support for a hard drive of up to 32MB on a Compact Flash card (note: not
+SRAM)
 - most of an ADM-3a / Kaypro II terminal emulator supporting 80x18 text
 - a gigantic 60kB TPA
 - an interrupt-driven keyboard
@@ -25,8 +27,6 @@ and I had to do _something_ with the rest)
 What you don't get:
 
 - power management (if you turn the machine off, all state is lost)
-- memory card support (I'll get round to doing it... ~~once I find my SRAM
-  card~~ eventually)
 - repeat key
 - blinking cursor
 - printer or serial port support
@@ -76,6 +76,38 @@ To replace the CCP:
 
 Then, inserting the disk into the NC200 and warm starting CP/M will load your
 new BDOS and CCP. (You don't even have to turn it off.)
+
+
+Using a hard drive
+------------------
+
+If you want to store files on a hard drive, you'll need a PCMCIA type II ATA
+card --- a Compact Flash card plugged into an inexpensive adaptor will do
+just fine.
+
+You will have trouble plugging this in to your NC200, because the slot in the
+case is only big enough for a type I card, and type II cards are thicker. The
+NC200 comes apart relatively easily and this can be removed, although
+plugging a card in takes care without the plastic guide.
+
+**Disclaimer:** Your NC200 was designed for type I cards only. While a type II
+card works fine on mine, it may not work fine on yours --- there's more power
+draw for a start, which may cause problems and potentially damage. Don't do
+this unless you're willing to live with the consequences. If you damage your
+machine, be aware that I will express sympathy but not compensate you in any
+way: you have been warned!
+
+The drive shows up as B: in CP/M. For simplicity no partition table is used
+so the CP/M drive will occupy the entire card; however, the maximum
+filesystem size is 32MB, so if you have a larger card (which seems likely)
+any additional space will be wasted.
+
+The card needs to be formatted before use. Use `mkfs b:` to do this. This
+will destroy any data on your card.
+
+Sadly, the NC200 is unable to boot from an ATA card, so you'll still need a
+floppy disk in the drive to start cpmish; but once booted, your files will be
+available on drive B.
 
 
 Technical details
