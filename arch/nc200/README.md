@@ -14,14 +14,12 @@ seamlessly run programs from disk if you use the right keyboard combination.
 What you get with this port:
 
 - standard PC 720kB floppy disks (with the CP/M file system, of course, but
-they're writeable from ordinary PC drives with normal sector skew)
+they're writeable from ordinary PC drives)
 - support for a hard drive of up to 32MB on a Compact Flash card (note: not
 SRAM)
 - most of an ADM-3a / Kaypro II terminal emulator supporting 80x18 text
 - a gigantic 60kB TPA
 - an interrupt-driven keyboard
-- a massive disk cache (because the NC200 has 128kB of RAM, CP/M uses 64kB,
-and I had to do _something_ with the rest)
 - bugs
 
 What you don't get:
@@ -37,7 +35,12 @@ What you don't get:
 How to use it
 -------------
 
-Format a 720kB floppy disk on a PC and `dd` the `nc200.img` file onto it.
+Format a 720kB floppy disk on the NC200 and `dd` the `nc200.img` file onto it.
+
+**Important:** the NC200 uses a non-standard sector skew to improve
+performance. If you format your disks on a PC, they'll work, but using disks
+formatted on the NC200 itself (using the standard ROM software) will more
+than double disk speed.
 
 Insert the disk into the machine's drive, power on, and press Code+Q. CP/Mish
 will boot.
@@ -45,20 +48,6 @@ will boot.
 **Big warning:** CP/Mish uses _all_ the memory in your system; if you have
 files stored in RAM, **you will lose them**. The entire state of the machine
 is destroyed. You have been warned!
-
-Also, **read this before you start**:
-
-- because of the disk cache, it's only safe to change disks when you're
-looking at the command prompt. After changing disks, you _must_ do `^C` (even
-if you're using something like ZSDOS which claims to autodetect this).
-Otherwise you may corrupt your new disk.
-
-- because of the disk cache, it's only safe to power off when you're looking
-at the cursor; otherwise data may not have been written all the way to disk.
-
-- format disks on a PC, not on the NC200 itself --- for some reason trying to
-boot from an NC200-formatted disk hard crashes the machine. Don't know why;
-it's probably due to the non-standard sector skew.
 
 You can replace the CCP and BIOS with your own if you like, although you do
 need to do this from Linux (because I haven't written the CP/M tools for this
@@ -124,11 +113,8 @@ However, it's only mapped in when it's actually doing something, so user code
 will never know it exists.
 
 Given that four banks provide the 64kB of CP/M userspace, and one bank
-contains the Supervisor, this leaves three banks spare; these are used for a
-gigantic 48kB LRU disk cache which is used for deblocking and buffering. The
-Supervisor actually reads and writes entire 9kB tracks as a unit, hence the
-good disk performance, and the CP/M sector accesses just read and write from
-the buffer. It's simple and very fast.
+contains the Supervisor, this leaves three banks spare; these are currently
+unused.
 
 The terminal emulator is ADM-3a with some Kaypro II extensions, using a
 custom (drawn by me!) 6x7 font to allow 80x18 characters of text. This

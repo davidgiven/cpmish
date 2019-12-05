@@ -149,78 +149,83 @@ fd765_wait_for_seek_ending:
 
  ; --- Does SEEK ------------------------------------------------------------
 
- ; Seeks to track B.
+ ; Seeks to track in deblock buffer in IX.
  ; Returns nz on success, z on failure.
 
  fd765_seek:
-		push bc
 		call fd765_wait_until_drive_ready
-		pop bc
 		ret z
 
 		ld a, 15                    ; SEEK
 		call fd765_tx
 		xor a                       ; head 0, drive 0
 		call fd765_tx
-		ld a, b                     ; track number
+		ld a, (ix+DBS_CUR_TRACK)    ; track number
 		call fd765_tx
 		jr fd765_wait_for_seek_ending
 
-; --- Reads or writes a track -----------------------------------------------
+; --- Reads or writes a sector ----------------------------------------------
 
-; Seeks to track B and reads up to DE bytes from it into the buffer at HL.
-; This can transfer up to NINE KILOBYTES of data.
+; Reads/writes a CP/M 128-byte sector, with deblocking etc.
+;
+; On entry:
+;   BC = zero-based track to load
+;   DE = zero-based sector to load
+;
+; Returns nz on success, z on error.
+
+fd_read128:
+    ld ix, FDBUF
+	jp generic_read128
+
+fd_write128:
+	ld ix, FDBUF
+	jp generic_write128
+
+; Given a deblocker structure in IX, reads the described sector into the
+; buffer. This transfers 512 bytes of data.
 ; Returns nz on success, z on failure.
 
-fd765_read_complete_track:
-		ld de, 9*1024
-fd765_read_track:
-		ld a, 9
-		ld (data.readwritecommand+6), a
-		ld a, 0xc6 ; READ SECTORS MULTITRACK
-		call fd765_setup_read_or_write
+label FD_R512
+		ld a, 0x66 ; READ SECTORS
+		call fd765_setup_read_or_write ; sets HL and DE
 		ret z
-		jr fd765_read_bytes_from_controller
-
-; Read de bytes from the 765 into HL.
+		; fall through
+; Read DE bytes from the 765 into HL.
 fd765_read_bytes_from_controller:
 		ld c, FD_DT_PORT
 		di ; terribly important
-fd765_read_loop:
+.1
 		in a, (FD_ST_PORT)
 		rla							; RQM...
-		jr nc, fd765_read_loop      ; ...low, keep waiting
+		jr nc, .1                   ; ...low, keep waiting
 		rla							; DIO (ignore)
 		rla							; EXM...
-		jr nc, fd765_read_loop_finished ; ...low, transfer complete
+		jr nc, .2                   ; ...low, transfer complete
 		ini							; (HL++) = port(C), B--
 
 		dec de
 		ld a, d
 		or e
-		jr nz, fd765_read_loop
-fd765_read_loop_finished:
+		jr nz, .1
+.2
 		ei
 		jr fd765_complete_transfer
 
-; Seeks to track B and writes a complete track to it from the buffer at HL.
-; This will write NINE KILOBYTES of data.
+; Given a deblocker structure in IX, writes the described sector out of the
+; buffer. This transfers 512 bytes of data.
 ; Returns nz on success, z on failure.
 
-fd765_write_complete_track:
-		ld de, 9*1024
-		ld a, 9
-		ld (data.readwritecommand+6), a
-		ld a, 0xc5 ; WRITE SECTORS MULTITRACK
-		call fd765_setup_read_or_write
+label FD_W512
+		ld a, 0x65 ; WRITE SECTORS MULTITRACK
+		call fd765_setup_read_or_write ; sets HL or DE
 		ret z
-		jr fd765_write_bytes_to_controller
-
+		; fall through
 ; Writes de bytes to the 765 from HL.
 fd765_write_bytes_to_controller:
 		ld c, FD_DT_PORT
 		di ; terribly important
-.1:
+.1
 		in a, (FD_ST_PORT)
 		rla							; RQM...
 		jr nc, .1                   ; ...low, keep waiting
@@ -233,7 +238,7 @@ fd765_write_bytes_to_controller:
 		ld a, d
 		or e
 		jr nz, .1
-.2:
+.2
 		ei
 		jr fd765_complete_transfer
 
@@ -256,7 +261,7 @@ fd765_complete_transfer:
 		ld c, a
 		add hl, bc
 		ld a, (hl)
-		or a
+		or a						; return nz on success, z on failure
 		ret
 
 data.fd765_status_codes:
@@ -270,28 +275,52 @@ data.fd765_status_codes:
 		db 0    ; unknown command
 		db 0    ; disk removed
 
-; On entry, A contains the opcode, B contains the track. HL is preserved.
+; On entry, A contains the opcode, and IX is the deblocker structure.
 ; Returns nz on success, z on failure.
 fd765_setup_read_or_write:
-		push hl
 		ld (data.readwritecommand+0), a
-		ld hl, data.readwritecommand+2
-		ld (hl), b
+		xor a
+		ld (data.readwritecommand+1), a ; physical head (in bit 2)
+		ld (data.readwritecommand+3), a	; logical head
+		ld a, (ix+DBS_CUR_SECTOR)
+		cp 9						; sectors 9-17 are on the other head
+		jr c, .1					; sectors 0-8
+
+		push af
+		ld a, 4
+		ld (data.readwritecommand+1), a ; physical head (in bit 2)
+		ld a, 1
+		ld (data.readwritecommand+3), a ; logical head
+		pop af
+		
+		sub 9						; ...and adjust sector numbering
+.1
+		inc a						; cpmish uses 0-based IDs
+		ld (data.readwritecommand+4), a
+		ld (data.readwritecommand+6), a
+		ld a, (ix+DBS_CUR_TRACK)
+		ld (data.readwritecommand+2), a
+
 		call fd765_seek
-		pop hl
 		ret z
 
-		push hl
 		ld hl, data.readwritecommand
 		ld b, data.readwritecommand.end - data.readwritecommand
 		ld c, FD_DT_PORT
-fd765_setup_read_or_write_loop:
+.3
 		in a, (FD_ST_PORT)
 		rla							; RQM...
-		jr nc, fd765_setup_read_or_write_loop ; ...low, keep waiting
+		jr nc, .3                   ; ...low, keep waiting
 		outi                        ; port(C) = (HL++), B++
-		jr nz, fd765_setup_read_or_write_loop
-		pop hl
+		jr nz, .3
+
+		ld d, ixh
+		ld e, ixl
+		ex de, hl
+		ld de, DBS_BUFFER
+		add hl, de					; HL is address of buffer
+		ld de, 512					; DE is count
+
 		or 1                        ; set nz
 		ret
 
@@ -304,7 +333,7 @@ data.readwritecommand:
 		db 0        ; 3: logical head 0
 		db 1        ; 4: start sector, always 1
 		db 2        ; 5: bytes per sector: 512
-		db 9        ; 6: last sector for one track (*inclusive*)
+		db 9        ; 6: last sector (*inclusive*)
 		db 27       ; 7: gap 3 length (27 is standard for 3.5" drives)
 		db 0        ; 8: sector length (unused)
 data.readwritecommand.end:

@@ -26,20 +26,35 @@ warmboot:
 
     call fd765_recalibrate_twice
     jr z, bootfailure
-    ld a, USER3_BANK            ; Map user space 0xc000 to 0x10000.
-    out (PORT_BANK3), a
-    ld b, 1
-    ld de, 0xffff - CBASE       ; amount to read
-    inc de                      ; ideally we'd use 0x10000 in the previous line but
-                                ; the assembler doesn't like it
-    ld hl, CBASE
-    call fd765_read_track
+
+    ld bc, 0                    ; start sector
+    ld de, 1                    ; track
+    ld hl, CBASE                ; start address in userspace
+.1
+    ld (current_dma), hl        ; set destination address
+    push bc
+    push de
+    push hl
+    call fd_read128
     jr z, bootfailure
+    pop hl
+
+    ld de, 128
+    add hl, de                  ; increment destination address
+    pop de
+    pop bc
+    inc bc                      ; next sector
+    ld a, h
+    or l                        ; run off the end of the address space?
+    jr nz, .1               
 
     ; Initialise the page zero CP/M-y things.
 
     ld a, USER0_BANK
     out (PORT_BANK1), a         ; Map user space 0x0000 to 0x4000.
+    ld a, USER3_BANK            ; Map user space 0xc000 to 0xc000.
+    out (PORT_BANK3), a
+
     ld a, 0xc3                  ; JP instruction
 
     ld (0x4000 + 0x0000), a     ; For warm boot
@@ -73,6 +88,7 @@ bootfailure:
     ld hl, str.insert_disk
     call tty_puts
     call kbd_get_next_key
+    ld sp, SYSSTK
     jr warmboot
     
 str.insert_disk:

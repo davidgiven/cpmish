@@ -220,54 +220,18 @@ ide_wait:
 ; Reads/writes a CP/M 128-byte sector, with deblocking etc.
 ;
 ; On entry:
-;   BC = zero-based track to load
-;   DE = zero-based sector to load
+;   BC = zero-based sector to load
+;   DE = zero-based track to load
 ;
 ; Returns nz on success, z on error.
 
 ata_read128:
-    ld a, 0
     ld ix, ATABUF
-    call DB_GET
-    ret z
-
-    ; HL now points to the loaded buffer. Copy into userspace.
-
-    push hl
-    ld hl, (current_dma)
-    call map_userspace_dma
-    ex de, hl               ; DE = destination address
-    pop hl                  ; HL = source address
-    ld bc, 128
-    ldir
-    
-    or 1                    ; set nz (success)
-    ret
+    jp generic_read128
 
 ata_write128:
-    ld a, (deblock_flag)
     ld ix, ATABUF
-    call DB_GET
-    ret z
-
-    ; HL now points to the loaded buffer. Copy from userspace.
-
-    push hl
-    ld hl, (current_dma)
-    call map_userspace_dma  ; HL = source address
-    pop de                  ; DE = destination address
-    ld bc, 128
-    ldir
-    ld (ix+DBS_DIRTY), 1    ; mark block dirty
-
-    ld a, (deblock_flag)
-    cp 1
-    jr nz, .1               ; no need to write back
-
-    jp DB_FLUSH
-.1
-    or 1
-    ret
+    jp generic_write128
 
 label ATA_R512
     call setup_ata_read_or_write
