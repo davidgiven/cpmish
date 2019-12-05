@@ -6,21 +6,24 @@
 	maclib cpm
 	maclib nc200
 	maclib cpmish
+	maclib deblocker
 
+	declare_deblocker
+
+	extern ATABUF
 	extern BBASE
+	extern BDEBLOCK
 	extern BDISK
 	extern BDMA
 	extern BIRQ
 	extern BOOT
 	extern BSECTOR
 	extern BTRACK
-	extern BDEBLOCK
+	extern DRVBDPB
 	extern FBASE
-	extern SYSOUT
-	extern ATABUF
-	extern BHDSIZE
-	extern PBAUD
 	extern FONT
+	extern PBAUD
+	extern SYSOUT
 
 	include "interrupts.inc"
 	include "keyboard.inc"

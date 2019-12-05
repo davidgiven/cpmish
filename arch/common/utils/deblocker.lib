@@ -4,6 +4,7 @@
 
 ; This is a general deblocker library. 
 
+
 ; Describes a drive to the deblocker.
 
 DBS_NUM_SECTORS = 0     ; physical sectors
@@ -30,7 +31,11 @@ DBS__SIZE       = DBS_BUFFER + 512
 ; On exit:
 ;   Z on error, NZ on success
 
-    ; Reads or writes a 128-byte sector.
+declare_deblocker macro
+    ; Reads and/or writes a 128-byte sector.
+    ; On return, HL points at the data in the buffer. To write, update the
+    ; buffer and set the dirty flag, and on the next call to GET or FLUSH
+    ; the data will be written back.
     ; On entry:
     ;   IX = pointer to deblocker structure
     ;   A  = deblock mode (0=normal, 1=write-through, 2=no read)
@@ -38,33 +43,20 @@ DBS__SIZE       = DBS_BUFFER + 512
     ;   DE = CP/M track
     ; On exit:
     ;   Z on failure, NZ on success
-    ;   HL = address of 128 byte data
-    if IMPL
-        public DB_R128
-        public DB_W128
-    else
-        extern DB_R128
-        extern DB_W128
-    endif
+    ;   HL = address of 128 byte data in buffer
+    extern DB_GET
 
     ; Flushes the buffer to disk (if necessary).
     ; On entry:
     ;   IX = pointer to deblocker structure
     ; On exit:
     ;   Z on failure, NZ on success
-    if IMPL
-        public DB_FLUSH
-    else
-        extern DB_FLUSH
-    endif
+    extern DB_FLUSH
 
     ; Updates a DPB with a disk capacity.
     ; On entry:
     ;   IX = pointer to deblocker structure
     ;   IY = DPB
-    if IMPL
-        public DB_CAP
-    else
-        extern DB_CAP
-    endif
-    
+    ;   HL = maximum number of blocks allowed
+    extern DB_CAP
+endm

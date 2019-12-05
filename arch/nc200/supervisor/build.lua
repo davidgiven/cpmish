@@ -26,6 +26,7 @@ zmac {
     srcs = { "./supervisor.z80" },
     deps = {
         "include/*.lib",
+        "arch/common/utils/deblocker.lib",
         "arch/nc200/include/*.lib",
         "./*.inc",
         "+keytab_inc",

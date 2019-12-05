@@ -35,6 +35,24 @@ main:
         cp8 dirty, 0
     endif
 
+    ; Change to currently loaded sector with sector dirty.
+
+    if 1
+        call reset
+        ld a, 1
+        ld (dirty), a
+        ld bc, 0
+        ld de, 0
+        call change_block
+        jp z, fail
+        
+        cp8 r512_count, 0
+        cp8 w512_count, 0
+        cp16 cur_sector, 0
+        cp16 cur_track, 0
+        cp8 dirty, 1
+    endif
+
     ; Change to new sector with current sector clean.
     
     if 1

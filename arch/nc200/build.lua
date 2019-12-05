@@ -72,6 +72,11 @@ normalrule {
     }
 }
 
+unix2cpm {
+    name = "readme",
+    srcs = { "README.md" }
+}
+
 diskimage {
     name = "diskimage",
     format = "nc200cpm",
@@ -87,6 +92,7 @@ diskimage {
         ["flash.com"] = "arch/nc200/tools+flash",
         ["mkfs.com"] = "cpmtools+mkfs",
         ["rawdisk.com"] = "cpmtools+rawdisk",
+        ["-readme.txt"] = "+readme",
     },
 }
-    
+ 

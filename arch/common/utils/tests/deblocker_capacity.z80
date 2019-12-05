@@ -37,6 +37,7 @@ main:
         set8 bsh, 3
         ld ix, disk_dat
         ld iy, dpb_dat
+        ld hl, 10000
         call DB_CAP
         cp16 spt, 72
         cp16 dsm, 719
@@ -49,11 +50,51 @@ main:
         set8 bsh, 7
         ld ix, disk_dat
         ld iy, dpb_dat
+        ld hl, 10000
         call DB_CAP
         cp16 spt, 72
         cp16 dsm, 44
     endif
     
+    ; Disk is too big.
+    if 1
+        set16 sector_count, 18
+        set16 track_count, 80
+        set8 bsh, 7
+        ld ix, disk_dat
+        ld iy, dpb_dat
+        ld hl, 5
+        call DB_CAP
+        cp16 spt, 72
+        cp16 dsm, 4
+    endif
+
+    ; Disk is way too big.
+    if 1
+        set16 sector_count, 18
+        set16 track_count, 8000
+        set8 bsh, 7
+        ld ix, disk_dat
+        ld iy, dpb_dat
+        ld hl, 5
+        call DB_CAP
+        cp16 spt, 72
+        cp16 dsm, 4
+    endif
+
+    ; The hard drive.
+    if 1
+        set16 sector_count, 256
+        set16 track_count, 0x7e
+        set8 bsh, 7
+        ld ix, disk_dat
+        ld iy, dpb_dat
+        ld hl, 2048
+        call DB_CAP
+        cp16 spt, 1024
+        cp16 dsm, 1007
+    endif
+
     ret
 
 disk_dat:

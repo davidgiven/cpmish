@@ -6,17 +6,7 @@
 IMPL = not 0
     maclib deblocker
     
-DB_R128:
-    ld (buffer), hl     ; save buffer address
-    call calculate_physical
-    ret z
-    ld a, 0             ; reset deblock mode
-    ld (mode), a
-    call change_block
-    ret z
-    jr calculate_buffer_address
-
-DB_W128:
+label DB_GET
     ld (mode), a        ; save deblock mode
     call calculate_physical
     ret z
@@ -33,7 +23,8 @@ calculate_buffer_address:
     add hl, bc
     ld bc, DBS_BUFFER
     add hl, bc
-    or a                ; set nz (success)
+
+    or 1                ; set nz (success)
     ret
 
 ; On entry:
@@ -95,7 +86,7 @@ calculate_physical:
 .3
     ld (hl), 1          ; addressed sector has changed
 success:
-    ora 1               ; set nz (success)
+    or 1                ; set nz (success)
     ret
 
 error:
@@ -113,10 +104,13 @@ change_block:
 
     ld l, (ix+DBS_W512+0) ; yes, write it back
     ld h, (ix+DBS_W512+1)
-    call calli
+    push bc
+    push de
+    call pchl
+    pop de
+    pop bc
     ret z
-    xor a
-    ld (ix+DBS_DIRTY), a ; clear dirty flag
+    ld (ix+DBS_DIRTY), 0 ; clear dirty flag
 
 .1
     ld (ix+DBS_CUR_SECTOR+1), b
@@ -129,33 +123,24 @@ change_block:
     jr z, success       ; if so, don't read
     ld l, (ix+DBS_R512+0)
     ld h, (ix+DBS_R512+1)
-    jp calli
-
-calli:
-    push ix
-    push bc
-    push de
-    call pchl
-    pop de
-    pop bc
-    pop ix
-    ret
-
 pchl:
     jp (hl)
 
-DB_FLUSH:
+label DB_FLUSH
     ld a, (ix+DBS_DIRTY)
     or a
     jr z, success
 
-    xor a
-    ld (ix+DBS_DIRTY), a
     ld l, (ix+DBS_W512+0) ; yes, write it back
     ld h, (ix+DBS_W512+1)
-    jr calli
+    call pchl
+    ret z
+    ld (ix+DBS_DIRTY), 0  ; only mark block as clean if write succeeded
+    ret
 
-DB_CAP:
+label DB_CAP
+    push hl             ; maximum number of blocks
+
     ld e, (ix+DBS_NUM_SECTORS+0)
     ld d, (ix+DBS_NUM_SECTORS+1)
     ld c, (ix+DBS_NUM_TRACKS+0)
@@ -184,12 +169,14 @@ DB_CAP:
     dec a
     jr nz, .1
 
-    ; We have the total number of physical sectors in DE:HL. Divide
-    ; by the block size to get the number of blocks.
+    pop bc              ; bc = maximum number of blocks
+
+    ; We have the total number of CP/M sectors in DE:HL. Divide by the block
+    ; size to get the number of blocks.
     ld a, (iy+DPB_BSH)
-    ; The block shift is n where n is the number of bits to shift
-    ; a CP/M sector count to get a block count.
-    ; So, we want to shift DEHL right by A bits to get the block count.
+    ; The block shift is n where n is the number of bits to shift a CP/M sector
+    ; count to get a block count. So, we want to shift DEHL right by A bits to
+    ; get the block count.
 .3
     srl d
     rr e
@@ -198,16 +185,26 @@ DB_CAP:
     dec a
     jr nz, .3
 
-    ; If DE is set, the disk is too big. Use the maximum possible size.
+    ; If DE is set, the disk is too big.
     or d                ; A is 0, remember
     or e
     jr z, .4            ; jump if disk fits
-    ld a, 0xff
-    ld (iy+DPB_DSM+0), a ; 0x10000 blocks, maximum size
-    ld (iy+DPB_DSM+1), a
-    ret
+    ld h, b
+    ld l, c             ; load the maximum number of blocks
 
 .4
+    ld a, b
+    cp h
+    jr c, .5                    ; high byte too big
+    jr nz, .6                   ; high byte too low, value in range
+    ld a, l
+    cp c
+    jr c, .6                    ; low byte in range
+.5
+    ; This disk really is too big.
+    ld h, b
+    ld l, c
+.6
     dec hl              ; actually want count-1
     ld (iy+DPB_DSM+0), l
     ld (iy+DPB_DSM+1), h

@@ -61,7 +61,6 @@ cache_evict_all:
 ; On entry:
 ;   BC = zero-based track to load
 ;   DE = zero-based sector to load
-;   HL = userspace address for data
 ;
 ; Returns nz on success, z on error.
 
