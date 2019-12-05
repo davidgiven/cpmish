@@ -73,11 +73,11 @@ finished:
 ; The baked command to read a track.
 
 data.readtrack:
-    db 0xc2     ; 0: READ TRACK MULTITRACK
+    db 0xc6     ; 0: READ DATA MULTITRACK
     db 0        ; 1: physical head 0, drive 0
     db 0        ; 2: track 0
     db 0        ; 3: logical head 0
-    db 0        ; 4: unused
+    db 1        ; 4: first sector
     db 2        ; 5: bytes per sector: 512
     db 9        ; 6: last sector for one track (*inclusive*)
     db 27       ; 7: gap 3 length (27 is standard for 3.5" drives)
