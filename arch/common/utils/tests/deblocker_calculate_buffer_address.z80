@@ -1,0 +1,27 @@
+; cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    jp main
+    include "../deblocker.z80"
+main:
+    if 1
+        ld ix, 0x1234
+        ld a, 3
+        ld (offset), a
+        call calculate_buffer_address
+
+        ld bc, 0x1234 + DBS_BUFFER + (3*128)
+        or a
+        sbc hl, bc
+        jr nz, fail
+    endif
+    ret
+
+fail:
+    ld de, .str
+    ld c, 9
+    jp 5
+.str: db "FAILED", 13, 10, '$'
+    
+

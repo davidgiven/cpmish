@@ -1,0 +1,37 @@
+; Amstrad NC200 cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+	maclib supervisor
+	maclib cpm
+	maclib nc200
+	maclib cpmish
+
+	extern ATA_R512
+	extern ATA_W512
+
+label ATABUF
+    dw 256      ; number of sectors
+    dw 0        ; number of tracks; filled in later
+    dw ATA_R512 ; read callback
+    dw ATA_W512 ; write callback
+    dw 0        ; current sector
+    dw 0        ; current track
+    db 0        ; dirty flag
+    ds 512      ; buffer
+
+label FDBUF
+	dw 18		; number of sectors
+	dw 80		; number of tracks
+	dw 0		; read callback
+	dw 0		; write callback
+	dw 0		; current sector
+	dw 0		; current track
+	db 0		; dirty flag
+	ds 512
+
+label PBAUD
+	db 1
+
+label FONT
+	include "font.inc"

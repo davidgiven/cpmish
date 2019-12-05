@@ -68,14 +68,14 @@ L_continue:
 L_no_card:
     ; If we get here, no card was found.
     ld hl, 0
-    ld (ata_blocks), hl
+    ld (ATABUF+DBS_NUM_TRACKS), hl
     ld hl, str.no_card
     jp tty_puts
 
 L_bad_card:
     ; If we get here, a bad card was found.
     ld hl, 0
-    ld (ata_blocks), hl
+    ld (ATABUF+DBS_NUM_TRACKS), hl
     ld hl, str.not_ata
     jp tty_puts
 
@@ -150,61 +150,43 @@ L_found_ata_card:
     ld a, IDE_STATUS_DATAREQUEST
     call ide_wait
 	ld hl, IDEREG_DATABLOCK
-	ld de, ATABUF
+	ld de, ATABUF+DBS_BUFFER
 	ld bc, 512
 	ldir
 
     ld hl, str.capacity1
     call tty_puts
 
-    ; ATABUF+120 contains the 32-bit number of 512-byte sectors in the disk.
-    ; The BIOS wants to know the number of 16384-byte blocks. As there are
-    ; 32 physical sectors per block, we need to shift this right by five
-    ; bits. Oh, boy.
+    ; buffer+120 contains the 32-bit number of 512-byte sectors in the disk.
+    ; We've made sure that there are 256 512-byte sectors per track, so to
+    ; get the track number we just want the top three bytes.
 
-    ld b, 5
+    ld hl, 0xffff           ; maximum number of tracks
+    ld a, (ATABUF+DBS_BUFFER+123)      ; top byte
+    or a
+    jr nz, .1               ; too many tracks? just use hl
+    ld hl, (ATABUF+DBS_BUFFER+121)
 .1
-    xor a
-    ld hl, ATABUF+123
-    rr (hl)
-    dec hl
-    rr (hl)
-    dec hl
-    rr (hl)
-    dec hl
-    rr (hl)
-    djnz .1
+    ld (ATABUF+DBS_NUM_TRACKS), hl
 
-    ld de, DRIVE_B_BLOCKS   ; maximum number of blocks
-    ld hl, (ATABUF+122)     ; high word of LBA size
-    ld a, h
-    or l
-    jr nz, .2               ; disk is too big
-    ld hl, (ATABUF+120)     ; low word of LBA size
-    ld a, d
-    cp h                    ; compare with high byte of maximum number of blocks
-    jr nc, .2               ; disk is still too big
-    xchg                    ; computed number of blocks is valid; de->hl
-.2
-    ld (ata_blocks), hl     ; save the number of blocks
-    ; There are 64 blocks per megabyte. 6-bit right shift from
-    ; http://www.chilliant.com/z80shift.html:
-    xor a
-    add hl, hl
-    rla
-    add hl, hl
-    rla
-    ld l, h
-    ld h, a
+    ; There is 128kB on each track. To get megabytes, divide by 8.
+    ld a, l
+    srl h
+    rra
+    srl h
+    rra
+    srl h
+    rra
+    ld l, a
     call tty_putdec16
     ld hl, str.capacity2
     call tty_puts
 
     ld hl, 0xffff
-    ld (ata_lba_current+0), hl
-    ld (ata_lba_current+2), hl
+    ld (ATABUF+DBS_CUR_SECTOR), hl
+    ld (ATABUF+DBS_CUR_TRACK), hl
     xor a
-    ld (ata_dirty), a
+    ld (ATABUF+DBS_DIRTY), a
     ret
 
 ; Waits for a specific IDE status, in A (or failure). Sets z on error.
@@ -232,7 +214,7 @@ ide_wait:
     call tty_puthex8
     call tty_newline
 
-    cp a                    ; set z (failed)
+    or a                    ; set z (failed)
     ret
 
 ; Reads/writes a CP/M 128-byte sector, with deblocking etc.
@@ -240,69 +222,54 @@ ide_wait:
 ; On entry:
 ;   BC = zero-based track to load
 ;   DE = zero-based sector to load
-;   HL = userspace address for data
 ;
 ; Returns nz on success, z on error.
 
 ata_read128:
-    call calculate_lba
-    ret z
-    call ata_change_block
-    ret z
-
-    ; Now copy the CP/M sector from the ATA buffer into userspace.
-
-    ld hl, (current_dma)
-    call map_userspace_dma
-    ex de, hl               ; DE = destination address
-    call calculate_ata_buffer_address ; HL = source address
-    ld bc, 128
-    ldir
-
-    or 1                    ; set nz
-    ret
-
-ata_write128:
-    call calculate_lba
-    ret z
-    call ata_change_block
+    ld a, 0
+    ld ix, ATABUF
+    call DB_GET
     ret z
 
-    ; Now copy the CP/M sector from userspace into the ATA buffer.
+    ; HL now points to the loaded buffer. Copy into userspace.
 
-    ld hl, (current_dma)
-    call map_userspace_dma
     push hl
-    call calculate_ata_buffer_address
+    ld hl, (current_dma)
+    call map_userspace_dma
     ex de, hl               ; DE = destination address
     pop hl                  ; HL = source address
     ld bc, 128
     ldir
-
-    jr ata_write256
-    ld hl, ata_dirty
-    ld (hl), 0              ; mark block as *clean*...
-    ld a, (BDEBLOCK)
-    cp 1
-    jr z, ata_write256      ; ...because we might be asked to write it back.
-
-    inc (hl)                ; otherwise it's dirty.
+    
     or 1                    ; set nz (success)
     ret
 
-; Returns the address of a CP/M sector in the ATA buffer in HL. Corrupts BC.
-calculate_ata_buffer_address:
-    ld a, (current_sector)
-    and 3                   ; get 0, 1, 2, 3 offset
-    rra                     ; HL = A<<7
-    ld h, a
-    ld l, 0
-    rr l
-    ld bc, ATABUF
-    add hl, bc              ; HL = address of sector
+ata_write128:
+    ld a, (deblock_flag)
+    ld ix, ATABUF
+    call DB_GET
+    ret z
+
+    ; HL now points to the loaded buffer. Copy from userspace.
+
+    push hl
+    ld hl, (current_dma)
+    call map_userspace_dma  ; HL = source address
+    pop de                  ; DE = destination address
+    ld bc, 128
+    ldir
+    ld (ix+DBS_DIRTY), 1    ; mark block dirty
+
+    ld a, (deblock_flag)
+    cp 1
+    jr nz, .1               ; no need to write back
+
+    jp DB_FLUSH
+.1
+    or 1
     ret
 
-ata_read256:
+label ATA_R512
     call setup_ata_read_or_write
     ret z
 
@@ -315,7 +282,11 @@ ata_read256:
 
     ; Copy the block from the IDE interface into the ATA buffer.
 
-    ld de, ATABUF           ; DE = destination address
+    ld hl, DBS_BUFFER
+    ld b, ixh
+    ld c, ixl
+    add hl, bc
+    ex de, hl               ; DE = destination address
     ld hl, IDEREG_DATABLOCK ; HL = source address
     ld bc, 512
     ldir
@@ -323,7 +294,7 @@ ata_read256:
     or 1                    ; set nz (success)
     ret
 
-ata_write256:
+label ATA_W512
     call setup_ata_read_or_write
     ret z
 
@@ -336,81 +307,16 @@ ata_write256:
 
     ; Copy the block from the ATA buffer interface into the IDE interface.
 
+    ld hl, DBS_BUFFER
+    ld b, ixh
+    ld c, ixl
+    add hl, bc              ; HL = source address
     ld de, IDEREG_DATABLOCK ; DE = destination address
-    ld hl, ATABUF           ; HL = source address
     ld bc, 512
     ldir
 
-    or 1                    ; set nz (success)
-    ret
-
-; Calculates the LBA address of the NEXT block.
-calculate_lba:
-    ld a, (current_sector+1) ; check that the sector count <0x400
-    cp 4
-    jp nc, out_of_bounds
-
-    ; Calculate the LBA address of the block.
-
-    ld a, 0xe0              ; top LBA byte is 0 (plus drive sector)
-    ld (ata_lba_next+3), a
-
-    ld hl, (current_sector) ; load the sector number / 4
-    srl h
-    rr l
-    srl h
-    rr l
-    ld (ata_lba_next+0), hl ; corrupts +1, which we fix next
-
-    ld hl, (current_track)  ; load the track number
-    ld (ata_lba_next+1), hl
-
-    ; Determine whether the LBA block has changed.
-    
-    ld c, 1
-    ld hl, ata_lba_current
-    ld de, ata_lba_next
-    ld b, 4
-.1
-    ld a, (de)
-    cp (hl)
-    jr nz, .2               ; bytes different, exit loop
-    inc hl
-    inc de
-    djnz .1
-    ld c, 0                 ; bytes all the same, don't change
-.2 
-    ld hl, ata_lba_changed
-    ld (hl), c
-
-    or 1                    ; set nz (success)
-    ret
-
-; Changes the block in the buffer. Returns z/nz 
-ata_change_block:
-    ld a, (ata_lba_changed)
-    or a
-    jr z, .2                ; block number hasn't changed, do nothing
-
-    ld a, (ata_dirty)
-    or a
-    jr z, .1
-    call ata_write256       ; the previous block was dirty, write it back
-    ret z
-    xor a
-    ld (ata_dirty), a
-.1
-    ld hl, (ata_lba_next+0)
-    ld (ata_lba_current+0), hl
-    ld hl, (ata_lba_next+2)
-    ld (ata_lba_current+2), hl
-
-    ld a, (BDEBLOCK)
-    cp 2                    ; looking at new block?
-    jr z, .2                ; if so, skip read
-    jp ata_read256          ; read new block
-.2
-    or 1                    ; set nz (success)
+    ld a, IDE_STATUS_READY
+    call ide_wait           ; check for disk error
     ret
 
 ; Prepares to read and write the CURRENT block.
@@ -426,10 +332,25 @@ setup_ata_read_or_write:
     out (PORT_BAUDRATE), a  ; read common space
     ei
 
-    ld hl, (ata_lba_current+0)
-    ld (IDEREG_LBA0), hl
-    ld hl, (ata_lba_current+2)
-    ld (IDEREG_LBA2), hl
+    ld a, IDE_STATUS_READY
+    call ide_wait
+    ret z
+
+    ld hl, IDEREG_LBA0
+
+    ld a, (ix+DBS_CUR_SECTOR+0)
+    ld (hl), a
+    inc hl
+
+    ld a, (ix+DBS_CUR_TRACK+0)
+    ld (hl), a
+    inc hl
+
+    ld a, (ix+DBS_CUR_TRACK+1)
+    ld (hl), a
+    inc hl
+
+    ld (hl), 0xe0           ; top LBA byte is 0 (plus drive selector)
 
     ld a, IDE_STATUS_READY
     call ide_wait
@@ -440,12 +361,6 @@ setup_ata_read_or_write:
 
     or 1                    ; set nz
     ret
-
-ata_blocks:      dw 0
-ata_lba_current: dw 0, 0
-ata_lba_next:    dw 0, 0
-ata_lba_changed: db 0
-ata_dirty:       db 0
 
 str.capacity1: db "Card is ATA with ", 0
 str.capacity2: db " MB", 13, 10, 0

@@ -185,6 +185,7 @@ void copy_one_file(FCB* src, FCB* dest)
     print(": ");
 
     cpm_set_user(destuser);
+    cpm_set_dma(buffer_start); /* findfirst writes to this */
     destexists = cpm_findfirst(dest) != 0xff;
     if (destexists)
     {

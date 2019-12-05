@@ -53,6 +53,7 @@ ld80 {
         "arch/nc200/supervisor+variables",
         "-P1000", "+rootdir.z80",
         "arch/nc200/supervisor+supervisor",
+        "arch/common/utils+deblocker",
         "-P1e00", "+relauto.z80",
         "-Pe700", "third_party/zcpr1+zcpr",
         "-Pef00", "third_party/zsdos+zsdos",
@@ -71,6 +72,11 @@ normalrule {
     }
 }
 
+unix2cpm {
+    name = "readme",
+    srcs = { "README.md" }
+}
+
 diskimage {
     name = "diskimage",
     format = "nc200cpm",
@@ -86,6 +92,7 @@ diskimage {
         ["flash.com"] = "arch/nc200/tools+flash",
         ["mkfs.com"] = "cpmtools+mkfs",
         ["rawdisk.com"] = "cpmtools+rawdisk",
+        ["-readme.txt"] = "+readme",
     },
 }
-    
+ 

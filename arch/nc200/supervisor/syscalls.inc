@@ -20,9 +20,13 @@ SREAD_DEBUG:    equ 0
 label SYSIN
     ld sp, SYSSTK
     ei
+    push ix
+    push iy
     jp (hl)
 
 syscall_exit:
+    pop iy
+    pop ix
     di
     ld a, USER3_BANK
     out (PORT_BANK3), a
@@ -87,50 +91,47 @@ label SCONST
 label SREAD
     call setup_read_or_write
 
-    ld hl, .1
+    ld hl, exit_read_or_write
     push hl
     ld a, (BDISK)
     or a
-    jp z, cache_read128
-    jp ata_read128
-.1
-    ld l, 0
-    jr z, general_purpose_failure
-    jp syscall_exit
+    jp z, cache_read128         ; drive 0
+    dec a
+    jp z, ata_read128           ; drive 1
+    jr general_purpose_failure
 
 ; Write 128-byte CP/M sector.
 label SWRITE
     call setup_read_or_write
     
-    ld hl, .1
+    ld hl, exit_read_or_write
     push hl
     ld a, (BDISK)
     or a
-    jp z, cache_write128
-    jp ata_write128
-.1
+    jp z, cache_write128        ; drive 0
+    dec a
+    jp z, ata_write128          ; drive 1
+    ; fall through
+general_purpose_failure:
+    ld l, 1
+    jp syscall_exit
+
+exit_read_or_write:
     ld l, 0
     jr z, general_purpose_failure
     jp syscall_exit
 
 setup_read_or_write:
-    ld a, (BDISK)
-    and 0xfe                    ; 0 or 1 are valid
-    jr nz, general_purpose_failure
-
-    ld hl, (BTRACK)             ; copy the transfer data into supervisor storage
-    ld (current_track), hl
-    ld hl, (BSECTOR)
-    ld (current_sector), hl
+    ld de, (BTRACK)             ; copy the transfer data into supervisor storage
+    ld (current_track), de
+    ld bc, (BSECTOR)
+    ld (current_sector), bc
     ld hl, (BDMA)
     ld (current_dma), hl
     ld a, (BDEBLOCK)
     ld (deblock_flag), a
+    ld a, (BDISK)
     ret
-
-general_purpose_failure:
-    ld l, 1
-    jp syscall_exit
 
 ; Miscellaneous unsupported system calls.
 label SLIST

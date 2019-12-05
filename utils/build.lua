@@ -57,3 +57,28 @@ definerule("objectifyc",
         }
     end
 )
+
+cprogram {
+    name = "unix2cpm",
+    srcs = { "./unix2cpm.c" }
+}
+
+definerule("unix2cpm",
+    {
+        srcs = { type="targets" },
+    },
+    function (e)
+        return normalrule {
+            name = e.name,
+            ins = {
+                "utils+unix2cpm",
+                e.srcs,
+            },
+            outleaves = { e.name..".txt" },
+            commands = {
+                "%{ins[1]} < %{ins[2]} > %{outs}"
+            }
+        }
+    end
+)
+

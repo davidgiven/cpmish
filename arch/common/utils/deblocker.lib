@@ -1,0 +1,62 @@
+; cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is a general deblocker library. 
+
+
+; Describes a drive to the deblocker.
+
+DBS_NUM_SECTORS = 0     ; physical sectors
+DBS_NUM_TRACKS  = 2     ; physical tracks
+DBS_R512        = 4     ; callback, see below
+DBS_W512        = 6     ; callback, see below
+DBS_CUR_SECTOR  = 8     ; current physical sector
+DBS_CUR_TRACK   = 10    ; current physical track
+DBS_DIRTY       = 12
+DBS_BUFFER      = 13
+DBS__SIZE       = DBS_BUFFER + 512
+; The R512 and W512 callbacks are used to read and write physical sectors.
+; They access from DBS_CUR_SECTOR/DBS_CUR_TRACK and read or write DBS_BUFFER.
+;
+; Note that W128 does not actually write the supplied data --- it requires
+; the caller to copy the data to the 128-byte buffer at HL after the call.
+; The *next* call to R128 or W128 will flush the data. For deblock mode
+; 1, the caller's required to call FLUSH to flush the buffer once this
+; is done.
+; 
+; They have the following signature:
+; On entry:
+;   IX = pointer to deblocker structure
+; On exit:
+;   Z on error, NZ on success
+
+declare_deblocker macro
+    ; Reads and/or writes a 128-byte sector.
+    ; On return, HL points at the data in the buffer. To write, update the
+    ; buffer and set the dirty flag, and on the next call to GET or FLUSH
+    ; the data will be written back.
+    ; On entry:
+    ;   IX = pointer to deblocker structure
+    ;   A  = deblock mode (0=normal, 1=write-through, 2=no read)
+    ;   BC = CP/M sector
+    ;   DE = CP/M track
+    ; On exit:
+    ;   Z on failure, NZ on success
+    ;   HL = address of 128 byte data in buffer
+    extern DB_GET
+
+    ; Flushes the buffer to disk (if necessary).
+    ; On entry:
+    ;   IX = pointer to deblocker structure
+    ; On exit:
+    ;   Z on failure, NZ on success
+    extern DB_FLUSH
+
+    ; Updates a DPB with a disk capacity.
+    ; On entry:
+    ;   IX = pointer to deblocker structure
+    ;   IY = DPB
+    ;   HL = maximum number of blocks allowed
+    extern DB_CAP
+endm

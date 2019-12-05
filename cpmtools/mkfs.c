@@ -142,7 +142,7 @@ void main(void)
     cpm_conout(cpm_fcb.dr + '@');
     printx(", destroying everything on it.");
     printx("Press Y to proceed, anything else to cancel:");
-    if (cpm_conin() != 'y')
+    if (cpm_conio(0xfd) != 'y')
         fatal("Aborted.");
 
     printx("Formatting now...");
@@ -159,11 +159,6 @@ void main(void)
             uint8_t i;
             for (i=0; i<blocksize/128; i++)
             {
-                printi(track);
-                cpm_conout(' ');
-                printi(sector);
-                crlf();
-
                 cpm_bios_settrk(track);
                 cpm_bios_setsec(sector);
                 if (cpm_bios_write())

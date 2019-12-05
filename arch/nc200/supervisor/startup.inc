@@ -26,7 +26,7 @@ warmboot:
 
     call fd765_recalibrate_twice
     jr z, bootfailure
-    ld a, USER3_BANK            ; Map user space 0xc000 to 0xc000.
+    ld a, USER3_BANK            ; Map user space 0xc000 to 0x10000.
     out (PORT_BANK3), a
     ld b, 1
     ld de, 0xffff - CBASE       ; amount to read
@@ -59,10 +59,11 @@ warmboot:
     ld hl, 0x0080
     ld (BDMA), hl
 
-    ld hl, (ata_blocks)
-    dec hl                      ; actually want maximum block number
-    ld (BHDSIZE), hl
-    
+    ld ix, ATABUF
+    ld iy, DRVBDPB
+    ld hl, DRIVE_B_BLOCKS
+    call DB_CAP                 ; update the HD disk size
+
     ; Now jump to the BIOS so it can page in the rest of userspace
     ; and start the CCP.
 

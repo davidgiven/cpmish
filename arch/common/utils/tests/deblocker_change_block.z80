@@ -1,0 +1,146 @@
+; cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+cp8 macro VAR, VAL
+    ld a, (VAR)
+    cp VAL
+    jp nz, fail
+    endm
+
+cp16 macro VAR, VAL
+    ld hl, (VAR)
+    ld bc, VAL
+    or a
+    sbc hl, bc
+    jp nz, fail
+    endm
+
+    jp main
+    include "../deblocker.z80"
+main:
+    ; Change to currently loaded sector.
+
+    if 1
+        call reset
+        ld bc, 0
+        ld de, 0
+        call change_block
+        jp z, fail
+        
+        cp8 r512_count, 0
+        cp8 w512_count, 0
+        cp16 cur_sector, 0
+        cp16 cur_track, 0
+        cp8 dirty, 0
+    endif
+
+    ; Change to currently loaded sector with sector dirty.
+
+    if 1
+        call reset
+        ld a, 1
+        ld (dirty), a
+        ld bc, 0
+        ld de, 0
+        call change_block
+        jp z, fail
+        
+        cp8 r512_count, 0
+        cp8 w512_count, 0
+        cp16 cur_sector, 0
+        cp16 cur_track, 0
+        cp8 dirty, 1
+    endif
+
+    ; Change to new sector with current sector clean.
+    
+    if 1
+        call reset
+        ld a, 1
+        ld (changed), a
+        ld bc, 1
+        ld de, 0
+        call change_block
+        jp z, fail
+        
+        cp8 r512_count, 1
+        cp8 w512_count, 0
+        cp16 cur_sector, 1
+        cp16 cur_track, 0
+        cp8 dirty, 0
+    endif
+
+    ; Change to new sector with current sector dirty.
+    
+    if 1
+        call reset
+        ld a, 1
+        ld (changed), a
+        ld (dirty), a
+        ld bc, 1
+        ld de, 0
+        call change_block
+        jp z, fail
+        
+        cp8 r512_count, 1
+        cp8 w512_count, 1
+        cp16 cur_sector, 1
+        cp16 cur_track, 0
+        cp8 dirty, 0
+    endif
+
+    ret
+
+reset:
+    ld ix, disk_dat
+    ld hl, 0
+    ld (cur_sector), hl
+    ld (cur_track), hl
+    xor a
+    ld (r512_count), a
+    ld (w512_count), a
+    ld (dirty), a
+    ld (changed), a
+    ld (mode), a
+    ret
+    
+; Mock R512 which always succeeds.
+r512:
+    push hl
+    ld hl, r512_count
+    inc (hl)
+    pop hl
+    ora 1
+    ret
+    
+; Mock W512 which always succeeds.
+w512:
+    push hl
+    ld hl, w512_count
+    inc (hl)
+    pop hl
+    ora 1
+    ret
+    
+r512_count: db 0
+w512_count: db 0
+
+disk_dat:
+    dw 10       ; sector count
+    dw 1        ; track count
+    dw r512     ; R512
+    dw w512     ; W512
+cur_sector:
+    dw 0        ; current sector
+cur_track:
+    dw 0        ; current track
+dirty:
+    db 0        ; dirty flag
+    
+fail:
+    ld de, .str
+    ld c, 9
+    jp 5
+.str: db "FAILED", 13, 10, '$'
+    
