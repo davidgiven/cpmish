@@ -8,6 +8,16 @@ diskdef nc200cpm
   os 2.2
 end
 
+diskdef nc200cf
+  seclen 512
+  tracks 256
+  sectrk 256
+  blocksize 16384
+  maxdir 512
+  boottrk 0
+  os 2.2
+end
+
 diskdef osborne1
    seclen 1024
    tracks 40

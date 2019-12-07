@@ -98,6 +98,14 @@ Sadly, the NC200 is unable to boot from an ATA card, so you'll still need a
 floppy disk in the drive to start cpmish; but once booted, your files will be
 available on drive B.
 
+If you have a CF card reader for a modern machine, the diskdefs file in the
+cpmish root should allow access to files on the card:
+
+    cpmcp -f nc200cf -i /dev/sdf 0:oncpm onlinux
+
+Be aware that it's set up for a 32MB file system so if you have a smaller card
+you will need to be careful writing to it.
+
 
 Technical details
 -----------------
