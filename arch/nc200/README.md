@@ -20,6 +20,7 @@ SRAM)
 - most of an ADM-3a / Kaypro II terminal emulator supporting 80x18 text
 - a gigantic 60kB TPA
 - an interrupt-driven keyboard
+- parallel printer support
 - bugs
 
 What you don't get:
@@ -27,7 +28,7 @@ What you don't get:
 - power management (if you turn the machine off, all state is lost)
 - repeat key
 - blinking cursor
-- printer or serial port support
+- serial port support
 - sysgen, format etc
 - no bugs
 
@@ -42,7 +43,7 @@ performance. If you format your disks on a PC, they'll work, but using disks
 formatted on the NC200 itself (using the standard ROM software) will more
 than double disk speed.
 
-Insert the disk into the machine's drive, power on, and press Code+Q. CP/Mish
+Insert the disk into the machine's drive, power on, and press Code+R. CP/Mish
 will boot.
 
 **Big warning:** CP/Mish uses _all_ the memory in your system; if you have
