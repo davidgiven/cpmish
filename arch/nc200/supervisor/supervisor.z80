@@ -25,6 +25,7 @@
 	extern FONT
 	extern PBAUD
 	extern SYSOUT
+	extern SYSSTK
 
 	include "interrupts.inc"
 	include "keyboard.inc"
@@ -34,4 +35,5 @@
 	include "io.inc"
 	include "tty.inc"
 	include "pcmcia.inc"
+	include "printer.inc"
 

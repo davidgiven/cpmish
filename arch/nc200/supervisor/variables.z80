@@ -37,3 +37,7 @@ label PBAUD
 
 label FONT
 	include "font.inc"
+
+supervisor_stack:
+	ds 64
+label SYSSTK

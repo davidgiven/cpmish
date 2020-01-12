@@ -57,7 +57,7 @@ label SCONIN
     call tty_undraw_cursor
     jr syscall_exit
 
-; Write console: writes char in A.
+; Write console: writes char in C.
 
 label SCONOUT
     call tty_undraw_cursor
@@ -70,10 +70,22 @@ label SCONOUT
 label SCONST
     call tty_draw_cursor
     call kbd_test_pending_key
+exit_with_status:
     ld l, 0
     jr z, syscall_exit
-    ld l, 0xff
+    dec l
     jr syscall_exit
+
+; Write printer: writes char in C.
+label SLIST
+    ld a, c
+    call lst_print
+    jr syscall_exit
+
+; Test printer: returns 0xff in A if printer is ready for writing.
+label SLISTST
+    call lst_test_busy
+    jr exit_with_status
 
 ; Read 128-byte CP/M sector.
 label SREAD
@@ -122,8 +134,6 @@ setup_read_or_write:
     ret
 
 ; Miscellaneous unsupported system calls.
-label SLIST
-label SLISTST
 label SPUNCH
 label SREADER
     ld l, 0

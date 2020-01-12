@@ -97,7 +97,3 @@ str.insert_disk:
 str.banner:
     cpmish_banner "Amstrad NC200"
     db 0
-
-supervisor_stack:
-		ds 64
-label SYSSTK
