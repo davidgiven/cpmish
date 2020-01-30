@@ -1,0 +1,112 @@
+; Brother 'OP2' cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is the executable which is loaded and run by the Brother's OS. It gets
+; loaded into the SRAM at 0x5000, leaving the 64kB of DRAM unused. Brother's
+; OS is running, and it's got a watchdog timer, so we have to be careful.
+; You get 0x1000 bytes of space.
+
+	maclib brotherop2
+
+	dw MAGIC_OP2
+
+	ld sp, stack + 128
+	di
+
+	call clear_screen
+
+	ld hl, 0x0000
+	ld (cursor_x), hl
+	ld hl, str.hello_world
+	call puts
+
+	jr $
+
+print_hex:
+	ld c, h
+	call print_hex_8
+	ld c, l
+print_hex_8:
+	ld a, c
+	rra
+	rra
+	rra
+	rra
+	call print_hex_4
+	ld a, c
+print_hex_4:
+	and 0x0f
+	add a, 0x90
+	daa
+	adc a, 0x40
+	daa
+	jr putchar
+
+putchar:
+	call putxy
+	push hl
+	ld hl, cursor_x
+	inc (hl)
+	pop hl
+	ret
+
+putxy:
+	push hl
+	ld hl, (cursor_x)
+	dec hl
+	inc l
+	out0h PORT_VIDEO_Y
+	ld h, 0
+	add hl, hl
+	out0l PORT_VIDEO_X
+	cp a, ' '
+	jr nz, .1
+	xor a
+.1
+	ld l, 0
+	out0l PORT_VIDEO_DATA
+	out0a PORT_VIDEO_DATA
+	pop hl
+	ret
+
+puts:
+	ld a, (hl)
+	or a
+	ret z
+	call putchar
+	inc hl
+	jr puts
+	
+clear_screen:
+	xor a
+	ld (cursor_y), a
+.1
+	xor a
+	ld (cursor_x), a
+.2
+	xor a
+	call putxy
+	ld a, (cursor_x)
+	inc a
+	ld (cursor_x), a
+	cp a, 80
+	jr nz, .2
+
+	ld a, (cursor_y)
+	inc a
+	ld (cursor_y), a
+	cp a, 14
+	jr nz, .1
+	ret
+
+cursor_x:
+	db 0
+cursor_y:
+	db 0
+
+str.hello_world:
+	db "Look, I'm running custom code on a Brother word processor!", 0
+
+stack:
+

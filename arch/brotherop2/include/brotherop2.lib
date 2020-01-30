@@ -1,0 +1,48 @@
+MAGIC_OP2 = 0xE189
+
+BBR = 0x39
+CBR = 0x38
+CBAR = 0x3a
+
+PORT_VIDEO_X = 0x72
+PORT_VIDEO_Y = 0x73
+PORT_VIDEO_DATA = 0x74
+
+SCREEN_WIDTH = 80
+SCREEN_HEIGHT = 14
+
+out0a   macro port
+        dw 0x39ed
+        db port
+        endm
+
+out0b   macro port
+        dw 0x01ed
+        db port
+        endm
+
+out0c   macro port
+        dw 0x09ed
+        db port
+        endm
+
+out0d   macro port
+        dw 0x11ed
+        db port
+        endm
+
+out0e   macro port
+        dw 0x19ed
+        db port
+        endm
+
+out0h   macro port
+        dw 0x21ed
+        db port
+        endm
+
+out0l   macro port
+        dw 0x29ed
+        db port
+        endm
+

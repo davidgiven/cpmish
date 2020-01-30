@@ -9,5 +9,6 @@ installable {
         ["emu"] = "utils/emu+emu",
         ["nc200.img"] = "arch/nc200+diskimage",
         ["kayproii.img"] = "arch/kayproii+diskimage",
+		["cpmish.op2"] = "arch/brotherop2+boot",
     }
 }
