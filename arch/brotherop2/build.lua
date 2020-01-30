@@ -7,7 +7,8 @@ zmac {
     srcs = { "./boot.z80" },
     deps = {
         "include/*.lib",
-        "./include/*.lib"
+        "./include/*.lib",
+		"arch/common/utils/tty.lib"
     },
 }
 

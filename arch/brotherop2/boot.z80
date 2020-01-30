@@ -2,58 +2,47 @@
 ; This file is distributable under the terms of the 2-clause BSD license.
 ; See COPYING.cpmish in the distribution root directory for more information.
 
-; This is the executable which is loaded and run by the Brother's OS. It gets
-; loaded into the SRAM at 0x5000, leaving the 64kB of DRAM unused. Brother's
-; OS is running, and it's got a watchdog timer, so we have to be careful.
-; You get 0x1000 bytes of space.
+; This is the executable which is loaded and run by the Brother's OS. It
+; gets loaded with BBR=CBR=0x50, CBAR=0x55, which means that DRAM from
+; physical addresses 0x55000 to 0x5ffff is mapped to logical 0x5000 to 0xffff.
 
 	maclib brotherop2
 
 	dw MAGIC_OP2
 
-	ld sp, stack + 128
+	ld sp, stack+128
 	di
 
-	call clear_screen
+	call tty_init
 
-	ld hl, 0x0000
-	ld (cursor_x), hl
-	ld hl, str.hello_world
-	call puts
+	call tty_putsi
+	db 'BBR = ', 0
+	in0a BBR
+	call tty_puthex8
+
+	call tty_putsi
+	db 13, 10, 'CBR = ', 0
+	in0a CBR
+	call tty_puthex8
+
+	call tty_putsi
+	db 13, 10, 'CBAR = ', 0
+	in0a CBAR
+	call tty_puthex8
 
 	jr $
 
-print_hex:
-	ld c, h
-	call print_hex_8
-	ld c, l
-print_hex_8:
-	ld a, c
-	rra
-	rra
-	rra
-	rra
-	call print_hex_4
-	ld a, c
-print_hex_4:
-	and 0x0f
-	add a, 0x90
-	daa
-	adc a, 0x40
-	daa
-	jr putchar
+EMULATE_CLEAR_TO_EOL = 1
+EMULATE_CLEAR_TO_EOS = 1
+	maclib tty
 
-putchar:
-	call putxy
-	push hl
-	ld hl, cursor_x
-	inc (hl)
-	pop hl
+tty_scroll:
+tty_insert_line:
+tty_delete_line:
 	ret
 
-putxy:
-	push hl
-	ld hl, (cursor_x)
+tty_rawwrite:
+	ld hl, (tty_cursorx)
 	dec hl
 	inc l
 	out0h PORT_VIDEO_Y
@@ -67,46 +56,8 @@ putxy:
 	ld l, 0
 	out0l PORT_VIDEO_DATA
 	out0a PORT_VIDEO_DATA
-	pop hl
 	ret
 
-puts:
-	ld a, (hl)
-	or a
-	ret z
-	call putchar
-	inc hl
-	jr puts
-	
-clear_screen:
-	xor a
-	ld (cursor_y), a
-.1
-	xor a
-	ld (cursor_x), a
-.2
-	xor a
-	call putxy
-	ld a, (cursor_x)
-	inc a
-	ld (cursor_x), a
-	cp a, 80
-	jr nz, .2
-
-	ld a, (cursor_y)
-	inc a
-	ld (cursor_y), a
-	cp a, 14
-	jr nz, .1
-	ret
-
-cursor_x:
-	db 0
-cursor_y:
-	db 0
-
-str.hello_world:
-	db "Look, I'm running custom code on a Brother word processor!", 0
-
+	dseg
 stack:
 

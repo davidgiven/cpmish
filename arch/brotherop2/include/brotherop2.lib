@@ -46,3 +46,38 @@ out0l   macro port
         db port
         endm
 
+in0a   macro port
+        dw 0x38ed
+        db port
+        endm
+
+in0b   macro port
+        dw 0x00ed
+        db port
+        endm
+
+in0c   macro port
+        dw 0x08ed
+        db port
+        endm
+
+in0d   macro port
+        dw 0x10ed
+        db port
+        endm
+
+in0e   macro port
+        dw 0x18ed
+        db port
+        endm
+
+in0h   macro port
+        dw 0x20ed
+        db port
+        endm
+
+in0l   macro port
+        dw 0x28ed
+        db port
+        endm
+

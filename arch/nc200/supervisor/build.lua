@@ -27,6 +27,7 @@ zmac {
     deps = {
         "include/*.lib",
         "arch/common/utils/deblocker.lib",
+        "arch/common/utils/tty.lib",
         "arch/nc200/include/*.lib",
         "./*.inc",
         "+keytab_inc",

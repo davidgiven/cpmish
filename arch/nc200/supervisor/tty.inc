@@ -12,108 +12,24 @@ BYTES_PER_LINE     equ BYTES_PER_SCANLINE * FONT_HEIGHT
 LAST_LINE          equ VIDEORAM_BASE + (SCREEN_HEIGHT-1) * BYTES_PER_LINE
 VIDEORAM_END       equ LAST_LINE + BYTES_PER_LINE
 
-cursorx:       db 0
-cursory:       db 0
 cursor_shown:  db 0
 
-commandlen:    db 0
-commandgot:    db 0
-commandbuf:    ds 3
-
-tty_init:
+video_init:
     ld a, VIDEORAM_BASE>>8
     out (PORT_DISPLAY_MEMORY_ADDR), a ; set base address of video RAM
-    call tty_clear_screen
+	jp tty_init
     ret
 
-; --- Prints a zero-terminated string in HL ---------------------------------
-
-; Prints a zero-terminated string in hl.
-tty_puts:
-    ld a, (hl)
-    or a
-    ret z
-    inc hl
-    push hl
-    call tty_putc
-    pop hl
-    jr tty_puts
-
-; --- Prints the hex bytes in HL or A ---------------------------------------
-
-; prints HL
-tty_puthex16:
-    ld a, h
-    call tty_puthex8
-    ld a, l
-tty_puthex8:
-    ld c, a
-    rra
-    rra
-    rra
-    rra
-    call tty_puthex8_conv
-    ld a, c
-tty_puthex8_conv:
-    and 15
-    add a, 0x90
-    daa
-    adc a, 0x40
-    daa
-    push hl
-    push bc
-    call tty_putc
-    pop bc
-    pop hl
-    ret
-
-; --- Prints the decimal number in HL ---------------------------------------
-
-tty_putdec16:
-    ld d, 0             ; suppress zeroes
-    ld bc, -10000
-    call .1
-    ld bc, -1000
-    call .1
-    ld bc, -100
-    call .1
-    ld bc, -10
-    call .1
-    dec d               ; don't suppress this zero
-    ld bc, -1
-.1                      ; loop which prints one digit
-    ld a, '0'-1
-.2
-    inc a
-    add hl, bc
-    jr c, .2            ; keep subtracting bc to get one digit
-    sbc hl, bc          ; under last subtraction (carry is known to be clear)
-
-    ; Did we get a zero?
-    cp '0'
-    jr z, .3
-    ; Not a zero.
-    dec d               ; don't suppress zeroes any more
-.4
-    push hl             ; print the digit
-    push de
-    call tty_putc
-    pop de
-    pop hl
-    ret
-
-    ; We got a zero.
-.3
-    bit 7, d            ; are we suppressing zeroes?
-    ret z               ; yes.
-    jr .4               ; no, so print it anyway.
+EMULATE_CLEAR_TO_EOL = 1
+EMULATE_CLEAR_TO_EOS = 0
+	maclib tty
 
 ; --- Calculates the address of the cursor ----------------------------------
 
 ; Sets cursor_screen_address to the address of the current char.
 
 tty_calculate_screen_address:
-    ld a, (cursory)
+    ld a, (tty_cursory)
     add a, a
     ld de, line_address_table
     ld h, 0
@@ -128,7 +44,7 @@ tty_calculate_screen_address:
     ; character is at; this is the same as cursorx*3/4, which will also
     ; fit in a byte (80*3 == 240).
     
-    ld a, (cursorx)
+    ld a, (tty_cursorx)
     ld b, a
     add a, a            ; a = cursorx*2
     add a, b            ; a = cursorx*2 + cursorx = cursorx*3
@@ -264,36 +180,7 @@ tty_draw_cursor_loop:
     pop af
     ret
 
-; --- Clears (and initialises) the screen -----------------------------------
-
-tty_clear_screen:
-    call tty_home_cursor
-    jr tty_clear_to_eos
-    
-tty_home_cursor:
-    xor a
-    ld (cursorx), a
-    ld (cursory), a
-    ret
-
 ; --- Screen clearing -------------------------------------------------------
-
-tty_clear_to_eol:
-    ld a, (cursorx)
-    push af
-.1:
-    ld a, (cursorx)
-    cp SCREEN_WIDTH
-    jr z, .2
-    ld a, ' '
-    call tty_rawwrite
-    ld hl, cursorx
-    inc (hl)
-    jr .1
-.2:
-    pop af
-    ld (cursorx), a
-    ret
 
 tty_clear_to_eos:
     ; Compute the start of the area to clear.
@@ -318,65 +205,7 @@ tty_clear_to_eos:
     ld (hl), 0
     ldir
 
-    jr tty_clear_to_eol         ; we haven't cleared the rest of this line
-
-; --- Performs a carriage return --------------------------------------------
-
-tty_newline:
-    call tty_cursor_down
-    ; fall through
-tty_carriagereturn:
-    xor a
-    ld (cursorx), a
-    ret
-
-; --- Move the cursor -------------------------------------------------------
-
-tty_cursor_left:
-    ld hl, cursorx
-    dec (hl)
-    ret p
-    inc (hl)
-    ret
-
-tty_cursor_up:
-    ld hl, cursory
-    dec (hl)
-    ret p
-    inc (hl)
-    ret
-
-tty_cursor_right:
-    ld hl, cursorx
-    ld a, (hl)
-    inc a
-    cp SCREEN_WIDTH
-    ret z
-    ld (hl), a
-    ret
-
-tty_cursor_down:
-    ld hl, cursory
-    ld a, (hl)
-    inc a
-    ld (hl), a
-    cp SCREEN_HEIGHT
-    ret nz
-    dec (hl)                ; oops, don't go the next line after all
-    jp tty_scroll
-
-; Move to (B, C).
-tty_goto_xy:
-    ld a, b
-    cp SCREEN_WIDTH
-    ret nc
-    ld (cursorx), a
-
-    ld a, c
-    cp SCREEN_HEIGHT
-    ret nc
-    ld (cursory), a
-    ret
+    jp tty_clear_to_eol         ; we haven't cleared the rest of this line
 
 ; --- Line insertion/removal ------------------------------------------------
 
@@ -443,149 +272,6 @@ calculate_insert_delete_size:
     ld c, l
     ex de, hl
     ret
-
-; --- Prints the character in A ---------------------------------------------
-; (also tty_newline)
-
-; Helper routine: called from tty_putc if this is a non-printable control
-; character. The character is in A.
-controlcharacter:
-    cp 0x08
-    jp z, tty_cursor_left
-    cp 0x0c
-    jr z, tty_cursor_right
-    cp 0x0a
-    jr z, tty_cursor_down
-    cp 0x0b
-    jp z, tty_cursor_up
-    cp 0x1e
-    jp z, tty_home_cursor
-    cp 0x0d
-    jp z, tty_carriagereturn
-    cp 0x18
-    jp z, tty_clear_to_eol
-    cp 0x17
-    jp z, tty_clear_to_eos
-    cp 0x1a
-    jp z, tty_clear_screen
-    cp 0x1b
-    ret nz ; give up if not an escape character
-
-    ; Escape characters need parameters, starting with one.
-    xor a
-    ld (commandgot), a
-    inc a
-    ld (commandlen), a
-    ret
-    
-; Helper routine: deal with command bytes (passed in C).
-queue_command_byte:
-    ; Write the byte to the buffer.
-
-    ld hl, commandgot
-    ld d, 0
-    ld e, (hl)
-    inc (hl)
-
-    ld hl, commandbuf
-    add hl, de
-    ld (hl), c
-
-    ; Have we reached the end of the buffer?
-
-    ld hl, commandlen
-    ld a, (commandgot)
-    cp (hl)
-    ret nz              ; no, go back for more bytes.
-    xor a
-    ld (hl), a          ; end of command
-
-    ; Process a command.
-
-    ld a, (commandbuf+0)
-    cp 'B'
-    jr z, setresetattr
-    cp 'C'
-    jr z, setresetattr
-    cp 'E'
-    jp z, tty_insert_line
-    cp 'R'
-    jp z, tty_delete_line
-    cp '='
-    jr z, gotoxy
-    ret
-
-; Helper routine: handles set/reset attributes.
-setresetattr:
-    ld a, (commandgot)  ; B, C takes parameters
-    cp 2                ; do we have enough bytes?
-    jr z, .1            ; yes, execute command
-    ld a, 2             ; not enough bytes read yet
-    ld (commandlen), a
-    ret
-.1:
-;    ld a, (commandbuf+1)
-;    cp '0'              ; reverse intensity
-;    ret nz              ; don't support anything else
-;    ld a, (commandbuf+0)
-;    cp 'C'              ; B=on, C=off
-;    ld hl, font_xor_value
-;    ld (hl), 0
-;    ret z
-;    dec (hl)
-    ret
-    
-; Helper routine: handles ESC = (gotoxy).
-gotoxy:
-    ld a, (commandgot)  ; = takes parameters
-    cp 3                ; do we have enough bytes?
-    jr z, .1            ; yes, execute command
-    ld a, 3             ; not enough bytes read yet
-    ld (commandlen), a
-    ret
-.1:
-    ld hl, commandbuf+1 ; got enough bytes; process command
-    ld a, (hl)
-    sub 32
-    ld c, a             ; Y
-    inc hl
-    ld a, (hl)
-    sub 32
-    ld b, a             ; X
-    jp tty_goto_xy
-
-tty_putc:
-    ; Check to see if there's a pending command.
-
-    ld c, a
-    ld a, (commandlen)
-    or a
-    jr nz, queue_command_byte
-
-    ; Handle special characters.
-
-    ld a, c
-    cp 32
-    jp c, controlcharacter
-
-    ; This is a printable character, so print it.
-
-    call tty_rawwrite
-
-    ; Now we've drawn a character, advance the cursor.
-
-    ld hl, cursorx
-    ld a, (hl)
-    inc a
-    ld (hl), a
-    cp SCREEN_WIDTH
-    ret nz
-
-    ; Reached the end of the line? Advance to the next one.
-
-    xor a
-    ld (hl), a
-    jp tty_cursor_down
 
 ; Writes A to the current cursor location, without advancing the cursor.
 
