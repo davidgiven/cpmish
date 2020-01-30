@@ -3,34 +3,73 @@
 ; See COPYING.cpmish in the distribution root directory for more information.
 
 ; This is the executable which is loaded and run by the Brother's OS. It
-; gets loaded with BBR=CBR=0x50, CBAR=0x55, which means that DRAM from
-; physical addresses 0x55000 to 0x5ffff is mapped to logical 0x5000 to 0xffff.
+; gets loaded with BBR=CBR=0x60, CBAR=0x55, which means that DRAM from
+; physical addresses 0x65000 to 0x6ffff is mapped to logical 0x5000 to 0xffff.
 
 	maclib brotherop2
 
 	dw MAGIC_OP2
 
-	ld sp, stack+128
-	di
+	; Slowly and carefully map us to 0x8000, to expose the common area at
+	; 0x6000 (which some OS system routines need to work). Tricky, because
+	; we're running from the code we're moving. IMPORTANT! Remember that
+	; even though we're loaded at 0x5000, we've been assembled at 0x8000
+	; and addresses will all be wrong.
+
+	; Move the C boundary up to 0x8000.
+
+	ld a, 0x85
+	out0a CBAR
+
+	; Set C to show physical memory from 0x65000.
+
+	ld a, 0x65 - 8
+	out0a CBR
+
+	; Switch to running code from the C bank.
+
+	jp switch_to_8000
+switch_to_8000:
+
+	; ...and raise the B boundary to 0x8000 too.
+
+	ld a, 0x88
+	out0a CBAR
 
 	call tty_init
 
-	call tty_putsi
-	db 'BBR = ', 0
-	in0a BBR
+.1
+	ld a, 5 ; get a key
+	rst 8
+	jr nc, .1
+	ld a, d
+	cp 0x8f
+	jr z, .1
 	call tty_puthex8
+	jr .1
 
-	call tty_putsi
-	db 13, 10, 'CBR = ', 0
-	in0a CBR
-	call tty_puthex8
-
-	call tty_putsi
-	db 13, 10, 'CBAR = ', 0
-	in0a CBAR
-	call tty_puthex8
-
+.2
+	rst 0
 	jr $
+
+
+dumpmem:
+	ld b, 32
+.1
+	ld a, (hl)
+	inc hl
+	push hl
+	push bc
+	call tty_puthex8
+	ld a, 32
+	call tty_putc
+	pop bc
+	pop hl
+	djnz .1
+	call tty_newline
+	ret
+
+count: dw 0
 
 EMULATE_CLEAR_TO_EOL = 1
 EMULATE_CLEAR_TO_EOS = 1
@@ -43,8 +82,6 @@ tty_delete_line:
 
 tty_rawwrite:
 	ld hl, (tty_cursorx)
-	dec hl
-	inc l
 	out0h PORT_VIDEO_Y
 	ld h, 0
 	add hl, hl

@@ -15,7 +15,7 @@ zmac {
 ld80 {
     name = "boot.img",
     srcs = {
-		"-P5000",
+		"-P8000",
 		"+boot.o"
     }
 }
@@ -27,7 +27,7 @@ normalrule {
     },
     outleaves = { "boot.op2" },
     commands = {
-        "dd if=%{ins[1]} of=%{outs} status=none bs=256 skip=80",
+        "dd if=%{ins[1]} of=%{outs} status=none bs=256 skip=128",
     }
 }
 
