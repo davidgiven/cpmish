@@ -8,7 +8,7 @@
 ; input stream, tracking the cursor position, etc, before calling out to
 ; supplied low-level routines to do the actual work.
 
-	dseg
+    dseg
 tty_cursorx:    db 0
 tty_cursory:    db 0 ; must be immediately after tty_cursory
 tty_attributes: db 0
@@ -17,15 +17,15 @@ commandlen:    db 0
 commandgot:    db 0
 commandbuf:    ds 3
 
-	cseg
+    cseg
 
 ; --- Clears (and initialises) the screen -----------------------------------
 
 tty_init:
-	xra a
-	ld (commandlen), a
-	ld (tty_attributes), a
-	; fall through
+    xra a
+    ld (commandlen), a
+    ld (tty_attributes), a
+    ; fall through
 tty_clear_screen:
     call tty_home_cursor
     jp tty_clear_to_eos
@@ -51,10 +51,10 @@ tty_puts:
 
 ; Prints an inline string.
 tty_putsi:
-	pop hl
-	call tty_puts
-	inc hl
-	jp (hl)
+    pop hl
+    call tty_puts
+    inc hl
+    jp (hl)
 
 ; --- Prints the hex bytes in HL or A ---------------------------------------
 
@@ -127,7 +127,7 @@ tty_putdec16:
 
 ; --- Screen clearing -------------------------------------------------------
 
-	if EMULATE_CLEAR_TO_EOL
+    if EMULATE_CLEAR_TO_EOL
 tty_clear_to_eol:
     ld a, (tty_cursorx)
     push af
@@ -144,27 +144,27 @@ tty_clear_to_eol:
     pop af
     ld (tty_cursorx), a
     ret
-	endif
+    endif
 
-	if EMULATE_CLEAR_TO_EOS
+    if EMULATE_CLEAR_TO_EOS
 tty_clear_to_eos:
-	ld hl, (tty_cursorx)
-	push hl
-	xor a
-	ld (tty_cursorx), a
+    ld hl, (tty_cursorx)
+    push hl
+    xor a
+    ld (tty_cursorx), a
 .1
-	ld a, (tty_cursory)
-	inc a
-	cp SCREEN_HEIGHT
-	jr z, .2
-	ld (tty_cursory), a
-	call tty_clear_to_eol
-	jr .1
+    ld a, (tty_cursory)
+    inc a
+    cp SCREEN_HEIGHT
+    jr z, .2
+    ld (tty_cursory), a
+    call tty_clear_to_eol
+    jr .1
 .2
-	pop hl
-	ld (tty_cursorx), hl
-	jp tty_clear_to_eol
-	endif
+    pop hl
+    ld (tty_cursorx), hl
+    jp tty_clear_to_eol
+    endif
 
 ; --- Performs a carriage return --------------------------------------------
 
@@ -308,12 +308,12 @@ setresetattr:
     cp '0'              ; reverse intensity
     ret nz              ; don't support anything else
     ld a, (commandbuf+0) ; B=on, C=off
-	ld hl, tty_attributes
-	res 0, (hl)
-	bit 0, a
-	ret z
-	set 0, (hl)
-	ret
+    ld hl, tty_attributes
+    res 0, (hl)
+    bit 0, a
+    ret z
+    set 0, (hl)
+    ret
     
 ; Helper routine: handles ESC = (gotoxy).
 gotoxy:
@@ -362,9 +362,11 @@ tty_putc:
     ret nz
 
     ; Reached the end of the line? Advance to the next one and go back to
-	; the margin.
+    ; the margin.
 
     xor a
     ld (hl), a
     jp tty_cursor_down
+
+; vim: set ts=4 sw=4 expandtab
 

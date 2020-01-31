@@ -2,28 +2,29 @@
 ; This file is distributable under the terms of the 2-clause BSD license.
 ; See COPYING.cpmish in the distribution root directory for more information.
 
-; This is a general deblocker library. 
-
+; This is a general deblocker library. To use, set DBS_BLOCK_SHIFT to the
+; power of two of the native sector size: so, 8 for 256 byte sectors,
+; 9 for 512 byte sectors, etc.
 
 ; Describes a drive to the deblocker.
 
 DBS_NUM_SECTORS = 0     ; physical sectors
 DBS_NUM_TRACKS  = 2     ; physical tracks
-DBS_R512        = 4     ; callback, see below
-DBS_W512        = 6     ; callback, see below
+DBS_RNATIVE     = 4     ; callback, see below
+DBS_WNATIVE     = 6     ; callback, see below
 DBS_CUR_SECTOR  = 8     ; current physical sector
 DBS_CUR_TRACK   = 10    ; current physical track
 DBS_DIRTY       = 12
 DBS_BUFFER      = 13
-DBS__SIZE       = DBS_BUFFER + 512
-; The R512 and W512 callbacks are used to read and write physical sectors.
-; They access from DBS_CUR_SECTOR/DBS_CUR_TRACK and read or write DBS_BUFFER.
+DBS__SIZE       = DBS_BUFFER + (1 << DBS_BLOCK_SHIFT)
+; The RNATIVE and WNATIVE callbacks are used to read and write physical
+; sectors. They access from DBS_CUR_SECTOR/DBS_CUR_TRACK and read or write
+; DBS_BUFFER.
 ;
-; Note that W128 does not actually write the supplied data --- it requires
-; the caller to copy the data to the 128-byte buffer at HL after the call.
-; The *next* call to R128 or W128 will flush the data. For deblock mode
-; 1, the caller's required to call FLUSH to flush the buffer once this
-; is done.
+; Note that to write data you need to call db_get, update the buffer returned
+; in HL, set the dirty flag, and then the *next* call to db_get (or db_flush)
+; will write the data back to disk. For deblock mode 1, the caller's required
+; to call flush to flush the buffer once this is done.
 ; 
 ; They have the following signature:
 ; On entry:
@@ -31,32 +32,240 @@ DBS__SIZE       = DBS_BUFFER + 512
 ; On exit:
 ;   Z on error, NZ on success
 
-declare_deblocker macro
-    ; Reads and/or writes a 128-byte sector.
-    ; On return, HL points at the data in the buffer. To write, update the
-    ; buffer and set the dirty flag, and on the next call to GET or FLUSH
-    ; the data will be written back.
-    ; On entry:
-    ;   IX = pointer to deblocker structure
-    ;   A  = deblock mode (0=normal, 1=write-through, 2=no read)
-    ;   BC = CP/M sector
-    ;   DE = CP/M track
-    ; On exit:
-    ;   Z on failure, NZ on success
-    ;   HL = address of 128 byte data in buffer
-    extern DB_GET
+; Reads and/or writes a 128-byte sector.
+; On return, HL points at the data in the buffer. To write, update the
+; buffer and set the dirty flag, and on the next call to GET or FLUSH
+; the data will be written back.
+; On entry:
+;   IX = pointer to deblocker structure
+;   A  = deblock mode (0=normal, 1=write-through, 2=no read)
+;   BC = CP/M sector
+;   DE = CP/M track
+; On exit:
+;   Z on failure, NZ on success
+;   HL = address of 128 byte data in buffer
+    cseg
+db_get:
+    ld (mode), a        ; save deblock mode
+    call calculate_physical
+    ret z
+    call change_block
+    ret z
+calculate_buffer_address:
+    ld a, (offset)
+    rra
+    ld h, a
+    ld l, 0
+    rr l
+    push ix
+    pop bc
+    add hl, bc
+    ld bc, DBS_BUFFER
+    add hl, bc
 
-    ; Flushes the buffer to disk (if necessary).
-    ; On entry:
-    ;   IX = pointer to deblocker structure
-    ; On exit:
-    ;   Z on failure, NZ on success
-    extern DB_FLUSH
+    or 1                ; set nz (success)
+    ret
 
-    ; Updates a DPB with a disk capacity.
-    ; On entry:
-    ;   IX = pointer to deblocker structure
-    ;   IY = DPB
-    ;   HL = maximum number of blocks allowed
-    extern DB_CAP
-endm
+; On entry:
+;   BC = CP/M sector
+;   DE = CP/M track
+; On exit:
+;   BC = physical sector
+;   DE = physical track
+calculate_physical:
+    ld a, c             ; save CP/M sector offset
+    and 3
+    ld (offset), a
+
+    ; Convert the CP/M sector count to a native sector count.
+    rept DBS_BLOCK_SHIFT - 7
+    srl b               ; divide sector count by four
+    rr c
+    endm
+
+    ; Check sector number is in bounds.
+
+    ld a, (ix+DBS_NUM_SECTORS+1)
+    cp b
+    jr c, error         ; high byte bigger, out of bounds
+    jr nz, .1           ; high byte smaller, in bounds
+    ld a, c
+    cp (ix+DBS_NUM_SECTORS+0)
+    jr nc, error        ; low byte equal or bigger, out of bounds
+.1
+
+    ; Check track number is in bounds.
+
+    ld a, (ix+DBS_NUM_TRACKS+1)
+    cp d
+    jr c, error         ; high byte bigger, out of bounds
+    jr nz, .2           ; high byte smaller, in bounds
+    ld a, e
+    cp (ix+DBS_NUM_TRACKS+0)
+    jr nc, error        ; low byte equal or bigger, out of bounds
+.2
+
+    ; Determine whether the address has changed.
+
+    ld hl, changed
+    ld (hl), 0
+
+    ld a, (ix+DBS_CUR_SECTOR+0)
+    cp c
+    jr nz, .3
+    ld a, (ix+DBS_CUR_SECTOR+1)
+    cp b
+    jr nz, .3
+    ld a, (ix+DBS_CUR_TRACK+0)
+    cp e
+    jr nz, .3
+    ld a, (ix+DBS_CUR_TRACK+1)
+    cp d
+    jr z, success
+
+.3
+    ld (hl), 1          ; addressed sector has changed
+success:
+    or 1                ; set nz (success)
+    ret
+
+error:
+    xor a               ; set z (error)
+    ret
+    
+change_block:
+    ld a, (changed)
+    or a
+    jr z, success       ; sector number hasn't changed, do nothing
+
+    ld a, (ix+DBS_DIRTY)
+    or a                ; was the previous sector dirty?
+    jr z, .1
+
+    ld l, (ix+DBS_WNATIVE+0) ; yes, write it back
+    ld h, (ix+DBS_WNATIVE+1)
+    push bc
+    push de
+    call pchl
+    pop de
+    pop bc
+    ret z
+    ld (ix+DBS_DIRTY), 0 ; clear dirty flag
+
+.1
+    ld (ix+DBS_CUR_SECTOR+1), b
+    ld (ix+DBS_CUR_SECTOR+0), c
+    ld (ix+DBS_CUR_TRACK+1), d
+    ld (ix+DBS_CUR_TRACK+0), e
+
+    ld a, (mode)
+    cp 2                ; looking at new block?
+    jr z, success       ; if so, don't read
+    ld l, (ix+DBS_RNATIVE+0)
+    ld h, (ix+DBS_RNATIVE+1)
+pchl:
+    jp (hl)
+
+; Flushes the buffer to disk (if necessary).
+; On entry:
+;   IX = pointer to deblocker structure
+; On exit:
+;   Z on failure, NZ on success
+db_flush:
+    ld a, (ix+DBS_DIRTY)
+    or a
+    jr z, success
+
+    ld l, (ix+DBS_WNATIVE+0) ; yes, write it back
+    ld h, (ix+DBS_WNATIVE+1)
+    call pchl
+    ret z
+    ld (ix+DBS_DIRTY), 0  ; only mark block as clean if write succeeded
+    ret
+
+
+; Updates a DPB with a disk capacity.
+; On entry:
+;   IX = pointer to deblocker structure
+;   IY = DPB
+;   HL = maximum number of blocks allowed
+    if DBS_WANT_DB_CAP
+db_cap:
+    push hl             ; maximum number of blocks
+
+    ld e, (ix+DBS_NUM_SECTORS+0)
+    ld d, (ix+DBS_NUM_SECTORS+1)
+    ld c, (ix+DBS_NUM_TRACKS+0)
+    ld b, (ix+DBS_NUM_TRACKS+1)
+
+    ; Convert DE to CP/M sectors.
+    rept DBS_BLOCK_SHIFT - 7
+    sla e
+    rl d
+    endm
+    ld (iy+DPB_SPT+0), e        ; write to SPT
+    ld (iy+DPB_SPT+1), d
+
+    ; BC*DE = DE:HL
+    ld hl, 0            ; result
+    ld a, 16            ; number of bits
+.1
+    add hl, hl
+    rl e
+    rl d                ; de:hl = de:hl*2, overflow to c
+    jr nc, .2
+    add hl, bc
+    jr nc, .2
+    inc de
+.2
+    dec a
+    jr nz, .1
+
+    pop bc              ; bc = maximum number of blocks
+
+    ; We have the total number of CP/M sectors in DE:HL. Divide by the block
+    ; size to get the number of blocks.
+    ld a, (iy+DPB_BSH)
+    ; The block shift is n where n is the number of bits to shift a CP/M sector
+    ; count to get a block count. So, we want to shift DEHL right by A bits to
+    ; get the block count.
+.3
+    srl d
+    rr e
+    rr h
+    rr l
+    dec a
+    jr nz, .3
+
+    ; If DE is set, the disk is too big.
+    or d                ; A is 0, remember
+    or e
+    jr z, .4            ; jump if disk fits
+    ld h, b
+    ld l, c             ; load the maximum number of blocks
+
+.4
+    ld a, b
+    cp h
+    jr c, .5                    ; high byte too big
+    jr nz, .6                   ; high byte too low, value in range
+    ld a, l
+    cp c
+    jr c, .6                    ; low byte in range
+.5
+    ; This disk really is too big.
+    ld h, b
+    ld l, c
+.6
+    dec hl              ; actually want count-1
+    ld (iy+DPB_DSM+0), l
+    ld (iy+DPB_DSM+1), h
+    ret
+
+    endif
+
+mode:        db 0
+offset:      db 0
+changed:     db 0
+buffer:      dw 0
+

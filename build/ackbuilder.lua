@@ -508,6 +508,13 @@ local typeconverters = {
 		return i
 	end,
 
+	number = function(propname, i)
+		if (type(i) ~= "number") then
+			error(string.format("property '%s' must be a number", propname))
+		end
+		return i
+	end,
+
 	table = function(propname, i)
 		if (type(i) ~= "table") then
 			error(string.format("property '%s' must be a table", propname))

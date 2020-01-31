@@ -1,0 +1,274 @@
+; Brother OP2 cpmish BIOS © 2020 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib brotherop2
+
+    cseg
+label BBASE
+
+; BIOS jump table.
+
+    jp BOOTE
+    jp WBOOTE
+    jp CONSTE
+    jp CONINE
+    jp CONOUTE
+    jp LISTE
+    jp PUNCHE
+    jp READERE
+    jp HOMEE
+    jp SELDSKE
+    jp SETTRKE
+    jp SETSECE
+    jp SETDMAE
+    jp READE
+    jp WRITEE
+    jp LISTSTE
+    jp SECTRANE
+
+; Actual BIOS entrypoints.
+;
+; The BIOS calls typically use a simple calling convention where the parameter
+; is in BC and the result is returned in A and HL. The docs don't mention
+; anything about other registers so we'll assume they can be corrupted. In
+; addition, our syscall stuff assumes that on return A = L, just like in the
+; BDOS, so we have a single parameter and a single response --- all very simple.
+
+; Cold boot on system startup. Actually, all this work is done by the bootstrap
+; program so nothing needs doing here and we just go straight to the CCP.
+BOOTE: equ call_ccp
+
+call_ccp:
+    ld a, 0xc3
+    ld hl, BBASE + 3         ; init BIOS entrypoint
+    ld (0x0000), a
+    ld (0x0001), hl
+
+    ld hl, FBASE + 6         ; init BDOS entrypoint
+    ld (0x0005), a
+    ld (0x0006), hl
+
+    ld a, (CDISK)            ; current selected disk
+    ld c, a
+    jp CBASE                 ; pass control to CCP
+
+stop_disk_motor:
+;    in a, (PORT_BITPORT)
+;    or 0x40                  ; turn off motor
+;    out (PORT_BITPORT)
+    ret
+; Warm boot on application exit.
+WBOOTE:
+    ld sp, 0x0100            ; ephemeral user stack
+
+    ld c, 0                  ; select drive 0
+    call SELDSKE
+    ld bc, 0
+    call SETTRKE             ; select track 0
+
+    ld hl, CBASE             ; location to load
+    ld bc, 1                 ; first sector to load
+
+    ; We just load track 0. There is some BDOS and BIOS on track 1, but this
+    ; should only ever need loading once on cold boot, so we save a bit of
+    ; time and complexity by not reloading it here.
+boot_loop:
+    push bc
+    push hl
+
+    call SETSECE             ; set sector to load
+
+    pop bc                   ; DMA address into BC
+    push bc
+    call SETDMAE             ; set address
+    call READE               ; actually load the sector
+
+    pop hl                   ; DMA address back into HL
+    ld bc, 128
+    add hl, bc
+
+    pop bc                   ; current sector back into bc
+    ld a, c
+    inc c
+    cp 39                    ; end of track 0
+    jr nz, boot_loop
+    jr call_ccp
+
+CONSTE:
+    ld hl, disk_off_count
+    inc (hl)                 ; increment drive motor count and...
+    call z, stop_disk_motor  ; ...turn the motor off on rollover
+    ret
+
+CONINE:
+    call stop_disk_motor
+    ret
+
+CONOUTE equ tty_putc
+
+LISTE:
+PUNCHE:
+    ret
+
+LISTSTE:
+READERE:
+return_error:
+    ld a, 0xff
+    ret
+
+; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
+; error).
+SELDSKE:
+    ld hl, drive_a_dph
+    ret
+
+HOMEE:
+    ld bc, 0
+    ; fall through
+SETTRKE:
+    ld (current_track), bc
+    ret
+
+SETSECE:
+    ld (current_sector), bc
+    ret
+
+SETDMAE:
+    ld (current_dma), bc
+    ret
+
+READE:
+    xor a                   ; reset disk timer
+    ld (disk_off_count), a
+
+    xor a                   ; deblocking mode normal
+    call getblock
+    jr z, return_error
+
+    ld de, (current_dma)
+copy_and_return:
+    ld bc, 128
+    ldir
+    xor a
+    ret
+
+WRITEE:
+    xor a                   ; reset disk timer
+    ld (disk_off_count), a
+
+    ld a, c                 ; set deblocking mode
+    call getblock
+    jr z, return_error
+
+    ld de, (current_dma)
+    ex de, hl
+    jr copy_and_return
+
+getblock;
+    ld ix, drive_a_dbs
+    ld bc, (current_sector)
+    ld b, 0
+    ld de, (current_track)
+    ld d, b
+    jp db_get
+
+SECTRANE:
+    ld h, b
+    ld l, c
+    ret
+
+; Call the Kaypro ROM (which is actually doing most of the work). On entry,
+; L contains the address into the syscall jump table.
+
+; Prints the text immediately following the call to print.
+print:
+    pop hl                   ; return address points to text to print
+    ld a, (hl)
+    inc hl
+    push hl                  ; save address after current char
+
+    or a
+    ret z                    ; if byte was zero, return
+    ld c, a
+    call CONOUTE
+    jr print
+
+EMULATE_CLEAR_TO_EOL = 1
+EMULATE_CLEAR_TO_EOS = 1
+    maclib tty
+
+tty_rawwrite:
+	ld hl, (tty_cursorx)
+	out0h PORT_VIDEO_Y
+	ld h, 0
+	add hl, hl
+	out0l PORT_VIDEO_X
+	cp a, ' '
+	jr nz, .1
+	xor a
+.1
+	ld l, 0
+	out0l PORT_VIDEO_DATA
+	out0a PORT_VIDEO_DATA
+	ret
+
+tty_scroll:
+tty_insert_line:
+tty_delete_line:
+    ret
+
+DBS_BLOCK_SHIFT = 8 ; 256-byte native sectors
+DBS_WANT_DB_CAP = 0 ; don't want the db_cap routine
+    maclib deblocker
+
+fd_r512:
+fd_w512:
+    ret
+
+drive_a_dbs:
+    dw 936      ; number of sectors
+    dw 78       ; number of tracks; filled in later
+    dw fd_r512  ; read callback
+    dw fd_w512  ; write callback
+	dw 0xffff   ; current sector
+    dw 0        ; current track
+    db 0        ; dirty flag
+    ds 256      ; buffer
+
+drive_a_dph:
+    dw 0                    ; Sector translation vector
+    dw 0, 0, 0              ; BDOS scratchpad
+    dw dirbuf               ; Directory scratchpad
+    dw drive_a_dpd          ; Drive parameter block
+    dw drive_a_check_vector ; Disk change check vector
+    dw drive_a_bitmap       ; Allocation bitmap
+
+RESERVED_TRACKS = 4
+DRIVE_A_BLOCKS = (78-RESERVED_TRACKS)*12*256 / 1024
+drive_a_dpd:
+    dw 12*2                 ; Number of CP/M sectors per track
+    db 3, 7                 ; BSH/BLM for 1024-byte blocks
+    db 0                    ; EXM for 1024-byte allocation units and <256 blocks
+    dw 31                   ; DRM, one fewer than the number of directory entries
+    db 0xf0, 0x00           ; Initial allocation vector for four directory blocks
+    dw 8                    ; Size of disk change vecto: (DRM+1)/4
+    dw RESERVED_TRACKS      ; Number of reserved tracks
+
+drive_a_bitmap:
+    ds (DRIVE_A_BLOCKS+7) / 8
+drive_a_check_vector:
+    ds 8
+dirbuf:
+    ds 128
+
+saved_stack: dw 0            ; user stack pointer while in system calls
+disk_off_count: db 0         ; cheap and nasty drive motor timer
+current_track: db 0
+current_sector: db 0
+current_dma: dw 0
+
+; vim: set ts=4 sw=4 expandtab
+

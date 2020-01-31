@@ -2,15 +2,6 @@ include "third_party/ld80/build.lua"
 include "third_party/zmac/build.lua"
 include "build/z80test.lua"
 
-zmac {
-    name = "deblocker",
-    srcs = { "./deblocker.z80" },
-    deps = {
-        "./deblocker.lib",
-        "include/cpm.lib"
-    },
-}
-
 local deblocker_tests = {
     "deblocker_calculate_physical",
     "deblocker_change_block",
@@ -24,7 +15,6 @@ for _, n in pairs(deblocker_tests) do
         srcs = { "./tests/"..n..".z80" },
         deps = {
             "./deblocker.lib",
-            "./deblocker.z80",
             "include/cpm.lib"
         }
     }

@@ -52,25 +52,6 @@ switch_to_8000:
 	rst 0
 	jr $
 
-
-dumpmem:
-	ld b, 32
-.1
-	ld a, (hl)
-	inc hl
-	push hl
-	push bc
-	call tty_puthex8
-	ld a, 32
-	call tty_putc
-	pop bc
-	pop hl
-	djnz .1
-	call tty_newline
-	ret
-
-count: dw 0
-
 EMULATE_CLEAR_TO_EOL = 1
 EMULATE_CLEAR_TO_EOS = 1
 	maclib tty

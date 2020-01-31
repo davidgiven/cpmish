@@ -13,22 +13,62 @@ zmac {
 }
 
 ld80 {
-    name = "boot.img",
+    name = "boot",
+	address = 0x8000,
     srcs = {
 		"-P8000",
 		"+boot.o"
     }
 }
 
-normalrule {
-    name = "boot",
-    ins = {
-        "+boot.img",
+zmac {
+	name = "bios",
+	srcs = { "./bios.z80" },
+	deps = {
+        "include/*.lib",
+        "./include/*.lib",
+		"arch/common/utils/tty.lib",
+		"arch/common/utils/deblocker.lib"
     },
-    outleaves = { "boot.op2" },
-    commands = {
-        "dd if=%{ins[1]} of=%{outs} status=none bs=256 skip=128",
-    }
 }
 
+-- This is the bit which CP/M reloads on warm boot (well, some of it).
+ld80 {
+	name = "cpmfile",
+	address = 0xe400,
+	srcs = {
+		"-Pe400", "third_party/zcpr1+zcpr",
+		"-Pec00", "third_party/zsdos+zsdos",
+		"-Pfa00", "+bios",
+	}
+}
+
+-- Produces the FAT bit of the disk image.
+zmac {
+	name = "fat",
+	srcs = { "./fat.z80" },
+	deps = {
+		"+boot",
+		"+cpmfile"
+	}
+}
+
+ld80 {
+	name = "bootfile",
+	srcs = { "+fat" }
+}
+
+diskimage {
+	name = "diskimage",
+	format = "brother-op2",
+	bootfile = { "+bootfile" },
+	map = {
+		["dump.com"] = "cpmtools+dump",
+		["stat.com"] = "cpmtools+stat",
+		["asm.com"] = "cpmtools+asm",
+		["copy.com"] = "cpmtools+copy",
+		["submit.com"] = "cpmtools+submit",
+		["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
+	},
+}
 

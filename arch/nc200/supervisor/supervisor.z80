@@ -6,9 +6,6 @@
 	maclib cpm
 	maclib nc200
 	maclib cpmish
-	maclib deblocker
-
-	declare_deblocker
 
 	extern ATABUF
 	extern BBASE
@@ -26,6 +23,10 @@
 	extern PBAUD
 	extern SYSOUT
 	extern SYSSTK
+
+DBS_BLOCK_SHIFT = 9
+DBS_WANT_DB_CAP = 1
+	maclib deblocker
 
 	include "interrupts.inc"
 	include "keyboard.inc"
