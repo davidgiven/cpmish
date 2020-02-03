@@ -20,7 +20,7 @@ BROTHER_MEDIA_BYTE = 0x58 ; non-standard
     dw 1        ; reserved sectors (this one)
     db 1        ; FAT count
     dw 0x40     ; number of root directory entries
-    dw 13       ; filesystem size, in sectors, not including reserved ones
+    dw 16       ; filesystem size, in sectors, not including reserved ones
     db BROTHER_MEDIA_BYTE
     dw 3        ; sectors per FAT
     dw 12       ; number of sectors per track
@@ -31,7 +31,7 @@ BROTHER_MEDIA_BYTE = 0x58 ; non-standard
     ; FAT
     org 0x0100
     db BROTHER_MEDIA_BYTE, 0xff, 0xff
-    db 0xff, 0x0f ; uh, one used cluster?
+	db 0x03, 0xf0, 0xff ; two clusters (2 and 3)
 
     ; Directory
     org 0x400
@@ -48,7 +48,7 @@ BROTHER_MEDIA_BYTE = 0x58 ; non-standard
     dw 0x0000   ; last modified time
     dw 0x0000   ; last modified date
     dw 2        ; low bytes of cluster number
-    dw 512, 0   ; file size (one cluster)
+    dw 1024, 0  ; file size (two clusters)
 
     org 0x440
     db "PRESS      ", 0
@@ -64,6 +64,6 @@ BROTHER_MEDIA_BYTE = 0x58 ; non-standard
     incbin "boot.cim"
 
     ; CP/M boot image
-    org 0xe00
+    org 0x1000
     incbin "cpmfile.cim"
 
