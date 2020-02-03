@@ -269,3 +269,5 @@ offset:      db 0
 changed:     db 0
 buffer:      dw 0
 
+; vim: sw=4 ts=4 expandtab
+

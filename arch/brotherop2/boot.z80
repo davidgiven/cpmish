@@ -38,20 +38,44 @@ switch_to_8000:
 	out0a CBAR
 
 	call tty_init
+	call tty_putsi
+	cpmish_banner 'Brother OP2'
+    db 10, 0
 
-.1
+	; Load the CCP, BDOS and BIOS for the first time.
+
+load_again:
+	ld ix, 0xe400			; low two bytes of physical address
+	ld h, 0x06				; high byte of physical address
+	ld bc, 0x1000 / 256     ; sector number (zero based)
+    inc bc                  ; Brother OS wants one-based sectors
+	ld de, (0x10000 - 0xe400) / 256
+	ld a, 3                 ; Read sector.
+	rst 0x28
+    jr c, disk_error
+
+    ; Call CP/M!
+
+    di
+    ld a, 0x00              ; B/C blocks start at 0x0000
+    out0a CBAR
+    jp 0xfa00
+
+disk_error:
+    ld a, 6                 ; Finished with disk.
+    rst 0x28
+
+    call tty_putsi
+    db 'Disk error! Press any key to try again.', 10, 0
+    call wait_for_a_key
+    jr load_again
+
+wait_for_a_key:
 	ld a, 5 ; get a key
 	rst 8
-	jr nc, .1
+	jr nc, wait_for_a_key
 	ld a, d
-	cp 0x8f
-	jr z, .1
-	call tty_puthex8
-	jr .1
-
-.2
-	rst 0
-	jr $
+	ret
 
 EMULATE_CLEAR_TO_EOL = 1
 EMULATE_CLEAR_TO_EOS = 1
@@ -78,7 +102,6 @@ tty_rawwrite:
 	ret
 
 str.banner:
-	cpmish_banner 'Brother OP2'
 
 end:
 

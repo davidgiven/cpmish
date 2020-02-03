@@ -10,7 +10,7 @@ BROTHER_MEDIA_BYTE = 0x58 ; non-standard
 
     aseg
     org 0x0000
-    db 0xeb, 0xfe
+    db 0xeb, 0xfe, 0x90
     db "BDOSV250"
 
     ; BPB
@@ -50,14 +50,59 @@ BROTHER_MEDIA_BYTE = 0x58 ; non-standard
     dw 2        ; low bytes of cluster number
     dw 1024, 0  ; file size (two clusters)
 
-    org 0x440
-    db "PRESS      ", 0
+    db "--------   ", 0
+	ds 20
     
-    org 0x460
-    db "CODE+Q     ", 0
+    db "--------   ", 0
+	ds 20
 
-    org 0x480
-    db "TO START   ", 0
+    db "--------   ", 0
+	ds 20
+
+	db "DO         ", 0
+	ds 20
+
+	db "NOT        ", 0
+	ds 20
+
+	db "WRITE      ", 0
+	ds 20
+
+	db "TO         ", 0
+	ds 20
+
+	db "THIS       ", 0
+	ds 20
+
+	db "DISK       ", 0
+	ds 20
+
+	db "--------   ", 0
+	ds 20
+	
+	db "--------   ", 0
+	ds 20
+	
+	db "--------   ", 0
+	ds 20
+	
+	db "USE        ", 0
+	ds 20
+
+	db "CODE+Q     ", 0
+	ds 20
+
+	db "THEN       ", 0
+	ds 20
+
+	db "ENTER      ", 0
+	ds 20
+
+	db "TO         ", 0
+	ds 20
+
+	db "START      ", 0
+	ds 20
 
     ; Bootstrap program
     org 0xc00
