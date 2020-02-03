@@ -7,31 +7,32 @@
 ; physical addresses 0x65000 to 0x6ffff is mapped to logical 0x5000 to 0xffff.
 
 	maclib brotherop2
+	maclib cpmish
 
+start:
 	dw MAGIC_OP2
 
-	; Slowly and carefully map us to 0x8000, to expose the common area at
-	; 0x6000 (which some OS system routines need to work). Tricky, because
-	; we're running from the code we're moving. IMPORTANT! Remember that
+	; In order to safely make system calls we need to show the system ROM
+	; at 0x4000-0x7fff. We're currently mapped in at 0x5000, so let's
+	; relocate to 0x8000 and adjust the mapping. 
+	;
+	; IMPORTANT! Remember that
 	; even though we're loaded at 0x5000, we've been assembled at 0x8000
 	; and addresses will all be wrong.
 
-	; Move the C boundary up to 0x8000.
+	; Physically copy our code.
 
-	ld a, 0x85
-	out0a CBAR
+	ld hl, 0x5000
+	ld de, 0x8000
+	ld bc, end - start
+	ldir
 
-	; Set C to show physical memory from 0x65000.
-
-	ld a, 0x65 - 8
-	out0a CBR
-
-	; Switch to running code from the C bank.
+	; Switch to running code from the new location.
 
 	jp switch_to_8000
 switch_to_8000:
 
-	; ...and raise the B boundary to 0x8000 too.
+	; ...and raise the B and C boundaries to 0x8000 too.
 
 	ld a, 0x88
 	out0a CBAR
@@ -76,6 +77,8 @@ tty_rawwrite:
 	out0a PORT_VIDEO_DATA
 	ret
 
-	dseg
-stack:
+str.banner:
+	cpmish_banner 'Brother OP2'
+
+end:
 

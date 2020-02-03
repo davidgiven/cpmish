@@ -41,6 +41,32 @@ label BBASE
 ; program so nothing needs doing here and we just go straight to the CCP.
 BOOTE: equ call_ccp
 
+; Switch from CP/M mapping to Brother OS mapping, with the BIOS at the top of
+; memory.
+
+sysin:
+	pop hl                  ; return address
+	ld (saved_stack), sp    ; save the CP/M stack pointer
+	exx
+	ld a, 0x88              ; expose the Brother ROM
+	out0a CBAR
+	exx
+	ld sp, 0x2000           ; switch to the Brother stack
+	ei
+	jp (hl) 				; exit
+
+; Switch from the Brother OS mapping to the CP/M mapping.
+
+sysout:
+	pop hl                  ; return address
+	di
+	exx
+	ld a, 0x00              ; map RAM in everywhere
+	out0a CBAR
+	exx
+	ld sp, (saved_stack)
+	jp (hl)
+
 call_ccp:
     ld a, 0xc3
     ld hl, BBASE + 3         ; init BIOS entrypoint
@@ -105,7 +131,15 @@ CONSTE:
 
 CONINE:
     call stop_disk_motor
-    ret
+	call sysin
+.1
+	ld a, 5					; get a key
+	rst 8
+	jr nc, .1
+	ld a, d
+	cp 0x8f
+	jr z, .1
+	jp sysout
 
 CONOUTE equ tty_putc
 
@@ -180,22 +214,6 @@ SECTRANE:
     ld l, c
     ret
 
-; Call the Kaypro ROM (which is actually doing most of the work). On entry,
-; L contains the address into the syscall jump table.
-
-; Prints the text immediately following the call to print.
-print:
-    pop hl                   ; return address points to text to print
-    ld a, (hl)
-    inc hl
-    push hl                  ; save address after current char
-
-    or a
-    ret z                    ; if byte was zero, return
-    ld c, a
-    call CONOUTE
-    jr print
-
 EMULATE_CLEAR_TO_EOL = 1
 EMULATE_CLEAR_TO_EOS = 1
     maclib tty
@@ -253,7 +271,7 @@ drive_a_dpd:
     db 3, 7                 ; BSH/BLM for 1024-byte blocks
     db 0                    ; EXM for 1024-byte allocation units and <256 blocks
     dw 31                   ; DRM, one fewer than the number of directory entries
-    db 0xf0, 0x00           ; Initial allocation vector for four directory blocks
+    db 0x80, 0x00           ; Initial allocation vector for one directory block
     dw 8                    ; Size of disk change vecto: (DRM+1)/4
     dw RESERVED_TRACKS      ; Number of reserved tracks
 
