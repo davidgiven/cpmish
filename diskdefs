@@ -47,9 +47,8 @@ diskdef brother-op2
     seclen 256
     tracks 78
     sectrk 12
-    blocksize 256
+    blocksize 1024
     maxdir 32
-    skew 0
     boottrk 4
     os 2.2
 end
