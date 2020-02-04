@@ -27,9 +27,9 @@ zmac {
 
 ld80 {
     name = "boot",
-	address = 0x8000,
+	address = 0x5000,
     srcs = {
-		"-P8000",
+		"-P5000",
 		"+boot.o"
     }
 }
@@ -59,11 +59,11 @@ zmac {
 -- This is the bit which CP/M reloads on warm boot (well, some of it).
 ld80 {
 	name = "cpmfile",
-	address = 0xe400,
+	address = 0x9400,
 	srcs = {
-		"-Pe400", "third_party/zcpr1+zcpr",
-		"-Pec00", "third_party/zsdos+zsdos",
-		"-Pfa00",
+		"-P9400", "third_party/zcpr1+zcpr",
+		"-P9c00", "third_party/zsdos+zsdos",
+		"-Paa00",
 		"+bios",
 		"+floppy"
 	}

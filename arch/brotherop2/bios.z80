@@ -53,21 +53,11 @@ label BBASE
 BOOTE:
     ld sp, 0x0100            ; ephemeral user stack
 
-    ld hl, (tty_cursorx)
-    out0h PORT_VIDEO_Y
-    ld h, 0
-    add hl, hl
-    out0l PORT_VIDEO_X
-    ld l, 0
-    out0l PORT_VIDEO_DATA
-    out0a PORT_VIDEO_DATA
+    call tty_init
 
     xor a
     ld (IOBYTE), a           ; reset iobyte and current disk
     ld (CDISK), a
-
-    ld a, 1
-    ld (tty_cursory), a
 
     ; fall through
 call_ccp:
@@ -98,7 +88,7 @@ WBOOTE:
     ; Reload the CCP (but not the BDOS or CCP).
 
     call sysin
-	ld ix, 0xe400			; low two bytes of physical address
+	ld ix, CBASE 			; low two bytes of physical address
 	ld h, 0x06				; high byte of physical address
 	ld bc, (0x1000 / 256) + 1 ; sector number (one based)
 	ld de, 8                ; number of sectors
@@ -227,9 +217,6 @@ SYSOUT:
 
 saved_stack: dw 0            ; user stack pointer while in system calls
 disk_off_count: db 0         ; cheap and nasty drive motor timer
-current_sector: dw 0
-current_track: dw 0
-current_dma: dw 0
 
 ; vim: ts=4 sw=4 expandtab ft=asm
 
