@@ -2,13 +2,26 @@ include "third_party/ld80/build.lua"
 include "third_party/zmac/build.lua"
 include "utils/build.lua"
 
+normalrule {
+    name = "font_inc",
+    ins = {
+        "arch/brotherop2/utils+fontconvert",
+        "utils+6x7font",
+    },
+    outleaves = { "font.inc" },
+    commands = {
+        "%{ins} > %{outs}"
+    }
+}
+
 zmac {
     name = "boot.o",
     srcs = { "./boot.z80" },
     deps = {
         "include/*.lib",
         "./include/*.lib",
-		"arch/common/utils/tty.lib"
+		"arch/common/utils/tty.lib",
+		"+font_inc"
     },
 }
 

@@ -196,10 +196,6 @@ tty_rawwrite:
     ld h, 0
     add hl, hl
     out0l PORT_VIDEO_X
-    cp a, ' '
-    jr nz, .1
-    xor a
-.1
     ld l, 0
     out0l PORT_VIDEO_DATA
     out0a PORT_VIDEO_DATA

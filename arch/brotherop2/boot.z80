@@ -37,10 +37,13 @@ switch_to_8000:
 	ld a, 0x88
 	out0a CBAR
 
-	call tty_init
-	call tty_putsi
-	cpmish_banner 'Brother OP2'
-    db 10, 0
+	; Seems to be necessary to reset the video system?
+
+	xor a
+	out0a PORT_VIDEO_Y
+	out0a PORT_VIDEO_X
+
+	call load_font
 
 	; Load the CCP, BDOS and BIOS for the first time.
 
@@ -65,9 +68,9 @@ disk_error:
     ld a, 6                 ; Finished with disk.
     rst 0x28
 
-    call tty_putsi
-    db 'Disk error! Press any key to try again.', 10, 0
-    call wait_for_a_key
+;    call tty_putsi
+;    db 'Disk error! Press any key to try again.', 10, 0
+;    call wait_for_a_key
     jr load_again
 
 wait_for_a_key:
@@ -77,31 +80,31 @@ wait_for_a_key:
 	ld a, d
 	ret
 
-EMULATE_CLEAR_TO_EOL = 1
-EMULATE_CLEAR_TO_EOS = 1
-	maclib tty
-
-tty_scroll:
-tty_insert_line:
-tty_delete_line:
-	ret
-
-tty_rawwrite:
-	ld hl, (tty_cursorx)
-	out0h PORT_VIDEO_Y
-	ld h, 0
-	add hl, hl
-	out0l PORT_VIDEO_X
-	cp a, ' '
-	jr nz, .1
+load_font:
+	ld a, 0x11
+	out0a PORT_VIDEO_Y
 	xor a
+	out0a PORT_VIDEO_X
+	ld c, 96
+	ld hl, font_table
 .1
-	ld l, 0
-	out0l PORT_VIDEO_DATA
+	ld b, 7
+.2
+	ld a, (hl)
 	out0a PORT_VIDEO_DATA
+	inc hl
+	djnz .2
+
+	xor a
+	out0a PORT_VIDEO_DATA
+
+	dec c
+	jr nz, .1
 	ret
 
-str.banner:
+font_table:
+	include "font.inc"
+font_table_end:
 
 end:
 
