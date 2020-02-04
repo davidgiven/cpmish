@@ -42,6 +42,17 @@ switch_to_8000:
 	xor a
 	out0a PORT_VIDEO_Y
 	out0a PORT_VIDEO_X
+	out0a PORT_VIDEO_Y
+	out0a PORT_VIDEO_X
+
+	; Clear the screen.
+	; FIXME: doesn't work. Why?
+
+	ld bc, 0xfff
+.1
+	out0a PORT_VIDEO_DATA
+	dec bc
+	jr nz, .1
 
 	call load_font
 
@@ -67,18 +78,16 @@ load_again:
 disk_error:
     ld a, 6                 ; Finished with disk.
     rst 0x28
-
-;    call tty_putsi
-;    db 'Disk error! Press any key to try again.', 10, 0
-;    call wait_for_a_key
-    jr load_again
+	rst 0					; nasty reboot
 
 wait_for_a_key:
-	ld a, 5 ; get a key
+	ld a, 9					; wait for a raw key scancode
 	rst 8
 	jr nc, wait_for_a_key
 	ld a, d
 	ret
+
+; Programs characters 32..127 in the system font.
 
 load_font:
 	ld a, 0x11
@@ -107,4 +116,6 @@ font_table:
 font_table_end:
 
 end:
+
+; vim: ts=4 sw=4 et ft=asm
 

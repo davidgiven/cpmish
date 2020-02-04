@@ -45,6 +45,17 @@ zmac {
     },
 }
 
+zmac {
+	name = "floppy",
+	srcs = { "./floppy.z80" },
+	deps = {
+        "include/*.lib",
+        "./include/*.lib",
+		"arch/common/utils/tty.lib",
+		"arch/common/utils/deblocker.lib"
+    },
+}
+
 -- This is the bit which CP/M reloads on warm boot (well, some of it).
 ld80 {
 	name = "cpmfile",
@@ -52,7 +63,9 @@ ld80 {
 	srcs = {
 		"-Pe400", "third_party/zcpr1+zcpr",
 		"-Pec00", "third_party/zsdos+zsdos",
-		"-Pfa00", "+bios",
+		"-Pfa00",
+		"+bios",
+		"+floppy"
 	}
 }
 

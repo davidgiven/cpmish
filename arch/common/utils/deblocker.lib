@@ -30,7 +30,7 @@ DBS__SIZE       = DBS_BUFFER + (1 << DBS_BLOCK_SHIFT)
 ; On entry:
 ;   IX = pointer to deblocker structure
 ; On exit:
-;   Z on error, NZ on success
+;   Z on dbs_i_error, NZ on dbs_i_success
 
 ; Reads and/or writes a 128-byte sector.
 ; On return, HL points at the data in the buffer. To write, update the
@@ -42,17 +42,17 @@ DBS__SIZE       = DBS_BUFFER + (1 << DBS_BLOCK_SHIFT)
 ;   BC = CP/M sector
 ;   DE = CP/M track
 ; On exit:
-;   Z on failure, NZ on success
+;   Z on failure, NZ on dbs_i_success
 ;   HL = address of 128 byte data in buffer
     cseg
 db_get:
-    ld (mode), a        ; save deblock mode
-    call calculate_physical
+    ld (dbs_i_mode), a  ; save deblock mode
+    call dbs_i_calculate_physical
     ret z
-    call change_block
+    call dbs_i_change_block
     ret z
-calculate_buffer_address:
-    ld a, (offset)
+dbs_i_calculate_buffer_address:
+    ld a, (dbs_i_offset)
     rra
     ld h, a
     ld l, 0
@@ -72,10 +72,10 @@ calculate_buffer_address:
 ; On exit:
 ;   BC = physical sector
 ;   DE = physical track
-calculate_physical:
+dbs_i_calculate_physical:
     ld a, c             ; save CP/M sector offset
     and 3
-    ld (offset), a
+    ld (dbs_i_offset), a
 
     ; Convert the CP/M sector count to a native sector count.
     rept DBS_BLOCK_SHIFT - 7
@@ -87,27 +87,27 @@ calculate_physical:
 
     ld a, (ix+DBS_NUM_SECTORS+1)
     cp b
-    jr c, error         ; high byte bigger, out of bounds
+    jr c, dbs_i_error   ; high byte bigger, out of bounds
     jr nz, .1           ; high byte smaller, in bounds
     ld a, c
     cp (ix+DBS_NUM_SECTORS+0)
-    jr nc, error        ; low byte equal or bigger, out of bounds
+    jr nc, dbs_i_error  ; low byte equal or bigger, out of bounds
 .1
 
     ; Check track number is in bounds.
 
     ld a, (ix+DBS_NUM_TRACKS+1)
     cp d
-    jr c, error         ; high byte bigger, out of bounds
+    jr c, dbs_i_error   ; high byte bigger, out of bounds
     jr nz, .2           ; high byte smaller, in bounds
     ld a, e
     cp (ix+DBS_NUM_TRACKS+0)
-    jr nc, error        ; low byte equal or bigger, out of bounds
+    jr nc, dbs_i_error  ; low byte equal or bigger, out of bounds
 .2
 
     ; Determine whether the address has changed.
 
-    ld hl, changed
+    ld hl, dbs_i_changed
     ld (hl), 0
 
     ld a, (ix+DBS_CUR_SECTOR+0)
@@ -121,22 +121,22 @@ calculate_physical:
     jr nz, .3
     ld a, (ix+DBS_CUR_TRACK+1)
     cp d
-    jr z, success
+    jr z, dbs_i_success
 
 .3
     ld (hl), 1          ; addressed sector has changed
-success:
+dbs_i_success:
     or 1                ; set nz (success)
     ret
 
-error:
+dbs_i_error:
     xor a               ; set z (error)
     ret
     
-change_block:
-    ld a, (changed)
+dbs_i_change_block:
+    ld a, (dbs_i_changed)
     or a
-    jr z, success       ; sector number hasn't changed, do nothing
+    jr z, dbs_i_success ; sector number hasn't changed, do nothing
 
     ld a, (ix+DBS_DIRTY)
     or a                ; was the previous sector dirty?
@@ -146,7 +146,7 @@ change_block:
     ld h, (ix+DBS_WNATIVE+1)
     push bc
     push de
-    call pchl
+    call dbs_i_pchl
     pop de
     pop bc
     ret z
@@ -158,27 +158,27 @@ change_block:
     ld (ix+DBS_CUR_TRACK+1), d
     ld (ix+DBS_CUR_TRACK+0), e
 
-    ld a, (mode)
+    ld a, (dbs_i_mode)
     cp 2                ; looking at new block?
-    jr z, success       ; if so, don't read
+    jr z, dbs_i_success ; if so, don't read
     ld l, (ix+DBS_RNATIVE+0)
     ld h, (ix+DBS_RNATIVE+1)
-pchl:
+dbs_i_pchl:
     jp (hl)
 
 ; Flushes the buffer to disk (if necessary).
 ; On entry:
 ;   IX = pointer to deblocker structure
 ; On exit:
-;   Z on failure, NZ on success
+;   Z on failure, NZ on dbs_i_success
 db_flush:
     ld a, (ix+DBS_DIRTY)
     or a
-    jr z, success
+    jr z, dbs_i_success
 
     ld l, (ix+DBS_WNATIVE+0) ; yes, write it back
     ld h, (ix+DBS_WNATIVE+1)
-    call pchl
+    call dbs_i_pchl
     ret z
     ld (ix+DBS_DIRTY), 0  ; only mark block as clean if write succeeded
     ret
@@ -203,7 +203,7 @@ db_cap:
     sla e
     rl d
     endm
-    ld (iy+DPB_SPT+0), e        ; write to SPT
+    ld (iy+DPB_SPT+0), e ; write to SPT
     ld (iy+DPB_SPT+1), d
 
     ; BC*DE = DE:HL
@@ -247,11 +247,11 @@ db_cap:
 .4
     ld a, b
     cp h
-    jr c, .5                    ; high byte too big
-    jr nz, .6                   ; high byte too low, value in range
+    jr c, .5            ; high byte too big
+    jr nz, .6           ; high byte too low, value in range
     ld a, l
     cp c
-    jr c, .6                    ; low byte in range
+    jr c, .6            ; low byte in range
 .5
     ; This disk really is too big.
     ld h, b
@@ -264,10 +264,10 @@ db_cap:
 
     endif
 
-mode:        db 0
-offset:      db 0
-changed:     db 0
-buffer:      dw 0
+dbs_i_mode:    db 0
+dbs_i_offset:  db 0
+dbs_i_changed: db 0
+dbs_i_buffer:  dw 0
 
-; vim: sw=4 ts=4 expandtab
+; vim: sw=4 ts=4 expandtab ft=asm
 

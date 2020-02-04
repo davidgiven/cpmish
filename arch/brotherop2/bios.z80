@@ -6,6 +6,19 @@
     maclib cpmish
     maclib brotherop2
 
+    public SYSIN
+    public SYSOUT
+    public ADDAHL
+
+    extrn SELDSKE
+    extrn HOMEE
+    extrn SETTRKE
+    extrn SETSECE
+    extrn SETDMAE
+    extrn READE
+    extrn WRITEE
+    extrn SECTRANE
+
     cseg
 
 ; BIOS jump table.
@@ -33,13 +46,21 @@ label BBASE
 ;
 ; The BIOS calls typically use a simple calling convention where the parameter
 ; is in BC and the result is returned in A and HL. The docs don't mention
-; anything about other registers so we'll assume they can be corrupted. In
-; addition, our syscall stuff assumes that on return A = L, just like in the
-; BDOS, so we have a single parameter and a single response --- all very simple.
+; anything about other registers so we'll assume they can be corrupted. Eight-
+; bit values are returned in A and sixteen-bit values in HL.
 
 ; Cold boot on system startup.
 BOOTE:
     ld sp, 0x0100            ; ephemeral user stack
+
+    ld hl, (tty_cursorx)
+    out0h PORT_VIDEO_Y
+    ld h, 0
+    add hl, hl
+    out0l PORT_VIDEO_X
+    ld l, 0
+    out0l PORT_VIDEO_DATA
+    out0a PORT_VIDEO_DATA
 
     xor a
     ld (IOBYTE), a           ; reset iobyte and current disk
@@ -64,10 +85,10 @@ call_ccp:
     jp CBASE                 ; pass control to CCP
 
 stop_disk_motor:
-    call sysin
+    call SYSIN
     ld a, 6                  ; finished with disk
     rst 0x28
-    call sysout
+    call SYSOUT
     ret
 
 ; Warm boot on application exit.
@@ -95,17 +116,51 @@ CONSTE:
     ret
 
 CONINE:
-    call stop_disk_motor
-    call sysin
+    call SYSIN
+    ld a, 6                 ; finished with disk
+    rst 0x28
 .1
-    ld a, 5                 ; get a key
+    ld a, 9                 ; get a raw key scancode
     rst 8
     jr nc, .1
+    call SYSOUT
 
-    call sysout
     ld a, d
+    and 0x3f
+    bit 7, d
+    jr z, .2
+    add 0x40
+.2
+    ld hl, keyboard_table
+    call ADDAHL
+    ld a, (hl)
+
+;    bit 4, d
+;    jr z, .3
+;    cp 0x20
+;    jr c, .3
+;    sub 0x20
+;.3
 
     ret
+
+ADDAHL:
+    add a, l
+    ld l, a
+    ret nc
+    inc h
+    ret
+
+keyboard_table:
+    db '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 39,  '=', ']', '-', ';', '#' ; 00
+    db '[', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o' ; 10
+    db 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '.', '/', ',', 10,  ' ' ; 20
+    db 127, 8,   11,  10,  12,  9,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0   ; 30
+    db ')', '!', '"', '#', '$', '%', '^', '&', '*', '(', '@', '+', '[', '_', ':', '~' ; 40
+    db '}', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O' ; 50
+    db 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '>', '?', '<', 10,  ' ' ; 60
+    db 0,   8,   11,  10,  12,  9,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0   ; 70
+
 
 CONOUTE:
     ld a, c
@@ -119,71 +174,6 @@ LISTSTE:
 READERE:
 return_error:
     ld a, 0xff
-    ret
-
-; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
-; error).
-SELDSKE:
-    ld hl, 0
-    ld a, c
-    or a
-    ret nz                  ; return 0 if not drive 0
-    ld hl, drive_a_dph
-    ret
-
-HOMEE:
-    ld bc, 0
-    ; fall through
-SETTRKE:
-    ld a, c
-    ld (current_track), bc
-    ret
-
-SETSECE:
-    ld a, c
-    ld (current_sector), bc
-    ret
-
-SETDMAE:
-    ld (current_dma), bc
-    ret
-
-READE:
-    xor a                   ; reset disk timer
-    ld (disk_off_count), a
-
-    xor a                   ; deblocking mode normal
-    call getblock
-    ;jr z, return_error
-
-    ld de, (current_dma)
-copy_and_return:
-    ld bc, 128
-    ldir
-    xor a
-    ret
-
-WRITEE:
-    xor a                   ; reset disk timer
-    ld (disk_off_count), a
-
-    ld a, c                 ; set deblocking mode
-    call getblock
-    jr z, return_error
-
-    ld de, (current_dma)
-    ex de, hl
-    jr copy_and_return
-
-getblock;
-    ld ix, drive_a_dbs
-    ld bc, (current_sector)
-    ld de, (current_track)
-    jp db_get
-
-SECTRANE:
-    ld h, b
-    ld l, c
     ret
 
 EMULATE_CLEAR_TO_EOL = 1
@@ -206,82 +196,10 @@ tty_insert_line:
 tty_delete_line:
     ret
 
-DBS_BLOCK_SHIFT = 8 ; 256-byte native sectors
-DBS_WANT_DB_CAP = 0 ; don't want the db_cap routine
-    maclib deblocker
-
-; Disk handling. On entry, these routines are called with
-; ix set to the deblocker structure, and return z on error.
-
-fd_r256:
-    push ix
-    push af
-    push hl
-    push bc
-    push de
-    ld a, 'R'
-    call tty_putc
-    ld a, (ix+DBS_CUR_TRACK)
-    call tty_puthex8
-    ld a, '.'
-    call tty_putc
-    ld a, (ix+DBS_CUR_SECTOR)
-    call tty_puthex8
-    pop de
-    pop bc
-    pop hl
-    pop af
-    pop ix
-
-    push ix
-    call fd_setup_read_or_write
-    call sysin
-    ld a, 3
-    rst 0x28
-fd_rw_return:
-    call sysout
-    pop ix
-    ;jr nc, disk_error
-    or 1
-    ret
-
-disk_error:
-    xor a                   ; set z (error)
-    ret
-
-fd_w256:
-    push ix
-    call fd_setup_read_or_write
-    call sysin
-    ld a, 4
-    rst 0x28
-    jr fd_rw_return
-
-fd_setup_read_or_write:
-    ld a, (ix+DBS_CUR_TRACK)
-    ld c, a                 ; c = track
-    add a, a                ; a = track*2
-    add a, c                ; a = track*3 --- this is all that will fit in 8 bits
-    ld l, a
-    ld h, 0                 ; hl = track*3
-    add hl, hl              ; hl = track*6
-    add hl, hl              ; hl = track*12
-    ld c, (ix+DBS_CUR_SECTOR)
-    ld b, 0
-    add hl, bc              ; hl = zero-based sector number
-    inc hl                  ; hl = one-based sector number
-    ld b, h
-    ld c, l                 ; bc = one-based sector number
-    ld de, DBS_BUFFER
-    add ix, de              ; ix = low bytes of physical address
-    ld de, 1                ; de = sector count
-    ld h, 0x06              ; high byte of physical address
-    ret
-
 ; Switch from CP/M mapping to Brother OS mapping, with the BIOS at the top of
 ; memory.
 
-sysin:
+SYSIN:
     exx
     pop hl                  ; return address
     ld (saved_stack), sp    ; save the CP/M stack pointer
@@ -296,7 +214,7 @@ sysin:
 ; Switch from the Brother OS mapping to the CP/M mapping.
 ; DO NOT TAIL CALL THESE.
 
-sysout:
+SYSOUT:
     di
     exx
     pop hl                  ; return address
@@ -307,48 +225,11 @@ sysout:
     exx
     ret
 
-drive_a_dbs:
-    dw 12       ; number of sectors
-    dw 78       ; number of tracks
-    dw fd_r256  ; read callback
-    dw fd_w256  ; write callback
-    dw 0xffff   ; current sector
-    dw 0        ; current track
-    db 0        ; dirty flag
-    ds 256      ; buffer
-
-drive_a_dph:
-    dw 0                    ; Sector translation vector
-    dw 0, 0, 0              ; BDOS scratchpad
-    dw dirbuf               ; Directory scratchpad
-    dw drive_a_dpd          ; Drive parameter block
-    dw drive_a_check_vector ; Disk change check vector
-    dw drive_a_bitmap       ; Allocation bitmap
-
-RESERVED_TRACKS = 4
-DRIVE_A_BLOCKS = (78-RESERVED_TRACKS)*12*256 / 1024
-drive_a_dpd:
-    dw 12*2                 ; Number of CP/M sectors per track
-    db 3, 7                 ; BSH/BLM for 1024-byte blocks
-    db 0                    ; EXM for 1024-byte allocation units and <256 blocks
-    dw DRIVE_A_BLOCKS-1     ; DSM
-    dw 31                   ; DRM, one fewer than the number of directory entries
-    db 0x80, 0x00           ; Initial allocation vector for one directory block
-    dw 8                    ; Size of disk change vector: (DRM+1)/4
-    dw RESERVED_TRACKS      ; Number of reserved tracks
-
-drive_a_bitmap:
-    ds (DRIVE_A_BLOCKS+7) / 8
-drive_a_check_vector:
-    ds 8
-dirbuf:
-    ds 128
-
 saved_stack: dw 0            ; user stack pointer while in system calls
 disk_off_count: db 0         ; cheap and nasty drive motor timer
 current_sector: dw 0
 current_track: dw 0
 current_dma: dw 0
 
-; vim: ts=4 sw=4 expandtab
+; vim: ts=4 sw=4 expandtab ft=asm
 

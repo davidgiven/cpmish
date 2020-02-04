@@ -368,5 +368,5 @@ tty_putc:
     ld (hl), a
     jp tty_cursor_down
 
-; vim: set ts=4 sw=4 expandtab
+; vim: sw=4 ts=4 expandtab ft=asm
 

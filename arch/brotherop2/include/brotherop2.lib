@@ -81,3 +81,17 @@ in0l   macro port
         db port
         endm
 
+mlthl	macro
+		dw 0x6ced
+		endm
+
+mltde 	macro
+		dw 0x5ced
+		endm
+
+mltbc	macro
+		dw 0x4ced
+		endm
+
+; vim: ts=4 sw=4 et ft=asm
+
