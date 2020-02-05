@@ -34,27 +34,18 @@ ld80 {
     }
 }
 
-zmac {
-	name = "bios",
-	srcs = { "./bios.z80" },
-	deps = {
-        "include/*.lib",
-        "./include/*.lib",
-		"arch/common/utils/tty.lib",
-		"arch/common/utils/deblocker.lib"
-    },
-}
-
-zmac {
-	name = "floppy",
-	srcs = { "./floppy.z80" },
-	deps = {
-        "include/*.lib",
-        "./include/*.lib",
-		"arch/common/utils/tty.lib",
-		"arch/common/utils/deblocker.lib"
-    },
-}
+for _, n in pairs({"bios", "floppy", "tty"}) do
+	zmac {
+		name = n,
+		srcs = { "./"..n..".z80" },
+		deps = {
+			"include/*.lib",
+			"./include/*.lib",
+			"arch/common/utils/tty.lib",
+			"arch/common/utils/deblocker.lib"
+		},
+	}
+end
 
 -- This is the bit which CP/M reloads on warm boot (well, some of it).
 ld80 {
@@ -65,7 +56,8 @@ ld80 {
 		"-P9c00", "third_party/zsdos+zsdos",
 		"-Paa00",
 		"+bios",
-		"+floppy"
+		"+floppy",
+		"+tty"
 	}
 }
 

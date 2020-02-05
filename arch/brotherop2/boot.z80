@@ -16,20 +16,18 @@ start:
     ; use this for our CP/M workspace, but we actually need it at 0x0000
     ; to 0xb000.
 
-	; Seems to be necessary to reset the video system?
-
-	xor a
-	out0a PORT_VIDEO_Y
-	out0a PORT_VIDEO_X
-	out0a PORT_VIDEO_Y
-	out0a PORT_VIDEO_X
-
 	; Clear the screen.
-	; FIXME: doesn't work. Why?
 
-	ld bc, 0xfff
+	ld bc, SCREEN_HEIGHT * 256
+	xor a
 .1
+    out0c PORT_VIDEO_LO
+    out0b PORT_VIDEO_HI
+    nop
+    xor a
 	out0a PORT_VIDEO_DATA
+    ld a, b
+    or c
 	dec bc
 	jr nz, .1
 
@@ -39,7 +37,7 @@ start:
 
 load_again:
 	ld ix, 0xe400			; low two bytes of physical address
-	ld h, 0x06				; high byte of physical address
+	ld h, 0x06				; high nibble of physical address
 	ld bc, 0x1000 / 256     ; sector number (zero based)
     inc bc                  ; Brother OS wants one-based sectors
 	ld de, (0x10000 - 0xe400) / 256
@@ -67,20 +65,13 @@ disk_error:
     rst 0x28
 	rst 0					; nasty reboot
 
-wait_for_a_key:
-	ld a, 9					; wait for a raw key scancode
-	rst 8
-	jr nc, wait_for_a_key
-	ld a, d
-	ret
-
 ; Programs characters 32..127 in the system font.
 
 load_font:
-	ld a, 0x11
-	out0a PORT_VIDEO_Y
 	xor a
-	out0a PORT_VIDEO_X
+	out0a PORT_VIDEO_LO
+	ld a, 0x11
+	out0a PORT_VIDEO_HI
 	ld c, 96
 	ld hl, font_table
 .1

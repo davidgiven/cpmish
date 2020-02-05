@@ -1,0 +1,90 @@
+; Brother OP2 cpmish BIOS © 2020 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib brotherop2
+
+    extrn SYSIN
+    extrn SYSOUT
+    extrn ADDAHL
+
+    public TTYINIT
+    public TTYPUTC
+    public TTYPUT8
+    public TTYPUT16
+
+    cseg
+
+EMULATE_CLEAR_TO_EOL = 1
+EMULATE_CLEAR_TO_EOS = 1
+    maclib tty
+
+TTYINIT equ tty_init
+TTYPUTC equ tty_putc
+TTYPUT8 equ tty_puthex8
+TTYPUT16 equ tty_puthex16
+
+tty_rawwrite:
+    ld c, a
+    ld a, (tty_cursorx)
+    add a
+    out0a PORT_VIDEO_LO
+    ld a, (tty_cursory)
+    out0a PORT_VIDEO_HI
+    xor a
+    out0a PORT_VIDEO_DATA
+    ld a, 0x7f
+    and c
+    out0a PORT_VIDEO_DATA
+    ret
+
+tty_delete_line
+    ld a, (tty_cursory)     ; dest line
+    cp SCREEN_HEIGHT - 1
+    jr z, .3                ; if already on the last line, don't move anything
+    ld h, a
+.1
+    ld l, 0                 ; char
+.2
+    inc h                   ; switch to source line
+    out0l PORT_VIDEO_LO
+    out0h PORT_VIDEO_HI
+    dec h                   ; move back to dest
+    nop
+    nop
+    in0a PORT_VIDEO_DATA
+    out0l PORT_VIDEO_LO
+    out0h PORT_VIDEO_HI
+    inc l                   ; next char
+    out0a PORT_VIDEO_DATA
+    ld a, 160
+    cp l
+    jr nz, .2
+
+    inc h
+    ld a, 13
+    cp h
+    jr nz, .1
+
+    ; Blank the bottom line of the screen.
+.3
+    xor a
+    out0a PORT_VIDEO_LO
+    ld b, SCREEN_HEIGHT - 1
+    out0b PORT_VIDEO_HI
+    ld b, 160
+    nop
+.4
+    out0a PORT_VIDEO_DATA
+    nop
+    nop
+    djnz .4
+    ret
+
+tty_insert_line:
+    ret
+
+; vim: ts=4 sw=4 et ft=asm
+

@@ -398,17 +398,3 @@ scanline_shift_amount:
     ex de, hl           ; put font pointer back in HL
     ret
 
-; --- Scrolls the screen by one line ----------------------------------------
-
-tty_scroll:
-    ld de, VIDEORAM_BASE
-    ld hl, VIDEORAM_BASE + BYTES_PER_LINE
-    ld bc, LAST_LINE - VIDEORAM_BASE
-    ldir
-    ld h, d
-    ld l, e
-    inc de
-    ld bc, BYTES_PER_LINE - 1
-    ld (hl), 0
-    ldir
-    ret

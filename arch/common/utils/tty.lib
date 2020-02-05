@@ -209,7 +209,15 @@ tty_cursor_down:
     cp SCREEN_HEIGHT
     ret nz
     dec (hl)                ; oops, don't go the next line after all
-    jp tty_scroll
+tty_scroll:
+	ld hl, tty_cursory
+	ld a, (hl)
+	push af
+	ld (hl), 0
+	call tty_delete_line
+	pop af
+	ld (tty_cursory), a
+	ret
 
 ; Move to (B, C).
 tty_goto_xy:

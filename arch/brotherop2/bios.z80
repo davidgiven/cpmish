@@ -19,6 +19,11 @@
     extrn WRITEE
     extrn SECTRANE
 
+    extrn TTYINIT
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+
     cseg
 
 ; BIOS jump table.
@@ -53,7 +58,7 @@ label BBASE
 BOOTE:
     ld sp, 0x0100            ; ephemeral user stack
 
-    call tty_init
+    call TTYINIT
 
     xor a
     ld (IOBYTE), a           ; reset iobyte and current disk
@@ -88,11 +93,11 @@ WBOOTE:
     ; Reload the CCP (but not the BDOS or CCP).
 
     call sysin
-	ld ix, CBASE 			; low two bytes of physical address
-	ld h, 0x06				; high byte of physical address
+	ld ix, CBASE + 0x5000    ; low two bytes of physical address
+	ld h, 0x06				 ; high byte of physical address
 	ld bc, (0x1000 / 256) + 1 ; sector number (one based)
-	ld de, 8                ; number of sectors
-	ld a, 3 ; read sector (maybe)
+	ld de, 8                 ; number of sectors
+	ld a, 3                  ; read sector
 	rst 0x28
     call sysout
     jr call_ccp
@@ -107,10 +112,10 @@ CONSTE:
 
 CONINE:
     call SYSIN
-    ld a, 6                 ; finished with disk
+    ld a, 6                  ; finished with disk
     rst 0x28
 .1
-    ld a, 9                 ; get a raw key scancode
+    ld a, 9                  ; get a raw key scancode
     rst 8
     jr nc, .1
     call SYSOUT
@@ -125,12 +130,13 @@ CONINE:
     call ADDAHL
     ld a, (hl)
 
-;    bit 4, d
-;    jr z, .3
-;    cp 0x20
-;    jr c, .3
-;    sub 0x20
-;.3
+    bit 6, d                ; CODE pressed?
+    jr z, .3
+    bit 6, a                ; 0x40 or up?
+    jr z, .3
+    and ~0x20
+    sub 0x40
+.3
 
     ret
 
@@ -145,16 +151,16 @@ keyboard_table:
     db '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 39,  '=', ']', '-', ';', '#' ; 00
     db '[', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o' ; 10
     db 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '.', '/', ',', 10,  ' ' ; 20
-    db 127, 8,   11,  10,  12,  9,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0   ; 30
+    db 127, 8,   11,  10,  12,  9,   0,   0,   92,  0,   0,   0,   0,   0,   0,   0   ; 30
     db ')', '!', '"', '#', '$', '%', '^', '&', '*', '(', '@', '+', '[', '_', ':', '~' ; 40
     db '}', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O' ; 50
     db 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '>', '?', '<', 10,  ' ' ; 60
-    db 0,   8,   11,  10,  12,  9,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0   ; 70
+    db 0,   8,   11,  10,  12,  9,   0,   0,   124, 0,   0,   0,   0,   0,   0,   0   ; 70
 
 
 CONOUTE:
     ld a, c
-    jp tty_putc
+    jp TTYPUTC
 
 LISTE:
 PUNCHE:
@@ -164,26 +170,6 @@ LISTSTE:
 READERE:
 return_error:
     ld a, 0xff
-    ret
-
-EMULATE_CLEAR_TO_EOL = 1
-EMULATE_CLEAR_TO_EOS = 1
-    maclib tty
-
-tty_rawwrite:
-    ld hl, (tty_cursorx)
-    out0h PORT_VIDEO_Y
-    ld h, 0
-    add hl, hl
-    out0l PORT_VIDEO_X
-    ld l, 0
-    out0l PORT_VIDEO_DATA
-    out0a PORT_VIDEO_DATA
-    ret
-
-tty_scroll:
-tty_insert_line:
-tty_delete_line:
     ret
 
 ; Switch from CP/M mapping to Brother OS mapping, with the BIOS at the top of

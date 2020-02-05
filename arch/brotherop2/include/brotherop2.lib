@@ -4,8 +4,8 @@ BBR = 0x39
 CBR = 0x38
 CBAR = 0x3a
 
-PORT_VIDEO_X = 0x72
-PORT_VIDEO_Y = 0x73
+PORT_VIDEO_LO = 0x72
+PORT_VIDEO_HI = 0x73
 PORT_VIDEO_DATA = 0x74
 
 SCREEN_WIDTH = 80
@@ -46,37 +46,37 @@ out0l   macro port
         db port
         endm
 
-in0a   macro port
+in0a    macro port
         dw 0x38ed
         db port
         endm
 
-in0b   macro port
+in0b    macro port
         dw 0x00ed
         db port
         endm
 
-in0c   macro port
+in0c    macro port
         dw 0x08ed
         db port
         endm
 
-in0d   macro port
+in0d    macro port
         dw 0x10ed
         db port
         endm
 
-in0e   macro port
+in0e    macro port
         dw 0x18ed
         db port
         endm
 
-in0h   macro port
+in0h    macro port
         dw 0x20ed
         db port
         endm
 
-in0l   macro port
+in0l    macro port
         dw 0x28ed
         db port
         endm

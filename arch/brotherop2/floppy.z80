@@ -10,6 +10,10 @@
     extrn SYSOUT
     extrn ADDAHL
 
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+
     public SELDSKE
     public HOMEE
     public SETTRKE
@@ -62,6 +66,7 @@ READE:
     xor a                   ; deblocking mode normal
     call getblock
     jr c, return_bios_error
+    ; hl is pointer to record in buffer
 
     ld de, (current_dma)
     ld bc, 127
@@ -73,6 +78,7 @@ WRITEE:
     ld a, c                 ; set deblocking mode
     call getblock
     jr c, return_bios_error
+    ; hl is pointer to record in buffer
 
     ld a, 1                 ; mark this sector as dirty
     ld (dirty), a
@@ -121,16 +127,10 @@ getblock;
     jr z, calculate_physical_address ; if so, skip the read
 
     push hl
-    call SYSIN
-    ld ix, disk_buffer      ; low byte of physical address
     ld b, h                 ; new current block (zero based)
     ld c, l
-    inc bc                  ; (one based)
-    ld h, 0x06              ; high byte of physical address
-    ld de, 1                ; sector count
     ld a, 3                 ; read sector
-    rst 0x28
-    call SYSOUT
+    call xfer_syscall
     pop hl
     ret c
 
@@ -150,20 +150,25 @@ calculate_physical_address:
 
 flush_current_block:
     push hl
-    call SYSIN
-    ld ix, disk_buffer      ; low byte of physical address
-    ld bc, (current_block)  ; old current block (zero based)
-    inc bc                  ; (one based)
-    ld hl, 0x06             ; high byte of physical address
-    ld de, 1                ; sector count
-    ld a, 4                 ; write sector
-    rst 0x28
-    call SYSOUT
+    ld bc, (current_block)  ; old current block
+    ld a, 4                 ; write block
+    call xfer_syscall
     pop hl
     ret c                   ; exit on error
 
     xor a                   ; also clears carry
     ld (dirty), a           ; clear dirty flag
+    ret
+
+; On entry, A = syscall number, BC = zero-based block to transfer.
+xfer_syscall:
+    call SYSIN
+    ld ix, disk_buffer + 0x5000 ; low byte of physical address
+    inc bc                  ; block number must be one based
+    ld h, 6                 ; high nibble of physical address
+    ld de, 1                ; sector count
+    rst 0x28                ; disk access
+    call SYSOUT
     ret
 
     dseg
