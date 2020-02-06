@@ -1,0 +1,22 @@
+name: C/C++ CI
+
+on: [push]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-16.04
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: apt
+      run: sudo apt install netpbm cpmtools lua5.1 ninja-build libz80ex-dev flex bison lua-posix libreadline-dev
+    - name: build-ack
+      run: |
+        git clone --depth=1 https://github.com/davidgiven/ack.git
+        make -C ack PREFIX=$HOME +ack-cpm
+        make -C ack PREFIX=$HOME install
+    - name: make
+      run: PATH=$PATH:$HOME/bin make
+        
+
