@@ -219,7 +219,7 @@ void main(int argc, const char* argv[])
             cpm_bios_setdma(cpm_default_dma);
             cpm_bios_settrk(track);
             cpm_bios_setsec(sector);
-            r = (mode == 'R') ? cpm_bios_read() : cpm_bios_write();
+            r = (mode == 'R') ? cpm_bios_read() : cpm_bios_write(0);
             end_seldsk();
             if (r)
                 break;
