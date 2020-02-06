@@ -50,14 +50,14 @@ end
 -- This is the bit which CP/M reloads on warm boot (well, some of it).
 ld80 {
 	name = "cpmfile",
-	address = 0x9400,
+	address = 0x9300,
 	srcs = {
-		"-P9400", "third_party/zcpr1+zcpr",
-		"-P9c00", "third_party/zsdos+zsdos",
-		"-Paa00",
+		"-P9300", "third_party/zcpr1+zcpr",
+		"-P9b00", "third_party/zsdos+zsdos",
+		"-Pa900",
 		"+bios",
 		"+floppy",
-		"+tty"
+		"+tty",
 	}
 }
 
@@ -76,6 +76,11 @@ ld80 {
 	srcs = { "+fat" }
 }
 
+unix2cpm {
+    name = "readme",
+    srcs = { "README.md" }
+}
+
 diskimage {
 	name = "diskimage",
 	format = "brother-op2",
@@ -88,6 +93,9 @@ diskimage {
 		["submit.com"] = "cpmtools+submit",
 		["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
 		["qe.com"] = "cpmtools+qe_BROTHEROP2",
+		["mkfs.com"] = "cpmtools+mkfs",
+		["rawdisk.com"] = "cpmtools+rawdisk",
+        ["-readme.txt"] = "+readme",
 	},
 }
 

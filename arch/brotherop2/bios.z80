@@ -23,6 +23,8 @@
     extrn TTYPUTC
     extrn TTYPUT8
     extrn TTYPUT16
+    extrn TTYPUTSI
+    extrn CURSTOGG
 
     cseg
 
@@ -50,15 +52,19 @@ label BBASE
 ; Actual BIOS entrypoints.
 ;
 ; The BIOS calls typically use a simple calling convention where the parameter
-; is in BC and the result is returned in A and HL. The docs don't mention
-; anything about other registers so we'll assume they can be corrupted. Eight-
-; bit values are returned in A and sixteen-bit values in HL.
+; is in BC and the result is returned in A and HL. The other registers can be
+; corrupted *except* for ix, which ZSDOS requires to be preserved; without it
+; it goes all funny and disk accesses fail weirdly. Eight-bit values are
+; returned in A and sixteen-bit values in HL.
 
 ; Cold boot on system startup.
 BOOTE:
     ld sp, 0x0100            ; ephemeral user stack
 
     call TTYINIT
+    call TTYPUTSI
+    cpmish_banner "Brother OP2"
+    db 0
 
     xor a
     ld (IOBYTE), a           ; reset iobyte and current disk
@@ -92,14 +98,14 @@ WBOOTE:
 
     ; Reload the CCP (but not the BDOS or CCP).
 
-    call sysin
+    call SYSIN
 	ld ix, CBASE + 0x5000    ; low two bytes of physical address
 	ld h, 0x06				 ; high byte of physical address
 	ld bc, (0x1000 / 256) + 1 ; sector number (one based)
 	ld de, 8                 ; number of sectors
 	ld a, 3                  ; read sector
 	rst 0x28
-    call sysout
+    call SYSOUT
     jr call_ccp
 
 CONSTE:
@@ -107,10 +113,11 @@ CONSTE:
     inc (hl)                 ; increment drive motor count and...
     call z, stop_disk_motor  ; ...turn the motor off on rollover
 
-    ld a, 0
+    xor a
     ret
 
 CONINE:
+    call CURSTOGG
     call SYSIN
     ld a, 6                  ; finished with disk
     rst 0x28
@@ -119,6 +126,7 @@ CONINE:
     rst 8
     jr nc, .1
     call SYSOUT
+    call CURSTOGG
 
     ld a, d
     and 0x3f
