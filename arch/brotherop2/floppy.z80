@@ -41,7 +41,7 @@ SELDSKE:
     ret
 
 HOMEE:
-    ld bc, 0
+    ld c, 0
     ; fall through
 SETTRKE:
     ld a, c
@@ -162,6 +162,7 @@ flush_current_block:
 
 ; On entry, A = syscall number, BC = zero-based block to transfer.
 xfer_syscall:
+    push ix
     call SYSIN
     ld ix, disk_buffer + 0x5000 ; low byte of physical address
     inc bc                  ; block number must be one based
@@ -169,6 +170,7 @@ xfer_syscall:
     ld de, 1                ; sector count
     rst 0x28                ; disk access
     call SYSOUT
+    pop ix
     ret
 
     dseg

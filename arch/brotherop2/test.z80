@@ -1,5 +1,0 @@
-	ld e, 'Q'
-	ld c, 2
-	call 5
-	ret
-

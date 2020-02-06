@@ -34,24 +34,6 @@ ld80 {
     }
 }
 
-zmac {
-    name = "test_o",
-    srcs = { "./test.z80" },
-    deps = {
-        "include/*.lib",
-        "./include/*.lib",
-    },
-}
-
-ld80 {
-    name = "test",
-	address = 0x0100,
-    srcs = {
-		"-P0100",
-		"+test_o"
-    }
-}
-
 for _, n in pairs({"bios", "floppy", "tty"}) do
 	zmac {
 		name = n,
@@ -99,14 +81,13 @@ diskimage {
 	format = "brother-op2",
 	bootfile = { "+bootfile" },
 	map = {
-		["test.com"] = "+test",
---		["dump.com"] = "cpmtools+dump",
---		["stat.com"] = "cpmtools+stat",
---		["asm.com"] = "cpmtools+asm",
---		["copy.com"] = "cpmtools+copy",
---		["submit.com"] = "cpmtools+submit",
---		["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
---		["qe.com"] = "cpmtools+qe_BROTHEROP2",
+		["dump.com"] = "cpmtools+dump",
+		["stat.com"] = "cpmtools+stat",
+		["asm.com"] = "cpmtools+asm",
+		["copy.com"] = "cpmtools+copy",
+		["submit.com"] = "cpmtools+submit",
+		["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
+		["qe.com"] = "cpmtools+qe_BROTHEROP2",
 	},
 }
 
