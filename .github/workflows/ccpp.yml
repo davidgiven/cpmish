@@ -17,5 +17,6 @@ jobs:
         make -C ack PREFIX=$HOME +ack-cpm
         make -C ack PREFIX=$HOME install
     - name: make
-      run: make
+      run: PATH=$PATH:$HOME/bin make
+        
 
