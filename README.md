@@ -34,6 +34,7 @@ Currently it supports these platforms:
 
   - [the Amstrad NC200 laptop](arch/nc200/README.md)
   - [the Kaypro II](arch/kayproii/README.md)
+  - [the Brother LW-30 typewriter (and probably others)](arch/brotherop2/README.md)
 
 If anyone wants to contribute any more BIOSes, I'd love pull requests!
 
@@ -140,8 +141,8 @@ Specifically:
 	main CP/Mish license.
 
   - `third_party/bbcbasic` contains a copy of R.T.Russell's Z80 BBC Basic,
-  which is distributable under the terms of the zlib license. See the
-  `third_party/bbcbasic/COPYING` file for more details.
+	which is distributable under the terms of the zlib license. See the
+	`third_party/bbcbasic/COPYING` file for more details.
 
   - `third_party/libstb` contains a copy of Sean Barrett's stb library, which
 	is partially in the public domain and partially distributable under the
@@ -157,9 +158,9 @@ Specifically:
 	probably others. To the best of my knowledge this is in the public domain.
 	See the `third_party/zmac/COPYING` file for more details.
 
-  - `third_party/ld80` contains a
-    (modified) copy of the LD80 macro assembler, written by (as far as I
-    know) George Philips and Gabor Kiss. It is in the public domain.
+  - `third_party/ld80` contains a (modified) copy of the LD80 macro assembler,
+	written by (as far as I know) George Philips and Gabor Kiss. It is in the
+	public domain.
 
   - `third_party/zsdos` contains a (modified) copy of the ZSDOS CP/M BDOS
 	clone, written by lots of people but mainly Cameron W. Cotrill and Harold
