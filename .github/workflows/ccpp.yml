@@ -10,7 +10,7 @@ jobs:
       with:
         fetch-depth: 1
     - name: apt
-      run: sudo apt install netpbm cpmtools lua5.1 ninja-build libz80ex-dev flex bison lua-posix
+      run: sudo apt install netpbm cpmtools lua5.1 ninja-build libz80ex-dev flex bison lua-posix libreadline-dev
     - name: build-ack
       run: |
         git clone --depth=1 https://github.com/davidgiven/ack.git
