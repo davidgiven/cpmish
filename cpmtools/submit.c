@@ -157,7 +157,7 @@ exit:
     control = false;
 }
 
-void main(int argc, const char* argv[])
+void main(int argc, char* argv[])
 {
     gargc = argc;
     gargv = argv;
