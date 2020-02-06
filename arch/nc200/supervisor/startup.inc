@@ -8,7 +8,7 @@
 label STARTUP
     ld sp, SYSSTK
     call init_interrupts
-    call video_init
+    call tty_init
     ld hl, str.banner
     call tty_puts
     call pcmcia_init
