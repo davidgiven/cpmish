@@ -49,7 +49,7 @@ int main(int argc, const char* argv[])
     {
         for (int x=0; x<charswidth; x++)
         {
-            unsigned char* p = data + x*CHAR_WIDTH + y*widthpixels*CHAR_HEIGHT;
+            unsigned char* p = data + 1 + x*CHAR_WIDTH + y*widthpixels*CHAR_HEIGHT;
 
 			printf("\tdb ");
             int yy = 0;
