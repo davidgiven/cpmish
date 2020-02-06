@@ -1,0 +1,221 @@
+; Brother OP2 cpmish BIOS © 2020 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib brotherop2
+
+    public SYSIN
+    public SYSOUT
+    public ADDAHL
+
+    extrn SELDSKE
+    extrn HOMEE
+    extrn SETTRKE
+    extrn SETSECE
+    extrn SETDMAE
+    extrn READE
+    extrn WRITEE
+    extrn SECTRANE
+
+    extrn TTYINIT
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+    extrn TTYPUTSI
+    extrn CURSTOGG
+
+    cseg
+
+; BIOS jump table.
+
+label BBASE
+    jp BOOTE
+    jp WBOOTE
+    jp CONSTE
+    jp CONINE
+    jp CONOUTE
+    jp LISTE
+    jp PUNCHE
+    jp READERE
+    jp HOMEE
+    jp SELDSKE
+    jp SETTRKE
+    jp SETSECE
+    jp SETDMAE
+    jp READE
+    jp WRITEE
+    jp LISTSTE
+    jp SECTRANE
+
+; Actual BIOS entrypoints.
+;
+; The BIOS calls typically use a simple calling convention where the parameter
+; is in BC and the result is returned in A and HL. The other registers can be
+; corrupted *except* for ix, which ZSDOS requires to be preserved; without it
+; it goes all funny and disk accesses fail weirdly. Eight-bit values are
+; returned in A and sixteen-bit values in HL.
+
+; Cold boot on system startup.
+BOOTE:
+    ld sp, 0x0100            ; ephemeral user stack
+
+    call TTYINIT
+    call TTYPUTSI
+    cpmish_banner "Brother OP2"
+    db 0
+
+    xor a
+    ld (IOBYTE), a           ; reset iobyte and current disk
+    ld (CDISK), a
+
+    ; fall through
+call_ccp:
+    ld a, 0xc3
+    ld hl, BBASE + 3         ; init BIOS entrypoint
+    ld (0x0000), a
+    ld (0x0001), hl
+
+    ld hl, FBASE + 6         ; init BDOS entrypoint
+    ld (0x0005), a
+    ld (0x0006), hl
+
+    ld a, (CDISK)
+    ld c, a                  ; c = current disk
+    jp CBASE                 ; pass control to CCP
+
+stop_disk_motor:
+    call SYSIN
+    ld a, 6                  ; finished with disk
+    rst 0x28
+    call SYSOUT
+    ret
+
+; Warm boot on application exit.
+WBOOTE:
+    ld sp, 0x0100            ; ephemeral user stack
+
+    ; Reload the CCP (but not the BDOS or CCP).
+
+    call SYSIN
+	ld ix, CBASE + 0x5000    ; low two bytes of physical address
+	ld h, 0x06				 ; high byte of physical address
+	ld bc, (0x1000 / 256) + 1 ; sector number (one based)
+	ld de, 8                 ; number of sectors
+	ld a, 3                  ; read sector
+	rst 0x28
+    call SYSOUT
+    jr call_ccp
+
+CONSTE:
+    ld hl, disk_off_count
+    inc (hl)                 ; increment drive motor count and...
+    call z, stop_disk_motor  ; ...turn the motor off on rollover
+
+    xor a
+    ret
+
+CONINE:
+    call CURSTOGG
+    call SYSIN
+    ld a, 6                  ; finished with disk
+    rst 0x28
+.1
+    ld a, 9                  ; get a raw key scancode
+    rst 8
+    jr nc, .1
+    call SYSOUT
+    call CURSTOGG
+
+    ld a, d
+    and 0x3f
+    bit 7, d
+    jr z, .2
+    add 0x40
+.2
+    ld hl, keyboard_table
+    call ADDAHL
+    ld a, (hl)
+    or a
+    bit 7, a
+    jr nz, .4
+
+    bit 6, d                ; CODE pressed?
+    jr z, .3
+    bit 6, a                ; 0x40 or up?
+    jr z, .3
+    and ~0x20
+    sub 0x40
+.3
+    ret
+.4
+    call SYSIN
+    rst 0
+
+ADDAHL:
+    add a, l
+    ld l, a
+    ret nc
+    inc h
+    ret
+
+keyboard_table:
+    db '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 39,  '=', ']', '-', ';', '#' ; 00
+    db '[', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o' ; 10
+    db 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '.', '/', ',', 13,  ' ' ; 20
+    db 8,   8,   11,  10,  12,  9,   0,   0,   92,  255, 0,   0,   0,   0,   0,   0   ; 30
+    db ')', '!', '"', '#', '$', '%', '^', '&', '*', '(', '@', '+', '}', '_', ':', '~' ; 40
+    db '{', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O' ; 50
+    db 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '>', '?', '<', 10,  ' ' ; 60
+    db 0,   8,   11,  10,  12,  9,   0,   0,   124, 0,   0,   0,   0,   0,   0,   0   ; 70
+
+
+CONOUTE:
+    ld a, c
+    jp TTYPUTC
+
+LISTE:
+PUNCHE:
+    ret
+
+LISTSTE:
+READERE:
+return_error:
+    ld a, 0xff
+    ret
+
+; Switch from CP/M mapping to Brother OS mapping, with the BIOS at the top of
+; memory.
+
+SYSIN:
+    exx
+    pop hl                  ; return address
+    ld (saved_stack), sp    ; save the CP/M stack pointer
+    ld c, 0x88              ; expose the Brother ROM
+    out0c CBAR
+    ld sp, 0x31ad           ; switch to the Brother stack
+    push hl
+    exx
+    ei
+    ret                     ; exit
+
+; Switch from the Brother OS mapping to the CP/M mapping.
+; DO NOT TAIL CALL THESE.
+
+SYSOUT:
+    di
+    exx
+    pop hl                  ; return address
+    ld c, 0x00              ; map RAM in everywhere
+    out0c CBAR
+    ld sp, (saved_stack)
+    push hl
+    exx
+    ret
+
+saved_stack: dw 0            ; user stack pointer while in system calls
+disk_off_count: db 0         ; cheap and nasty drive motor timer
+
+; vim: ts=4 sw=4 expandtab ft=asm
+

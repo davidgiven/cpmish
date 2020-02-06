@@ -14,6 +14,7 @@ cprogram {
 definerule("ld80",
     {
         srcs = { type="table" },
+		address = { type="number", default=0 },
     },
     function (e)
         local args = {}
@@ -38,7 +39,8 @@ definerule("ld80",
                 deps,
             },
             commands = {
-                "%{ins[1]} -m -O bin -o %{outs[1]} -s %{outs[1]}.sym "..table.concat(args, " ")
+                "%{ins[1]} -m -O bin -o %{outs[1]}.all -s %{outs[1]}.sym "..table.concat(args, " "),
+                "dd if=%{outs[1]}.all of=%{outs[1]} status=none bs=1 skip="..e.address
             }
         }
     end

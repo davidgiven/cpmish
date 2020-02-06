@@ -1,0 +1,214 @@
+; Brother OP2 cpmish BIOS © 2020 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib brotherop2
+
+    extrn SYSIN
+    extrn SYSOUT
+    extrn ADDAHL
+
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+
+    public SELDSKE
+    public HOMEE
+    public SETTRKE
+    public SETSECE
+    public SETDMAE
+    public SECTRANE
+    public READE
+    public WRITEE
+
+; This file contains the floppy drive handling code, and the deblocker. We
+; don't use the standard deblocker because space is really at a premium and
+; as we only have one drive we don't need the genericity of the standard
+; deblocker.
+
+    cseg
+
+; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
+; error).
+SELDSKE:
+    ld hl, 0
+    ld a, c
+    or a
+    ret nz                  ; return 0 if not drive 0
+    ld hl, drive_a_dph
+    ret
+
+HOMEE:
+    ld c, 0
+    ; fall through
+SETTRKE:
+    ld a, c
+    ld (current_track), a
+    ret
+
+SETSECE:
+    ld a, c
+    ld (current_sector), a
+    ret
+
+SETDMAE:
+    ld (current_dma), bc
+    ret
+
+SECTRANE:
+    ld h, b
+    ld l, c
+    ret
+
+READE:
+    xor a                   ; deblocking mode normal
+    call getblock
+    jr c, return_bios_error
+    ; hl is pointer to record in buffer
+
+    ld de, (current_dma)
+    ld bc, 128
+    ldir
+    xor a
+    ret
+
+WRITEE:
+    ld a, c                 ; set deblocking mode
+    call getblock
+    jr c, return_bios_error
+    ; hl is pointer to record in buffer
+
+    ld a, 1                 ; mark this sector as dirty
+    ld (dirty), a
+
+    ld de, (current_dma)
+    ex de, hl
+    ld bc, 128
+    ldir
+
+    ld a, (deblock_mode)    ; if deblock mode 1, flush the block now
+    cp 1
+    call z, flush_current_block
+    xor a
+    ret
+
+return_bios_error:
+    ld a, 1
+    ret
+
+    ; Changes the block in the deblocking buffer.
+    ; Returns C on exit; HL contains the address of the CP/M sector.
+getblock;
+    ld (deblock_mode), a    ; save the deblocking mode
+
+    ld hl, (current_track)  ; l = current track, h = garbage
+    ld h, 12
+    mlthl
+    ld a, (current_sector)  ; CP/M sector count!
+    srl a                   ; native sector count
+    call ADDAHL
+
+    push hl
+    ld bc, (current_block)
+    or a                    ; clear carry
+    sbc hl, bc              ; compare hl and bc
+    pop hl
+    jr z, calculate_physical_address ; block hasn't changed
+
+    ld a, (dirty)           ; was the previous block dirty?
+    or a
+    call nz, flush_current_block ; HL is preserved
+    ret c
+
+    ld a, (deblock_mode)
+    cp 2                    ; is this a fresh block?
+    jr z, calculate_physical_address ; if so, skip the read
+
+    push hl
+    ld b, h                 ; new current block (zero based)
+    ld c, l
+    ld a, 3                 ; read sector
+    call xfer_syscall
+    pop hl
+    ret c
+
+    ld (current_block), hl  ; update current block only once we know it worked
+    ; fall through
+calculate_physical_address:
+    ld a, (current_sector)
+    and 1                   ; bottom bit
+    rrca                    ; ...goes to the top bit
+    ld hl, disk_buffer      ; get offset into buffer
+    call ADDAHL
+    xor a                   ; clear carry (success)
+    ret
+
+; Writes the current block back. Returns C on error.
+; Preserves HL but not A, DE, BC.
+
+flush_current_block:
+    push hl
+    ld bc, (current_block)  ; old current block
+    ld a, 4                 ; write block
+    call xfer_syscall
+    pop hl
+    ret c                   ; exit on error
+
+    xor a                   ; also clears carry
+    ld (dirty), a           ; clear dirty flag
+    ret
+
+; On entry, A = syscall number, BC = zero-based block to transfer.
+xfer_syscall:
+    push ix
+    call SYSIN
+    ld ix, disk_buffer + 0x5000 ; low byte of physical address
+    inc bc                  ; block number must be one based
+    ld h, 6                 ; high nibble of physical address
+    ld de, 1                ; sector count
+    rst 0x28                ; disk access
+    call SYSOUT
+    pop ix
+    ret
+
+    dseg
+
+drive_a_dph:
+    dw 0                    ; Sector translation vector
+    dw 0, 0, 0              ; BDOS scratchpad
+    dw dirbuf               ; Directory scratchpad
+    dw drive_a_dpd          ; Drive parameter block
+    dw drive_a_check_vector ; Disk change check vector
+    dw drive_a_bitmap       ; Allocation bitmap
+
+RESERVED_TRACKS = 4
+DRIVE_A_BLOCKS = (78-RESERVED_TRACKS)*12*256 / 1024
+drive_a_dpd:
+    dw 12*2                 ; Number of CP/M sectors per track
+    db 3, 7                 ; BSH/BLM for 1024-byte blocks
+    db 0                    ; EXM for 1024-byte allocation units and <256 blocks
+    dw DRIVE_A_BLOCKS-1     ; DSM
+    dw 31                   ; DRM, one fewer than the number of directory entries
+    db 0x80, 0x00           ; Initial allocation vector for one directory block
+    dw 8                    ; Size of disk change vector: (DRM+1)/4
+    dw RESERVED_TRACKS      ; Number of reserved tracks
+
+drive_a_bitmap:
+    ds (DRIVE_A_BLOCKS+7) / 8
+drive_a_check_vector:
+    ds 8
+dirbuf:
+    ds 128
+
+deblock_mode:   db 0
+dirty:          db 0
+current_dma:    dw 0
+current_sector: db 0
+current_track:  db 0
+current_block:  dw 0xffff
+disk_buffer:    ds 256
+
+; vim: ts=4 sw=4 et ft=asm
+

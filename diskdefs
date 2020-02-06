@@ -1,43 +1,57 @@
 diskdef nc200cpm
-  seclen 512
-  tracks 80
-  sectrk 18
-  blocksize 2048
-  maxdir 128
-  boottrk 2
-  os 2.2
+    seclen 512
+    tracks 80
+    sectrk 18
+    blocksize 2048
+    maxdir 128
+    boottrk 2
+    os 2.2
 end
 
 diskdef nc200cf
-  seclen 512
-  tracks 256
-  sectrk 256
-  blocksize 16384
-  maxdir 512
-  boottrk 0
-  os 2.2
+    seclen 512
+    tracks 256
+    sectrk 256
+    blocksize 16384
+    maxdir 512
+    boottrk 0
+    os 2.2
 end
 
 diskdef osborne1
-   seclen 1024
-   tracks 40
-   sectrk 5
-   blocksize 1024
-   maxdir 64
-   boottrk 3
-   os 2.2
+    seclen 1024
+    tracks 40
+    sectrk 5
+    blocksize 1024
+    maxdir 64
+    boottrk 3
+    os 2.2
 end
 
 # setfdprm /dev/fd0 zerobased SS DD ssize=512 cyl=40 sect=10 head=1
 # Kaypro II
 diskdef kpii
-  seclen 512
-  tracks 40
-  sectrk 10
-  blocksize 1024
-  maxdir 128 # actually only 64 are usable
-  skew 0
-  boottrk 1
-  os 2.2
+    seclen 512
+    tracks 40
+    sectrk 10
+    blocksize 1024
+    maxdir 128 # actually only 64 are usable
+    skew 0
+    boottrk 1
+    os 2.2
 end
+
+# Brother OP2 240kB disk image
+# Note: you need FluxEngine to write this!
+diskdef brother-op2
+    seclen 256
+    tracks 78
+    sectrk 12
+    blocksize 1024
+    maxdir 32
+    boottrk 4
+    os 2.2
+end
+
+# vim: set ts=4 sw=4 expandtab
 

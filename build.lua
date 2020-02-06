@@ -9,5 +9,6 @@ installable {
         ["emu"] = "utils/emu+emu",
         ["nc200.img"] = "arch/nc200+diskimage",
         ["kayproii.img"] = "arch/kayproii+diskimage",
+		["brotherop2.img"] = "arch/brotherop2+diskimage",
     }
 }

@@ -28,6 +28,11 @@ extern void con_clear_to_eol(void);
     #define SCREENHEIGHT 18
     #define LIBCUSS_CLEAREOL "\030"
     #define LIBCUSS_ADM3
+#elif defined LIBCUSS_BROTHEROP2
+    #define SCREENWIDTH 80
+    #define SCREENHEIGHT 14
+    #define LIBCUSS_CLEAREOL "\030"
+    #define LIBCUSS_ADM3
 #else
     #error "No libcuss configuration specified."
 #endif

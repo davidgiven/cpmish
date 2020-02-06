@@ -1,0 +1,114 @@
+; Brother OP2 cpmish BIOS © 2020 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This file produces the FAT filesystem image which the Brother word processor
+; loads the bootstrap executable from. It occupies tracks 0-3. Two sectors of
+; file data starts on track 1, followed by the CP/M boot image.
+
+BROTHER_MEDIA_BYTE = 0x58 ; non-standard
+
+    aseg
+    org 0x0000
+    db 0xeb, 0xfe, 0x90
+    db "BDOSV250"
+
+    ; BPB
+    org 0x000b
+    dw 256      ; bytes per sector
+    db 2        ; sectors per cluster
+    dw 1        ; reserved sectors (this one)
+    db 1        ; FAT count
+    dw 0x40     ; number of root directory entries
+    dw 16       ; filesystem size, in sectors, not including reserved ones
+    db BROTHER_MEDIA_BYTE
+    dw 3        ; sectors per FAT
+    dw 12       ; number of sectors per track
+    dw 1        ; number of heads
+    dw 0        ; number of hidden sectors
+    ret         ; don't know what this is for!
+
+    ; FAT
+    org 0x0100
+    db BROTHER_MEDIA_BYTE, 0xff, 0xff
+	db 0x03, 0xf0, 0xff ; two clusters (2 and 3)
+
+    ; Directory
+    org 0x400
+    db "WP1A FLOPPY", 8 ; disk label
+
+    org 0x420
+    db "CPMISH  OP2", 0 ; normal file
+    db 0x00     ; unused flags
+    db 0x00     ; 10ms time unit creation time
+    dw 0x0000   ; creation time
+    dw 0x0000   ; creation date
+    dw 0x0000   ; last access date
+    dw 0        ; high bytes of cluster number
+    dw 0x0000   ; last modified time
+    dw 0x0000   ; last modified date
+    dw 2        ; low bytes of cluster number
+    dw 1024, 0  ; file size (two clusters)
+
+    db "--------   ", 0
+	ds 20
+    
+    db "--------   ", 0
+	ds 20
+
+    db "--------   ", 0
+	ds 20
+
+	db "DO         ", 0
+	ds 20
+
+	db "NOT        ", 0
+	ds 20
+
+	db "WRITE      ", 0
+	ds 20
+
+	db "TO         ", 0
+	ds 20
+
+	db "THIS       ", 0
+	ds 20
+
+	db "DISK       ", 0
+	ds 20
+
+	db "--------   ", 0
+	ds 20
+	
+	db "--------   ", 0
+	ds 20
+	
+	db "--------   ", 0
+	ds 20
+	
+	db "USE        ", 0
+	ds 20
+
+	db "CODE+Q     ", 0
+	ds 20
+
+	db "THEN       ", 0
+	ds 20
+
+	db "ENTER      ", 0
+	ds 20
+
+	db "TO         ", 0
+	ds 20
+
+	db "START      ", 0
+	ds 20
+
+    ; Bootstrap program
+    org 0xc00
+    incbin "boot.cim"
+
+    ; CP/M boot image
+    org 0x1000
+    incbin "cpmfile.cim"
+

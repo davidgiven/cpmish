@@ -161,7 +161,7 @@ void main(void)
             {
                 cpm_bios_settrk(track);
                 cpm_bios_setsec(sector);
-                if (cpm_bios_write())
+                if (cpm_bios_write(0))
                     fatal("Disk error");
 
                 sector++;

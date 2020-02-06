@@ -1,0 +1,101 @@
+; Brother 'OP2' cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is the executable which is loaded and run by the Brother's OS. It
+; gets loaded with BBR=CBR=0x60, CBAR=0x55, which means that DRAM from
+; physical addresses 0x65000 to 0x6ffff is mapped to logical 0x5000 to 0xffff.
+
+    maclib brotherop2
+    maclib cpmish
+
+start:
+    dw MAGIC_OP2
+
+    ; On load, we have available RAM from 0x5000 to 0xffff. We're going to
+    ; use this for our CP/M workspace, but we actually need it at 0x0000
+    ; to 0xb000.
+
+    ; Clear the screen.
+
+    ld bc, SCREEN_HEIGHT * 256
+    xor a
+.1
+    out0c PORT_VIDEO_LO
+    out0b PORT_VIDEO_HI
+    nop
+    xor a
+    out (PORT_VIDEO_DATA), a
+    ld a, b
+    or c
+    dec bc
+    jr nz, .1
+
+    call load_font
+
+    ; Load the CCP, BDOS and BIOS for the first time.
+
+LOAD_ADDRESS = 0xe300
+
+load_again:
+    ld ix, LOAD_ADDRESS     ; low two bytes of physical address
+    ld h, 0x06              ; high nibble of physical address
+    ld bc, 0x1000 / 256     ; sector number (zero based)
+    inc bc                  ; Brother OS wants one-based sectors
+    ld de, (0x10000 - LOAD_ADDRESS) / 256
+    ld a, 3                 ; Read sector.
+    rst 0x28
+    jr c, disk_error
+
+    ; Call CP/M!
+
+    di
+    
+    ld a, 0x50              ; C boundary at 0x5000, B at 0x0000
+    out0a CBAR
+    ld a, 0x65              ; B block starts at 0x65
+    out0a BBR
+    jp remapped - 0x5000    ; jump to code visible in the B block
+remapped:
+    out0a CBR               ; C block now starts at 0x5b too
+    ld a, 0x00              ; C and B blocks both start at 0x0000
+    out0a CBAR
+    jp 0xa900               ; Start BIOS
+
+disk_error:
+    ld a, 6                 ; Finished with disk.
+    rst 0x28
+    rst 0                   ; nasty reboot
+
+; Programs characters 32..127 in the system font.
+
+load_font:
+    xor a
+    out (PORT_VIDEO_LO), a
+    ld a, 0x11
+    out (PORT_VIDEO_HI), a
+    ld d, 96
+    ld hl, font_table
+.1
+    ld b, 7
+.2
+    ld a, (hl)
+    out (PORT_VIDEO_DATA), a
+    inc hl
+    djnz .2
+
+    xor a
+    out (PORT_VIDEO_DATA), a
+
+    dec c
+    jr nz, .1
+    ret
+
+font_table:
+    include "font.inc"
+font_table_end:
+
+end:
+
+; vim: ts=4 sw=4 et ft=asm
+
