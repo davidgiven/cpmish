@@ -69,7 +69,7 @@ READE:
     ; hl is pointer to record in buffer
 
     ld de, (current_dma)
-    ld bc, 127
+    ld bc, 128
     ldir
     xor a
     ret
@@ -85,7 +85,7 @@ WRITEE:
 
     ld de, (current_dma)
     ex de, hl
-    ld bc, 127
+    ld bc, 128
     ldir
 
     ld a, (deblock_mode)    ; if deblock mode 1, flush the block now

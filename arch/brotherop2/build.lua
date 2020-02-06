@@ -15,7 +15,7 @@ normalrule {
 }
 
 zmac {
-    name = "boot.o",
+    name = "boot_o",
     srcs = { "./boot.z80" },
     deps = {
         "include/*.lib",
@@ -30,7 +30,25 @@ ld80 {
 	address = 0x5000,
     srcs = {
 		"-P5000",
-		"+boot.o"
+		"+boot_o"
+    }
+}
+
+zmac {
+    name = "test_o",
+    srcs = { "./test.z80" },
+    deps = {
+        "include/*.lib",
+        "./include/*.lib",
+    },
+}
+
+ld80 {
+    name = "test",
+	address = 0x0100,
+    srcs = {
+		"-P0100",
+		"+test_o"
     }
 }
 
@@ -81,13 +99,14 @@ diskimage {
 	format = "brother-op2",
 	bootfile = { "+bootfile" },
 	map = {
-		["dump.com"] = "cpmtools+dump",
-		["stat.com"] = "cpmtools+stat",
-		["asm.com"] = "cpmtools+asm",
-		["copy.com"] = "cpmtools+copy",
-		["submit.com"] = "cpmtools+submit",
-		["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
-		["qe.com"] = "cpmtools+qe_BROTHEROP2",
+		["test.com"] = "+test",
+--		["dump.com"] = "cpmtools+dump",
+--		["stat.com"] = "cpmtools+stat",
+--		["asm.com"] = "cpmtools+asm",
+--		["copy.com"] = "cpmtools+copy",
+--		["submit.com"] = "cpmtools+submit",
+--		["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
+--		["qe.com"] = "cpmtools+qe_BROTHEROP2",
 	},
 }
 
