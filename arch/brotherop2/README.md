@@ -24,7 +24,7 @@ What you get with this port:
 
 - about 230kB of storage on a 240kB GCR disk (I have to reserve four tracks for
   a FAT filesystem to boot from)
-- most of an ADM-3a / Kaypro II terminal emulator supporting 80x14 test
+- most of an ADM-3a / Kaypro II terminal emulator supporting 80x14 text
 - a pitiful 38kB TPA
 - a non-interrupt driven keyboard which drops keypresses if the machine's busy
 - a blinking cursor
@@ -73,8 +73,9 @@ Technical details
 
 The machine has a Z180 with 512MB of address space. The RAM is at 0x60000 to
 0x6ffff, physical. cpmish lives from 0x65000 to 0x6ffff so as not to step on
-the Brother OS's toes; we call out to it to do keyboard and disk handling, as
-both are complex to use. Hence the very small TPA.
+the Brother OS's toes, which uses 0x60000 to 0x64fff for workspace; we rely on
+it to do keyboard and disk handling, as both are complex to use. Hence the very
+small TPA.
 
 It'd be theoretically possible to dispense with the Brother OS entirely, and
 access all the hardware ourselves. This would require reverse engineering the
@@ -86,10 +87,9 @@ adequate alignment, and make up for it by moving the head a fraction of a track
 until they get a clean read!).
 
 The terminal emulator is ADM-3a with some Kaypro II extensions, using a
-custom (drawn by me!) 6x7 font to allow 80x18 characters of text. This
-appears to be a relatively common choice and most software I've tried (Turbo
-Pascal, VDE etc) works. Sadly, games tend not to work due to the non-standard
-screen size.
+custom (drawn by me!) 6x7 font. This appears to be a relatively common choice
+and most software I've tried (Turbo Pascal, VDE etc) works. Sadly, games tend
+not to work due to the non-standard screen size.
 
 
 Who?
