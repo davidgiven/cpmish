@@ -65,7 +65,7 @@ INIT:   ;CALL    INTIME          ;INITIALISE TIMER
 ;REBOOT - Stop interrupts and return to CP/M. 
 ;
 REBOOT: LD      A,3
-        OUT     (CTC0+3),A
+;        OUT     (CTC0+3),A
         RST     0
 
 ;
@@ -173,60 +173,64 @@ WAIT1:  CP      (HL)
 ; Destroys: A,D,E,H,L,F
 ;
 ;
-PCSR:   LD      A,E
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,HL           ;*16
-        LD      D,H
-        LD      E,L
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,DE           ;*80
-        LD      D,0
-        LD      E,A
-        ADD     HL,DE           ;OFFSET FROM HOME
-        LD      DE,(HOME)
-        ADD     HL,DE
-        LD      A,14
-        OUT     (CRTCS),A
-        LD      A,H
-        AND     0FH
-        OUT     (CRTCD),A
-        LD      A,15
-        OUT     (CRTCS),A
-        LD      A,L
-        OUT     (CRTCD),A
-        RET
+PCSR:   RET
+;		LD      A,E
+;        ADD     HL,HL
+;        ADD     HL,HL
+;        ADD     HL,HL
+;        ADD     HL,HL           ;*16
+;        LD      D,H
+;        LD      E,L
+;        ADD     HL,HL
+;        ADD     HL,HL
+;        ADD     HL,DE           ;*80
+;        LD      D,0
+;        LD      E,A
+;        ADD     HL,DE           ;OFFSET FROM HOME
+;        LD      DE,(HOME)
+;        ADD     HL,DE
+;        LD      A,14
+;        OUT     (CRTCS),A
+;        LD      A,H
+;        AND     0FH
+;        OUT     (CRTCD),A
+;        LD      A,15
+;        OUT     (CRTCS),A
+;        LD      A,L
+;        OUT     (CRTCD),A
+;        RET
 ;
 ;GCSR - Return cursor coordinates.
 ;   Outputs:  DE = X coordinate (POS)
 ;             HL = Y coordinate (VPOS)
 ;  Destroys: A,D,E,H,L,F
 ;
-GCSR:   LD      A,14
-        OUT     (CRTCS),A
-        IN      A,(CRTCD)
-        LD      H,A
-        LD      A,15
-        OUT     (CRTCS),A
-        IN      A,(CRTCD)
-        LD      L,A
-        LD      DE,(HOME)
-        SBC     HL,DE
-        LD      A,H
-        AND     7
-        LD      H,A
-        LD      DE,-80
-        LD      A,D
-ROWS:   ADD     HL,DE
-        INC     A
-        JR      C,ROWS
-        SBC     HL,DE
-        LD      D,0
-        LD      E,A
-        EX      DE,HL
-        RET
+GCSR:	ld		de, 0
+		ld 		hl, 0
+		ret
+;		LD      A,14
+;        OUT     (CRTCS),A
+;        IN      A,(CRTCD)
+;        LD      H,A
+;        LD      A,15
+;        OUT     (CRTCS),A
+;        IN      A,(CRTCD)
+;        LD      L,A
+;        LD      DE,(HOME)
+;        SBC     HL,DE
+;        LD      A,H
+;        AND     7
+;        LD      H,A
+;        LD      DE,-80
+;        LD      A,D
+;ROWS:   ADD     HL,DE
+;        INC     A
+;        JR      C,ROWS
+;        SBC     HL,DE
+;        LD      D,0
+;        LD      E,A
+;        EX      DE,HL
+;        RET
 ;
 TIME:   DEFS    4
 ;
