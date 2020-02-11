@@ -1078,6 +1078,7 @@ OSINIT: LD      C,45            ;*
 ;        JP      PE,SUM
 ;        OR      E
 ;        JR      NZ,BADSUM
+		XOR     A
         LD      B,INILEN
         LD      HL,TABLE
 CLRTAB: LD      (HL),A          ;CLEAR FILE TABLE ETC.
