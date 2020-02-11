@@ -11,7 +11,8 @@ for _, f in pairs(srcs) do
 end
 
 ld80 {
-    name = "bbcbasic_img",
+    name = "bbcbasic",
+	address = 0x100,
     srcs = {
         "+patch",
         "-P0200",
@@ -26,7 +27,3 @@ ld80 {
     }
 }
 
-bintocom {
-    name = "bbcbasic",
-    srcs = { "+bbcbasic_img" }
-}
