@@ -206,8 +206,13 @@ CHAIN0: LD      SP,(HIMEM)
         CALL    LOAD0
 RUN0:   LD      SP,(HIMEM)      ;PREPARE FOR RUN
         LD      IX,RANDOM
-RAND:   LD      A,R             ;RANDOMISE (CARE!)
-        JR      Z,RAND
+		; dtrg: bugfix here; on emulators, R is always zero, and the original
+		; code always waiting until it was non-zero, resulting in a hang.
+		; Instead we crudely hack around it.
+		ld      a, r
+		jr      nz, .1
+		inc     a
+.1
         RLCA
         RLCA
         LD      (IX+3),A
