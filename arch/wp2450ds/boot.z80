@@ -1,0 +1,49 @@
+; Brother 'OP2' cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is the executable which is loaded and run by the Brother's OS. It
+; gets loaded with BBR=CBR=0x60, CBAR=0x55, which means that DRAM from
+; physical addresses 0x65000 to 0x6ffff is mapped to logical 0x5000 to 0xffff.
+
+    maclib wp2450ds
+    maclib cpmish
+
+start:
+    dw 0xc181
+    dw 0x0101
+    dw 0x0000
+    db "BR"
+
+    di
+
+    ; Clear the screen.
+
+    ld b, 12*8
+    ld de, 0
+    ld hl, font_table
+    xor a
+.1
+    out0e PORT_VIDEO_LO
+    out0d PORT_VIDEO_HI
+    nop
+    ld a, (hl)
+    inc hl
+    out (PORT_VIDEO_DATA_W), a
+    ld a, 91
+    add e
+    ld e, a
+    jnc .2
+    inc d
+.2
+    djnz .1
+
+    jp $
+
+font_table:
+    include "font.inc"
+font_table_end:
+
+
+; vim: ts=4 sw=4 et ft=asm
+
