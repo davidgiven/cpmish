@@ -15,6 +15,7 @@
     public TTYPUT8
     public TTYPUT16
     public TTYPUTSI
+    public TTYNL
     public SETCURS
 
     cseg
@@ -28,6 +29,7 @@ TTYPUTC equ tty_putc
 TTYPUT8 equ tty_puthex8
 TTYPUT16 equ tty_puthex16
 TTYPUTSI equ tty_putsi
+TTYNL equ tty_newline
 
 tty_rawwrite:
     and 0x7f

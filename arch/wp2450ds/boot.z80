@@ -14,6 +14,7 @@
     extrn TTYPUT8
     extrn TTYPUT16
     extrn TTYPUTSI
+    extrn TTYNL
     extrn SETCURS
 
 start:
@@ -22,28 +23,11 @@ start:
     dw 0x0000
     db "BR"
 
-    di
+    di                  ; The Brother OS is not at home
 
-;    ; Clear the screen.
-;
-;    ld b, 12*8
-;    ld de, 0
-;    ld hl, font_table
-;    xor a
-;.1
-;    out0e PORT_VIDEO_LO
-;    out0d PORT_VIDEO_HI
-;    nop
-;    ld a, (hl)
-;    inc hl
-;    out (PORT_VIDEO_DATA_W), a
-;    ld a, 91
-;    add e
-;    ld e, a
-;    jnc .2
-;    inc d
-;.2
-;    djnz .1
+    xor a
+    out0a CBAR          ; now the entire address space is RAM
+    ld sp, 0x100        ; startup stack
 
     call TTYINIT
     call TTYPUTSI
@@ -51,8 +35,176 @@ start:
     db 0
     call SETCURS
     
+;    ; Now, load the entire first track to 0x0000. The FDC has just loaded
+;    ; this boot block so we know it's correctly seeked and spun up. We
+;    ; just need to issue the command and we're ready.
+;
+;    ; Send the read command to the 765.
+;
+;    ld hl, data.seek
+;    ld b, data.seek.end - data.seek
+;    call fdc_command
+;    call fdc_read_status
+;
+;    ; Turn DMA off.
+;
+;    ld hl, data.specify
+;    ld b, data.specify.end - data.specify
+;    call fdc_command
+;    call fdc_read_status
+;
+;    ; Read track 0.
+;
+;    ld hl, data.readtrack
+;    ld b, data.readtrack.end - data.readtrack
+;    call fdc_command
+;
+;    ; Now read bytes from the FDC until we're done.
+;
+;	ld hl, 0x100               ; destination address
+;read_loop:
+;    in0a PORT_HD63266_STATUS
+;	rla							; RQM...
+;	jr nc, read_loop      		; ...low, keep waiting
+;	rla							; DIO (ignore)
+;	rla							; EXM...
+;	jr nc, read_finished		; ...low, transfer complete
+;    in0a PORT_HD63266_DATA
+;    ld (hl), a
+;    inc hl
+;    jr read_loop
+;read_finished:
+;    
+;    call fdc_read_status
+;    call TTYPUT8
+;    call TTYNL
+
+    call fd765_recalibrate_twice
+    ld a, 0x03  				; SPECIFY
+    call fd765_tx
+    ld a, 0xdf  				; SRT, HUT
+    call fd765_tx
+    ld a, 0x0d  				; HLT, ND
+    call fd765_tx
+    call fd765_read_status
+
+    ld ix, fd765_deblock
+    ld a, 0
+    ld (ix+DBS_CUR_SECTOR), a
+    ld (ix+DBS_CUR_TRACK), a
+    call fd_read512
+
+    ld b, 64
+    ld hl, fd765_deblock + DBS_BUFFER
+.1
+    ld a, (hl)
+    inc hl
+    push af
+    push hl
+    call TTYPUT8
+    ld a, ' '
+    call TTYPUTC
+    pop hl
+    pop af
+    djnz .1
+
     jp $
 
+fd765_motor_on:
+    ld a, 0xe1          ; motor on
+    out0a PORT_HD63266_STATUS
+    ret
+
+fd765_nudge_tc:
+    ret
+
+fd765_pause:
+    ret
+
+DBS_BLOCK_SHIFT = 9
+DBS_WANT_DB_CAP = 0
+    maclib deblocker
+
+FD_DRIVE_READY_COUNTS = 0
+
+fd765_read_st_a macro
+    in0a PORT_HD63266_STATUS
+    endm
+
+fd765_write_st_a macro
+    out0a PORT_HD63266_STATUS
+    endm
+
+fd765_read_dt_a macro
+    in0a PORT_HD63266_DATA
+    endm
+
+fd765_write_dt_a macro
+    out0a PORT_HD63266_DATA
+    endm
+
+    maclib upd765
+
+fd765_deblock:
+	dw 18		   ; number of sectors
+	dw 80		   ; number of tracks
+	dw fd_read512  ; read callback
+	dw fd_write512 ; write callback
+	dw 0xffff      ; current sector
+	dw 0		   ; current track
+	db 0		   ; dirty flag
+	ds 512		   ; buffer
+
+;; Sends a command to the FDC.
+;; HL = command buffer, B = length
+;fdc_command:
+;	in a, (PORT_HD63266_STATUS)
+;	rla							; RQM...
+;	jr nc, fdc_command          ; ...low, keep waiting
+;    ld a, (hl)
+;    inc hl
+;    out0a PORT_HD63266_DATA
+;    djnz fdc_command
+;    ret
+;
+;; Reads the FDC status.
+;
+;fdc_read_status:
+;	in a, (PORT_HD63266_STATUS)
+;	rla 						; RQM...
+;	jr nc, fdc_read_status  	; ...low, keep waiting 
+;	rla							; DIO...
+;    ret nc                      ; ...low, no more data
+;    in a, (PORT_HD63266_DATA)
+;	jr fdc_read_status
+;
+;data.specify:
+;    db 0x03     ; 0: SPECIFY
+;    db 0xdf     ; 1: SRT, HUT
+;    db 0x0d     ; 2: HLT, ND
+;data.specify.end:
+;
+;; The baked command to seek to track 0.
+;
+;data.seek:
+;    db 0x0f     ; 0: SEEK
+;    db 0        ; 1: physical head 0, drive 0
+;    db 0        ; 2: track 0
+;data.seek.end:
+;
+;; The baked command to read a track.
+;
+;data.readtrack:
+;    db 0xc6     ; 0: READ DATA MULTITRACK
+;    db 0        ; 1: physical head 0, drive 0
+;    db 0        ; 2: track 0
+;    db 0        ; 3: logical head 0
+;    db 1        ; 4: first sector
+;    db 2        ; 5: bytes per sector: 512
+;    db 9        ; 6: last sector for one track (*inclusive*)
+;    db 27       ; 7: gap 3 length (27 is standard for 3.5" drives)
+;    db 0        ; 8: sector length (unused)
+;data.readtrack.end:
 
 ; vim: ts=4 sw=4 et ft=asm
 
