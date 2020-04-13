@@ -28,13 +28,31 @@ start:
     ld sp, 0x100        ; startup stack
 
     call FDCAL2
-    ld a, 0x03  				; SPECIFY
+    ld a, 0x03          ; SPECIFY
     call FDTX
-    ld a, 0xdf  				; SRT, HUT
+    ld a, 0xdf          ; SRT, HUT
     call FDTX
-    ld a, 0x0d  				; HLT, ND
+    ld a, 0x0d          ; HLT, ND
     call FDTX
     call FDRSTAT
+
+    ld d, 1             ; current track
+    ld e, 0             ; current sector
+    ld hl, LOAD_ADDRESS ; destination address
+.1
+    push de
+    push hl
+    call FDR512
+    pop de
+    ld bc, 512
+    ldir                ; copy buffer data to memory
+    ex de, hl           ; updated destination address to HL
+    pop de
+
+    inc e
+    ld a, 18
+    cp e
+    jr nz, .1           ; loop again
 
     jp $
 
