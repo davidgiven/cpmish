@@ -22,5 +22,10 @@ label   macro L
 L:
         endm
 
+export  macro X, I
+		public X
+X:		equ I
+		endm
+
 ; vim: ts=4 sw=4 et ft=asm
 

@@ -1,0 +1,75 @@
+; Brother WP2450DS cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is the executable which is loaded and run by the Brother's OS. It
+; gets loaded with BBR=CBR=0x60, CBAR=0x55, which means that DRAM from
+; physical addresses 0x65000 to 0x6ffff is mapped to logical 0x5000 to 0xffff.
+
+    maclib wp2450ds
+    maclib cpmish
+    maclib cpm
+
+    export FDTX, fd765_tx
+    export FDCAL2, fd765_recalibrate_twice
+    export FDRSTAT, fd765_read_status
+
+fd765_motor_on:
+    ld a, 0xe1          ; motor on
+    out0a PORT_HD63266_STATUS
+    ret
+
+fd765_nudge_tc:
+    ret
+
+fd765_pause:
+    ret
+
+DBS_BLOCK_SHIFT = 9
+DBS_WANT_DB_CAP = 0
+    maclib deblocker
+
+FD_DRIVE_READY_COUNTS = 0
+
+fd765_read_st_a macro
+    in0a PORT_HD63266_STATUS
+    endm
+
+fd765_write_st_a macro
+    out0a PORT_HD63266_STATUS
+    endm
+
+fd765_read_dt_a macro
+    in0a PORT_HD63266_DATA
+    endm
+
+fd765_write_dt_a macro
+    out0a PORT_HD63266_DATA
+    endm
+
+    maclib upd765
+
+; Reads the physical sector at track=D, sector=E, and returns
+; a pointer to it in HL.
+
+label FDR512
+    ld ix, fd765_deblock
+    ld (ix+DBS_CUR_SECTOR), e
+    ld (ix+DBS_CUR_TRACK), d
+    call fd_read512
+    ret z
+    ld hl, fd765_deblock
+    ret
+
+fd765_deblock:
+	dw 18		   ; number of sectors
+	dw 80		   ; number of tracks
+	dw fd_read512  ; read callback
+	dw fd_write512 ; write callback
+	dw 0xffff      ; current sector
+	dw 0		   ; current track
+	db 0		   ; dirty flag
+	ds 512		   ; buffer
+
+; vim: ts=4 sw=4 et ft=asm
+
