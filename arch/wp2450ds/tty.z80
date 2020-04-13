@@ -1,0 +1,130 @@
+; Brother OP2 cpmish BIOS © 2020 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib wp2450ds
+
+    extrn SYSIN
+    extrn SYSOUT
+    extrn ADDAHL
+
+    public TTYINIT
+    public TTYPUTC
+    public TTYPUT8
+    public TTYPUT16
+    public TTYPUTSI
+    public SETCURS
+
+    cseg
+
+EMULATE_CLEAR_TO_EOL = 1
+EMULATE_CLEAR_TO_EOS = 1
+    maclib tty
+
+TTYINIT equ tty_init
+TTYPUTC equ tty_putc
+TTYPUT8 equ tty_puthex8
+TTYPUT16 equ tty_puthex16
+TTYPUTSI equ tty_putsi
+
+tty_rawwrite:
+    and 0x7f
+    sub 0x20
+    push af
+    ld de, (tty_cursorx)
+    call calc_address
+    ex de, hl                ; destination address in de
+
+    pop af
+
+    ld h, 0
+    ld l, a
+    ld b, h
+    ld c, l
+
+    ; Multiply by 7:
+                             ; 1
+    add hl, hl
+    add hl, bc               ; 1
+    add hl, hl
+    add hl, bc               ; 1
+
+    ld bc, font_table
+    add hl, bc               ; hl = font addr
+
+    ex de, hl                ; hl = video addr, de = font addr
+    ld b, 7
+.2
+    out0l PORT_VIDEO_ADDR_LO
+    out0h PORT_VIDEO_ADDR_HI
+    nop
+    ld a, (de)
+    inc de
+    out (PORT_VIDEO_DATA_W), a
+
+    ld a, 91
+    add l
+    ld l, a
+    jnc .3
+    inc h
+.3
+    djnz .2
+
+    out0l PORT_VIDEO_ADDR_LO
+    out0h PORT_VIDEO_ADDR_HI
+    nop
+    xor a
+    out (PORT_VIDEO_DATA_W), a
+
+    ret
+
+; On entry, D=y, E=x
+calc_address:
+    ld h, 0
+    ld l, d
+    ld b, h
+    ld c, d
+
+    ; Multiply by 728 (8 x 91):
+                            ; 1
+    add hl, hl              ; 0
+    add hl, hl
+    add hl, bc              ; 1
+    add hl, hl
+    add hl, bc              ; 1
+    add hl, hl              ; 0
+    add hl, hl
+    add hl, bc              ; 1
+    add hl, hl
+    add hl, bc              ; 1
+    add hl, hl              ; 0
+    add hl, hl              ; 0
+    add hl, hl              ; 0
+
+    ld a, l
+    add e
+    ld l, a
+    rnc
+    inc h
+    ret
+
+SETCURS:
+    ld hl, (tty_cursorx)
+    out0l PORT_VIDEO_CURSOR_LO
+    out0h PORT_VIDEO_CURSOR_HI
+    ret
+    
+tty_delete_line
+    ret
+
+tty_insert_line:
+    ret
+
+font_table:
+    include "font.inc"
+font_table_end:
+
+; vim: ts=4 sw=4 et ft=asm
+

@@ -21,3 +21,6 @@ label   macro L
         public L
 L:
         endm
+
+; vim: ts=4 sw=4 et ft=asm
+

@@ -9,6 +9,13 @@
     maclib wp2450ds
     maclib cpmish
 
+    extrn TTYINIT
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+    extrn TTYPUTSI
+    extrn SETCURS
+
 start:
     dw 0xc181
     dw 0x0101
@@ -17,32 +24,34 @@ start:
 
     di
 
-    ; Clear the screen.
+;    ; Clear the screen.
+;
+;    ld b, 12*8
+;    ld de, 0
+;    ld hl, font_table
+;    xor a
+;.1
+;    out0e PORT_VIDEO_LO
+;    out0d PORT_VIDEO_HI
+;    nop
+;    ld a, (hl)
+;    inc hl
+;    out (PORT_VIDEO_DATA_W), a
+;    ld a, 91
+;    add e
+;    ld e, a
+;    jnc .2
+;    inc d
+;.2
+;    djnz .1
 
-    ld b, 12*8
-    ld de, 0
-    ld hl, font_table
-    xor a
-.1
-    out0e PORT_VIDEO_LO
-    out0d PORT_VIDEO_HI
-    nop
-    ld a, (hl)
-    inc hl
-    out (PORT_VIDEO_DATA_W), a
-    ld a, 91
-    add e
-    ld e, a
-    jnc .2
-    inc d
-.2
-    djnz .1
-
+    call TTYINIT
+    call TTYPUTSI
+    cpmish_banner "Brother WP2450DS"
+    db 0
+    call SETCURS
+    
     jp $
-
-font_table:
-    include "font.inc"
-font_table_end:
 
 
 ; vim: ts=4 sw=4 et ft=asm
