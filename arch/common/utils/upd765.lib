@@ -196,7 +196,7 @@ fd765_complete_transfer:
 	rla                         ; IC6->C, IC7->b0, EN->b1
 	rla                         ; IC6->b0, IC7->b1, EN->b2
 	and 7                       ; clip off stray bits
-	ld hl, (data.fd765_status_codes)
+	ld hl, data.fd765_status_codes
 	ld b, 0
 	ld c, a
 	add hl, bc
