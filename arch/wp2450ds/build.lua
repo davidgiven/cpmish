@@ -52,11 +52,11 @@ zmac {
 -- This is the bit which CP/M reloads on warm boot (well, some of it).
 ld80 {
 	name = "cpmfile_img",
-	address = 0x9300,
+	address = 0xdc00,
 	srcs = {
-		"-P9300", "third_party/zcpr1+zcpr",
-		"-P9b00", "third_party/zsdos+zsdos",
-		"-Pa900",
+		"-Pdc00", "third_party/zcpr1+zcpr",
+		"-Pe400", "third_party/zsdos+zsdos",
+		"-Pf200",
 		"+bios_o",
 		"+upd765_o",
 		"+tty_o",

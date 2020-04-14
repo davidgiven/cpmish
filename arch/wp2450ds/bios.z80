@@ -1,4 +1,4 @@
-; Brother 'OP2' cpmish BIOS © 2019 David Given
+; Brother "P2450DS cpmish BIOS © 2019 David Given
 ; This file is distributable under the terms of the 2-clause BSD license.
 ; See COPYING.cpmish in the distribution root directory for more information.
 
@@ -6,8 +6,9 @@
 ; gets loaded with BBR=CBR=0x60, CBAR=0x55, which means that DRAM from
 ; physical addresses 0x65000 to 0x6ffff is mapped to logical 0x5000 to 0xffff.
 
-    maclib wp2450ds
+    maclib cpm
     maclib cpmish
+    maclib wp2450ds
 
     extrn TTYINIT
     extrn TTYPUTC
@@ -16,15 +17,207 @@
     extrn TTYPUTSI
     extrn TTYNL
     extrn SETCURS
+    extrn FDR512
+    extrn FDR128
+    extrn FDMOFF
+    extrn BSECTOR
+    extrn BTRACK
+    extrn BDMA
 
-start:
+; BIOS jump table.
+
+label BBASE
+    jp BOOTE
+    jp WBOOTE
+    jp CONSTE
+    jp CONINE
+    jp CONOUTE
+    jp LISTE
+    jp PUNCHE
+    jp READERE
+    jp HOMEE
+    jp SELDSKE
+    jp SETTRKE
+    jp SETSECE
+    jp SETDMAE
+    jp READE
+    jp WRITEE
+    jp LISTSTE
+    jp SECTRANE
+
+; Actual BIOS entrypoints.
+;
+; The BIOS calls typically use a simple calling convention where the parameter
+; is in BC and the result is returned in A and HL. The other registers can be
+; corrupted *except* for ix, which ZSDOS requires to be preserved; without it
+; it goes all funny and disk accesses fail weirdly. Eight-bit values are
+; returned in A and sixteen-bit values in HL.
+
+; Cold boot on system startup.
+BOOTE:
+    ld sp, 0x0100            ; ephemeral user stack
+
     call TTYINIT
     call TTYPUTSI
-    cpmish_banner "Brother WP2450DS"
+    cpmish_banner "Brother OP2"
     db 0
-    call SETCURS
-    
-    jp $
+
+    xor a
+    ld (IOBYTE), a           ; reset iobyte and current disk
+    ld (CDISK), a
+
+    ; fall through
+call_ccp:
+    ld a, 0xc3
+    ld hl, BBASE + 3         ; init BIOS entrypoint
+    ld (0x0000), a
+    ld (0x0001), hl
+
+    ld hl, FBASE + 6         ; init BDOS entrypoint
+    ld (0x0005), a
+    ld (0x0006), hl
+
+    ld a, (CDISK)
+    ld c, a                  ; c = current disk
+    jp CBASE                 ; pass control to CCP
+
+; Warm boot on application exit.
+WBOOTE:
+    ld sp, 0x0100            ; ephemeral user stack
+
+    ; Reload the CCP, BDOS and CCP.
+
+    ld d, 1             ; current track
+    ld e, 0             ; current sector
+    ld hl, CBASE        ; destination address
+.1
+    push de
+    push hl
+    call FDR512
+    pop de
+    ld bc, 512
+    ldir                ; copy buffer data to memory
+    ex de, hl           ; updated destination address to HL
+    pop de
+
+    inc e
+    ld a, 18
+    cp e
+    jr nz, .1           ; loop again
+    jr call_ccp
+
+CONSTE:
+    ld hl, disk_off_count
+    inc (hl)                 ; increment drive motor count and...
+    call z, FDMOFF           ; ...turn the motor off on rollover
+
+    xor a
+    ret
+
+CONINE:
+    ld a, 0xff
+    ret
+
+ADDAHL:
+    add a, l
+    ld l, a
+    ret nc
+    inc h
+    ret
+
+CONOUTE:
+    ld a, c
+    jp TTYPUTC
+
+LISTE:
+PUNCHE:
+    ret
+
+LISTSTE:
+READERE:
+return_error:
+    ld a, 0xff
+    ret
+
+; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
+; error).
+SELDSKE:
+    ld hl, 0
+    ld a, c
+    or a
+    ret nz                  ; return 0 if not drive 0
+    ld hl, drive_a_dph
+    ret
+
+HOMEE:
+    ld c, 0
+    ; fall through
+SETTRKE:
+    ld a, c
+    ld (BTRACK), a
+    ret
+
+SETSECE:
+    ld a, c
+    ld (BSECTOR), a
+    ret
+
+SETDMAE:
+    ld (BDMA), bc
+    ret
+
+SECTRANE:
+    ld h, b
+    ld l, c
+    ret
+
+return_bios_error:
+    ld a, 0xff
+    ret
+
+READE:
+    xor a                   ; deblocking mode normal
+    push ix
+    call FDR128
+    pop ix
+    jr z, return_bios_error
+    xor a
+    ret
+
+WRITEE:
+    ld a, 0xff
+    ret
+
+drive_a_dph:
+    dw 0                    ; Sector translation vector
+    dw 0, 0, 0              ; BDOS scratchpad
+    dw dirbuf               ; Directory scratchpad
+    dw drive_a_dpd          ; Drive parameter block
+    dw drive_a_check_vector ; Disk change check vector
+    dw drive_a_bitmap       ; Allocation bitmap
+
+RESERVED_TRACKS = 2
+DRIVE_A_SIZE = 720                          ; kB
+DRIVE_A_BLOCKS = (DRIVE_A_SIZE - (RESERVED_TRACKS*9)) / 2 ; 2kB blocks
+
+drive_a_dpd:
+    dw 18*4                 ; Number of CP/M sectors per track
+    db 4, 15                ; BSH/BLM for 2048-byte blocks
+    db 0                    ; EXM for 2048-byte allocation units and >255 blocks
+    dw DRIVE_A_BLOCKS-1     ; DSM
+    dw 127                  ; DRM, one fewer than the number of directory entries
+    db 0xc0, 0x00           ; Initial allocation vector for two directory blocks
+    dw 32                   ; Size of disk change check vector: (DRM+1)/4
+    dw RESERVED_TRACKS      ; Number of reserved tracks
+
+drive_a_bitmap:
+    ds (DRIVE_A_BLOCKS+7) / 8
+drive_a_check_vector:
+    ds 8
+dirbuf:
+    ds 128
+
+disk_off_count: db 0         ; cheap and nasty drive motor timer
 
 ; vim: ts=4 sw=4 et ft=asm
 

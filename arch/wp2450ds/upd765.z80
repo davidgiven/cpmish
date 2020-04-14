@@ -13,9 +13,16 @@
     export FDTX, fd765_tx
     export FDCAL2, fd765_recalibrate_twice
     export FDRSTAT, fd765_read_status
+    export FDMOFF, fd765_motor_off
+    export DBGET, db_get
 
 fd765_motor_on:
     ld a, 0xe1          ; motor on
+    out0a PORT_HD63266_STATUS
+    ret
+
+fd765_motor_off:
+    ld a, 0xd1          ; motor off
     out0a PORT_HD63266_STATUS
     ret
 
@@ -58,7 +65,23 @@ label FDR512
     ld (ix+DBS_CUR_TRACK), d
     call fd_read512
     ret z
-    ld hl, fd765_deblock
+    ld hl, fd765_deblock+DBS_BUFFER
+    ret
+
+label FDR128
+    xor a
+    ld bc, (BSECTOR)
+    ld b, a
+    ld de, (BTRACK)
+    ld d, a
+    ld ix, fd765_deblock
+    call db_get
+    ret z
+
+    ld de, (BDMA)
+    ld bc, 128
+    ldir
+    or a
     ret
 
 fd765_deblock:
@@ -70,6 +93,13 @@ fd765_deblock:
 	dw 0		   ; current track
 	db 0		   ; dirty flag
 	ds 512		   ; buffer
+
+label BSECTOR
+    db 0
+label BTRACK
+    db 0
+label BDMA
+    dw 0
 
 ; vim: ts=4 sw=4 et ft=asm
 

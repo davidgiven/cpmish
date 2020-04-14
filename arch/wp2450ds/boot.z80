@@ -54,7 +54,7 @@ start:
     cp e
     jr nz, .1           ; loop again
 
-    jp $
+    jp BIOS_ADDRESS
 
 ; vim: ts=4 sw=4 et ft=asm
 
