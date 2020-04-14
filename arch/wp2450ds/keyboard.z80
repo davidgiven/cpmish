@@ -12,6 +12,9 @@
 	export KBGET, kbd_get
 	export KBTEST, kbd_test
 
+MODIFIER_BIT_SHIFT = 0
+MODIFIER_BIT_CTRL = 1
+
 	cseg
 
 ; Scans the keyboard, and returns the scancode of the first key pressed
@@ -100,11 +103,60 @@ kbd_get:
     or a
     jr z, kbd_get
 
+    ; We now have a keyboard scancode in A, so use the keyboard map to convert
+    ; it to ASCII.
+
+    ld b, a
+    ;cp 0x38
+    ;jr z, shift_change
+
+    ld a, b
+;    sla a
+;    ret nc                          ; ignore keyups
+;    srl a
+
+    ld b, 0
+    ld c, a
+    ld a, (keyboard_modifiers)
+    ld hl, keyboard_normal_map
+    bit 0, a
+    jr z, .2
+    ld hl, keyboard_shifted_map
+.2:
+    add hl, bc
+    ld a, (hl)
+
+    ld hl, keyboard_modifiers
+    bit MODIFIER_BIT_CTRL, (hl)
+    jr z, .1
+    and 31
+.1:
+    or a
+    jr z, unknown_scancode
+    ret
+
+shift_change:
+    ld hl, keyboard_modifiers
+    res MODIFIER_BIT_SHIFT, (hl)
+    bit 7, b
+    ret nz
+    set MODIFIER_BIT_SHIFT, (hl)
+    ret
+
+ctrl_change:
+    ld hl, keyboard_modifiers
+    res MODIFIER_BIT_CTRL, (hl)
+    bit 7, b
+    ret nz
+    set MODIFIER_BIT_CTRL, (hl)
+    ret
+
+unknown_scancode:
+    ld a, c
     call TTYPUT8
     ld a, ' '
     call TTYPUTC
     jr kbd_get
-    ret
 
 ; Returns Z if no keys are pending, NZ otherwise.
 kbd_test:
@@ -118,6 +170,9 @@ kbd_test:
 
 pending_scancode: db 0
 keyboard_bitmap: ds 8
+keyboard_modifiers: db 0
+
+.include "keytab.inc"
 
 ; vim: ts=4 sw=4 et ft=asm
 

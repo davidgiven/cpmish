@@ -14,6 +14,15 @@ normalrule {
     }
 }
 
+normalrule {
+    name = "keytab_inc",
+    ins = { "arch/wp2450ds/utils+mkkeytab" },
+    outleaves = { "keytab.inc" },
+    commands = {
+        "%{ins} > %{outs}"
+    }
+}
+
 zmac {
     name = "tty_o",
     srcs = { "./tty.z80" },
@@ -42,6 +51,7 @@ zmac {
     deps = {
         "include/*.lib",
         "./include/*.lib",
+		"+keytab_inc",
     },
 }
 
