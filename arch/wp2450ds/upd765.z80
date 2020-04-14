@@ -16,6 +16,8 @@
     export FDMOFF, fd765_motor_off
     export DBGET, db_get
 
+    cseg
+
 fd765_motor_on:
     ld a, 0xe1          ; motor on
     out0a PORT_HD63266_STATUS

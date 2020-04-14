@@ -37,6 +37,15 @@ zmac {
 }
 
 zmac {
+    name = "keyboard_o",
+    srcs = { "./keyboard.z80" },
+    deps = {
+        "include/*.lib",
+        "./include/*.lib",
+    },
+}
+
+zmac {
     name = "bios_o",
     srcs = { "./bios.z80" },
     deps = {
@@ -60,6 +69,7 @@ ld80 {
 		"+bios_o",
 		"+upd765_o",
 		"+tty_o",
+		"+keyboard_o",
 	}
 }
 

@@ -1,0 +1,123 @@
+; Brother WP2450DS cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib wp2450ds
+    maclib cpmish
+    maclib cpm
+
+    extrn TTYPUT8
+    extrn TTYPUTC
+
+	export KBGET, kbd_get
+	export KBTEST, kbd_test
+
+	cseg
+
+; Scans the keyboard, and returns the scancode of the first key pressed
+; since the last call. Keyup events are not returned at all (but update
+; the bitmap). If no events have happened, returns 0.
+
+kbd_scan:
+    ld hl, pending_scancode
+    ld a, (hl)
+    ld (hl), 0
+    or a
+    ret nz                  ; return any pending scancode
+
+    ld hl, keyboard_bitmap  ; hl points to current bitmap byte
+    ld d, 0                 ; matrix probe counter
+x_loop:
+    out0d PORT_KB
+    nop
+    in0a PORT_KB            ; read the matrix
+    cpl                     ; bits are set to 0 when a key is pressed
+    xor (hl)                ; test for changed keys
+    jr z, no_keys_pressed
+
+    ; We've detected a changed key, either down or up.
+
+    ld c, a                 ; C = changed bitmap
+
+    ld b, 1                 ; which bit to probe
+y_loop:
+    ld a, b
+    and c                   ; test for changed key
+    jr z, bit_not_changed
+
+    ; Bit B has changed. Look at the bitmap to figure out what it was.
+
+    ld a, (hl)
+    and b
+    jr nz, keyup            ; a change from 1 to 0 means a keyup
+
+    ; Right! This is a keydown, so stop scanning now.
+
+    ld a, b
+    or (hl)
+    ld (hl), a              ; change the 0 to a 1 in the bitmap
+
+    ; Compute the scancode.
+
+    ld a, d
+    add a
+    add a
+    add a                   ; Put the probe value in the top three bits
+.1                          ; Put the sense value in the bottom three bits
+    rr b
+    ret z
+    inc a
+    jr .1
+
+    ; Record released keys.
+
+keyup:
+    ld a, (hl)
+    xor b
+    ld (hl), a              ; change the 1 to a 0 in the bitmap
+    ; fall through
+bit_not_changed:
+    sla b                   ; move to next bit
+    jr nz, y_loop
+    
+    ; The only way we'll get here is if all the changed keys were
+    ; ups. We just continue scanning the matrix.
+
+no_keys_pressed:
+    inc d
+    inc hl
+    ld a, 8
+    cp d
+    jr nz, x_loop
+
+    ; If we got here, we didn't find any keydown events.
+
+    xor a
+    ret
+    
+kbd_get:
+    call kbd_scan
+    or a
+    jr z, kbd_get
+
+    call TTYPUT8
+    ld a, ' '
+    call TTYPUTC
+    jr kbd_get
+    ret
+
+; Returns Z if no keys are pending, NZ otherwise.
+kbd_test:
+    call kbd_scan
+    or a
+    ret z               ; nope, nothing
+
+    ld (pending_scancode), a ; unget the key just pressed
+    xor a
+    ret
+
+pending_scancode: db 0
+keyboard_bitmap: ds 8
+
+; vim: ts=4 sw=4 et ft=asm
+
