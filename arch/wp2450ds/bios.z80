@@ -59,7 +59,7 @@ label BBASE
 
 ; Cold boot on system startup.
 BOOTE:
-    ld sp, 0x0100            ; ephemeral user stack
+    ld sp, 0x0100           ; ephemeral user stack
 
     call TTYINIT
     call TTYPUTSI
@@ -67,47 +67,49 @@ BOOTE:
     db 0
 
     xor a
-    ld (IOBYTE), a           ; reset iobyte and current disk
+    ld (IOBYTE), a          ; reset iobyte and current disk
     ld (CDISK), a
 
     ; fall through
 call_ccp:
     ld a, 0xc3
-    ld hl, BBASE + 3         ; init BIOS entrypoint
+    ld hl, BBASE + 3        ; init BIOS entrypoint
     ld (0x0000), a
     ld (0x0001), hl
 
-    ld hl, FBASE + 6         ; init BDOS entrypoint
+    ld hl, FBASE + 6        ; init BDOS entrypoint
     ld (0x0005), a
     ld (0x0006), hl
 
     ld a, (CDISK)
-    ld c, a                  ; c = current disk
-    jp CBASE                 ; pass control to CCP
+    ld c, a                 ; c = current disk
+    jp CBASE                ; pass control to CCP
 
 ; Warm boot on application exit.
 WBOOTE:
-    ld sp, 0x0100            ; ephemeral user stack
+    ld sp, 0x0100           ; ephemeral user stack
 
     ; Reload the CCP, BDOS and CCP.
 
-    ld d, 1             ; current track
-    ld e, 0             ; current sector
-    ld hl, CBASE        ; destination address
+    ld a, 1
+    sta (BTRACK)            ; current CP/M track
+    ld a, 0
+    sta (BSECTOR)           ; current CP/M sector
+    ld hl, CBASE
+    ld (BDMA), hl           ; destination address
 .1
-    push de
-    push hl
-    call FDR512
-    pop de
-    ld bc, 512
-    ldir                ; copy buffer data to memory
-    ex de, hl           ; updated destination address to HL
-    pop de
+    call READE              ; go via the main entrypoint because of the buffer
 
-    inc e
-    ld a, 18
-    cp e
-    jr nz, .1           ; loop again
+    ld bc, 128
+    ld hl, (BDMA)
+    add hl, bc
+    ld (BDMA), hl
+
+    ld a, (BSECTOR)
+    inc a
+    ld (BSECTOR), a
+    cp (BBASE - CBASE) / 128
+    jr nz, .1
     jr call_ccp
 
 CONSTE:
@@ -122,6 +124,7 @@ CONSTE:
     ret
 
 CONINE:
+    call FDMOFF
     jp KBGET
 
 ADDAHL:
@@ -182,6 +185,9 @@ return_bios_error:
     ret
 
 READE:
+    ld hl, disk_off_count
+    ld (hl), 0
+
     push ix
     call FDR128
 read_write_exit:
@@ -191,6 +197,9 @@ read_write_exit:
     ret
 
 WRITEE:
+    ld hl, disk_off_count
+    ld (hl), 0
+
     ld a, c                 ; set deblocking mode
     push ix
     call FDW128

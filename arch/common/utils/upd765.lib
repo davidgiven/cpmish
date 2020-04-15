@@ -38,7 +38,7 @@ read_status_loop:
 	fd765_read_dt_a
 	ld (hl), a
 	inc hl
-	djnz read_status_loop
+	jr read_status_loop
 data.fd765_status:
 	ds 8						; 8 bytes of status data
 
