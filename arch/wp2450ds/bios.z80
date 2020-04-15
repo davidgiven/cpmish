@@ -221,7 +221,7 @@ drive_a_dpd:
 drive_a_bitmap:
     ds (DRIVE_A_BLOCKS+7) / 8
 drive_a_check_vector:
-    ds 8
+    ds 32
 dirbuf:
     ds 128
 
