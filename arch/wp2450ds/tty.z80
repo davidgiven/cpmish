@@ -190,7 +190,41 @@ on_last_line:
     jr clear_bytes
 
 tty_insert_line:
-    ret
+    ld a, (tty_cursory)
+    cp SCREEN_HEIGHT - 1
+    jr z, on_last_line      ; skip scroll if there's nothing to do
+
+    ld hl, SCREEN_WIDTH * SCREEN_HEIGHT * 8 - SCREEN_WIDTH
+
+    ld b, a
+    ld a, SCREEN_HEIGHT -1
+    sub b                   ; calculate number of text lines to move
+    add a
+    add a
+    add a
+    ld d, a                 ; b = number of scanlines to move
+
+.1
+    call read_scanline
+
+    ld bc, -(SCREEN_WIDTH * 8)
+    add hl, bc
+    call write_scanline
+
+    ld bc, SCREEN_WIDTH * 7
+    add hl, bc
+
+    dec d
+    jr nz, .1
+
+    ; Finished; clear the current line.
+
+    ld a, (tty_cursory)
+    ld d, a
+    ld e, 0
+    call calc_address
+    ld hl, SCREEN_WIDTH * 1 * 8
+    jp clear_bytes
 
 ; Loads the scanline at video memory address HL into the buffer.
 read_scanline:
