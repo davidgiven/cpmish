@@ -22,7 +22,7 @@
     cseg
 
 EMULATE_CLEAR_TO_EOL = 1
-EMULATE_CLEAR_TO_EOS = 1
+EMULATE_CLEAR_TO_EOS = 0
     maclib tty
 
 TTYINIT equ tty_init
@@ -120,11 +120,45 @@ SETCURS:
     out0h PORT_VIDEO_CURSOR_HI
     ret
     
-tty_delete_line
+tty_clear_to_eos:
+    call tty_clear_to_eol
+    ld a, (tty_cursory)
+    inc a
+    cp SCREEN_HEIGHT
+    ret z                   ; return if we're on the last line of the screen
+    ld d, a
+    ld e, 0
+    call calc_address       ; hl is the address of the beginning of the next line
+
+    ld de, SCREEN_WIDTH * SCREEN_HEIGHT * 8
+    ex de, hl               ; DE = video memory address, HL = size of video memory
+    or a                    ; clear C
+    sbc hl, de              ; calculate amount of video memory to clear
+    ; fall through
+; Clear HL bytes from video memory address DE
+clear_bytes:
+    out0e PORT_VIDEO_ADDR_LO
+    out0d PORT_VIDEO_ADDR_HI
+    
+    xor a
+.1
+    out0a PORT_VIDEO_DATA_W
+    dec hl
+    jr nz, .1
     ret
+
+tty_delete_line
+    ; Delete the last line of the screen.
+
+    ld de, SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 8
+    ld hl, SCREEN_WIDTH * SCREEN_HEIGHT * 8
+    jr clear_bytes
 
 tty_insert_line:
     ret
+
+video_buffer:
+    ds 91
 
 font_table:
     include "font.inc"
