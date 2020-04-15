@@ -34,7 +34,10 @@ Currently it supports these platforms:
 
   - [the Amstrad NC200 laptop](arch/nc200/README.md)
   - [the Kaypro II](arch/kayproii/README.md)
-  - [the Brother LW-30 typewriter (and probably others)](arch/brotherop2/README.md)
+  - [the Brother LW-30 typewriter (and probably
+	others)](arch/brotherop2/README.md)
+  - [the Brother WP-2450DS typewriter (and probably
+	others)](arch/wp2450ds/README.md)
 
 If anyone wants to contribute any more BIOSes, I'd love pull requests!
 
