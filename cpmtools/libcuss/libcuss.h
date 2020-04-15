@@ -21,17 +21,18 @@ extern void con_clear_to_eol(void);
 #if defined LIBCUSS_KAYPROII
     #define SCREENWIDTH 80
     #define SCREENHEIGHT 24
-    #define LIBCUSS_CLEAREOL "\030"
     #define LIBCUSS_ADM3
 #elif defined LIBCUSS_NC200
     #define SCREENWIDTH 80
     #define SCREENHEIGHT 18
-    #define LIBCUSS_CLEAREOL "\030"
     #define LIBCUSS_ADM3
 #elif defined LIBCUSS_BROTHEROP2
     #define SCREENWIDTH 80
     #define SCREENHEIGHT 14
-    #define LIBCUSS_CLEAREOL "\030"
+    #define LIBCUSS_ADM3
+#elif defined LIBCUSS_BROTHER_WP2450DS
+	#define SCREENWIDTH 91
+	#define SCREENHEIGHT 30
     #define LIBCUSS_ADM3
 #else
     #error "No libcuss configuration specified."
@@ -41,6 +42,7 @@ extern void con_clear_to_eol(void);
 
 #if defined LIBCUSS_ADM3
     #define LIBCUSS_CLEAR "\032"
+    #define LIBCUSS_CLEAREOL "\030"
     #define LIBCUSS_NEWLINE "\r\n"
     #define LIBCUSS_ADM3
 

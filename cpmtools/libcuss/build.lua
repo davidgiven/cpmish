@@ -2,6 +2,7 @@ local libcuss_terminals = {
     "KAYPROII",
     "NC200",
 	"BROTHEROP2",
+	"BROTHER_WP2450DS",
 }
 
 for _, terminal in ipairs(libcuss_terminals) do

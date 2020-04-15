@@ -129,15 +129,16 @@ diskimage {
 	format = "brother-wp2450ds",
 	bootfile = { "+bootfile_img" },
 	map = {
-		["dump.com"] = "cpmtools+dump",
-		["stat.com"] = "cpmtools+stat",
 		["asm.com"] = "cpmtools+asm",
-		["copy.com"] = "cpmtools+copy",
-		["submit.com"] = "cpmtools+submit",
 		["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
+		["copy.com"] = "cpmtools+copy",
+		["dump.com"] = "cpmtools+dump",
 		["mkfs.com"] = "cpmtools+mkfs",
 		["rawdisk.com"] = "cpmtools+rawdisk",
+		["stat.com"] = "cpmtools+stat",
+		["submit.com"] = "cpmtools+submit",
         ["-readme.txt"] = "+readme",
+        ["qe.com"] = "cpmtools+qe_BROTHER_WP2450DS",
 	},
 }
 
