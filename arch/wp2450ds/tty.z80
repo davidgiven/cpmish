@@ -140,21 +140,88 @@ clear_bytes:
     out0e PORT_VIDEO_ADDR_LO
     out0d PORT_VIDEO_ADDR_HI
     
-    xor a
+    ld b, 0
 .1
-    out0a PORT_VIDEO_DATA_W
+    out0b PORT_VIDEO_DATA_W
     dec hl
+    ld a, h
+    or l
     jr nz, .1
     ret
 
-tty_delete_line
+    export XXX, tty_delete_line
+
+tty_delete_line:
+    ld a, (tty_cursory)
+    cp SCREEN_HEIGHT - 1
+    jr z, on_last_line      ; skip scroll if there's nothing to do
+
+    push af
+    ld d, a
+    ld e, 0
+    call calc_address       ; hl = dest address
+    pop af
+
+    ld b, a
+    ld a, SCREEN_HEIGHT - 1
+    sub b                   ; calculate number of text lines to move
+    add a
+    add a
+    add a
+    ld d, a                 ; b = number of scanlines to move
+
+    ld bc, -SCREEN_WIDTH
+    add hl, bc              ; compensate for preincrement in loop
+.1
+    ld bc, SCREEN_WIDTH * 9
+    add hl, bc
+    call read_scanline
+
+    ld bc, -(SCREEN_WIDTH * 8)
+    add hl, bc
+    call write_scanline
+
+    dec d
+    jr nz, .1
+
     ; Delete the last line of the screen.
 
+on_last_line:
     ld de, SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 8
-    ld hl, SCREEN_WIDTH * SCREEN_HEIGHT * 8
+    ld hl, SCREEN_WIDTH * 1 * 8
     jr clear_bytes
 
 tty_insert_line:
+    ret
+
+; Loads the scanline at video memory address HL into the buffer.
+read_scanline:
+    push hl
+    out0l PORT_VIDEO_ADDR_LO
+    out0h PORT_VIDEO_ADDR_HI
+    ld b, SCREEN_WIDTH
+    ld hl, video_buffer
+.1
+    in0a PORT_VIDEO_DATA_R
+    ld (hl), a
+    inc hl
+    djnz .1
+    pop hl
+    ret
+
+; Writes the scanline at video memory address HL from the buffer.
+write_scanline:
+    push hl
+    out0l PORT_VIDEO_ADDR_LO
+    out0h PORT_VIDEO_ADDR_HI
+    ld b, SCREEN_WIDTH
+    ld hl, video_buffer
+.1
+    ld a, (hl)
+    out0a PORT_VIDEO_DATA_W
+    inc hl
+    djnz .1
+    pop hl
     ret
 
 video_buffer:
