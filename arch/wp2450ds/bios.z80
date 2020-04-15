@@ -19,6 +19,7 @@
     extrn TTYHOME
     extrn SETCURS
     extrn FDR512
+    extrn FDW128
     extrn FDR128
     extrn FDMOFF
     extrn BSECTOR
@@ -62,7 +63,7 @@ BOOTE:
 
     call TTYINIT
     call TTYPUTSI
-    cpmish_banner "Brother OP2"
+    cpmish_banner "Brother WP2450DS"
     db 0
 
     xor a
@@ -181,17 +182,19 @@ return_bios_error:
     ret
 
 READE:
-    xor a                   ; deblocking mode normal
     push ix
     call FDR128
+read_write_exit:
     pop ix
     jr z, return_bios_error
     xor a
     ret
 
 WRITEE:
-    ld a, 0xff
-    ret
+    ld a, c                 ; set deblocking mode
+    push ix
+    call FDW128
+    jr read_write_exit
 
 drive_a_dph:
     dw 0                    ; Sector translation vector

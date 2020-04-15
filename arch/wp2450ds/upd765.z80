@@ -70,13 +70,17 @@ label FDR512
     ld hl, fd765_deblock+DBS_BUFFER
     ret
 
-label FDR128
+setup_bc_de_and_ix:
     xor a
     ld bc, (BSECTOR)
     ld b, a
     ld de, (BTRACK)
     ld d, a
     ld ix, fd765_deblock
+    ret
+
+label FDR128
+    call setup_bc_de_and_ix
     call db_get
     ret z
 
@@ -86,15 +90,41 @@ label FDR128
     or a
     ret
 
+; On entry, a is the deblock mode.
+label FDW128
+    sta (deblock_mode)
+    push af
+    call setup_bc_de_and_ix
+    pop af
+    call db_get
+    ret z
+
+    ld (ix+DBS_DIRTY), 1    ; mark this sector as dirty
+
+    ld de, (BDMA)
+    ex de, hl
+    ld bc, 128
+    ldir                    ; copy data into the buffer
+
+deblock_mode: equ $ + 1
+    ld a, 0
+    cp 1                    ; if deblock mode 1, flush the block now
+    jr nz, .1
+    call db_flush
+    ret z
+.1
+    or 1                    ; set nz
+    ret
+
 fd765_deblock:
-	dw 18		   ; number of sectors
-	dw 80		   ; number of tracks
-	dw fd_read512  ; read callback
-	dw fd_write512 ; write callback
-	dw 0xffff      ; current sector
-	dw 0		   ; current track
-	db 0		   ; dirty flag
-	ds 512		   ; buffer
+    dw 18          ; number of sectors
+    dw 80          ; number of tracks
+    dw fd_read512  ; read callback
+    dw fd_write512 ; write callback
+    dw 0xffff      ; current sector
+    dw 0           ; current track
+    db 0           ; dirty flag
+    ds 512         ; buffer
 
 label BSECTOR
     db 0
