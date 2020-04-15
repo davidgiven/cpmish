@@ -149,8 +149,6 @@ clear_bytes:
     jr nz, .1
     ret
 
-    export XXX, tty_delete_line
-
 tty_delete_line:
     ld a, (tty_cursory)
     cp SCREEN_HEIGHT - 1

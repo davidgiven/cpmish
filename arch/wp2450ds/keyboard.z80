@@ -22,12 +22,6 @@ MODIFIER_BIT_CTRL = 1
 ; the bitmap). If no events have happened, returns 0.
 
 kbd_scan:
-    ld hl, pending_scancode
-    ld a, (hl)
-    ld (hl), 0
-    or a
-    ret nz                  ; return any pending scancode
-
     ld hl, keyboard_bitmap  ; hl points to current bitmap byte
     ld d, 0                 ; matrix probe counter
 x_loop:
@@ -52,33 +46,32 @@ y_loop:
 
     ld a, (hl)
     and b
+    ld a, 0x80              ; key up
     jr nz, keyup            ; a change from 1 to 0 means a keyup
+    xor a                   ; key down
+keyup:
 
     ; Right! This is a keydown, so stop scanning now.
 
+    ld e, a                 ; save the key up / key down bit
+
     ld a, b
-    or (hl)
-    ld (hl), a              ; change the 0 to a 1 in the bitmap
+    xor (hl)
+    ld (hl), a              ; invert the bit in the bitmap
 
     ; Compute the scancode.
 
     ld a, d
     add a
     add a
-    add a                   ; Put the probe value in the top three bits
-.1                          ; Put the sense value in the bottom three bits
+    add a                   ; put the probe value in the top three bits
+    or e                    ; add the key up / key down bit
+.1                          ; put the sense value in the bottom three bits
     rr b
     ret z
     inc a
     jr .1
 
-    ; Record released keys.
-
-keyup:
-    ld a, (hl)
-    xor b
-    ld (hl), a              ; change the 1 to a 0 in the bitmap
-    ; fall through
 bit_not_changed:
     sla b                   ; move to next bit
     jr nz, y_loop
@@ -98,25 +91,58 @@ no_keys_pressed:
     xor a
     ret
     
+; Blocks waiting for the next key.
 kbd_get:
-    call kbd_scan
+    call kbd_poll
     or a
     jr z, kbd_get
+    ret
+
+shift_change:
+    xor a
+    ld hl, keyboard_modifiers
+    res MODIFIER_BIT_SHIFT, (hl)
+    bit 7, b
+    ret nz
+    set MODIFIER_BIT_SHIFT, (hl)
+    ret
+
+ctrl_change:
+    xor a
+    ld hl, keyboard_modifiers
+    res MODIFIER_BIT_CTRL, (hl)
+    bit 7, b
+    ret nz
+    set MODIFIER_BIT_CTRL, (hl)
+    ret
+
+; Returns the ASCII keycode in A, or 0 if nothing is pending.
+kbd_poll:
+    ld hl, pending_key
+    ld a, (hl)
+    or a
+    ld (hl), 0
+    ret nz                  ; return any pending key
+    call kbd_scan
+    or a
+    ret z                   ; give up if no key event
 
     ; We now have a keyboard scancode in A, so use the keyboard map to convert
     ; it to ASCII.
 
     ld b, a
-    ;cp 0x38
-    ;jr z, shift_change
+    and 0x7f
+    cp 0x38
+    jr z, shift_change
+    cp 0x30
+    jr z, ctrl_change
 
-    ld a, b
-;    sla a
-;    ret nc                          ; ignore keyups
-;    srl a
+    ld a, 0
+    bit 7, b
+    ret nz                  ; ignore keyups
 
+    ld c, b
     ld b, 0
-    ld c, a
     ld a, (keyboard_modifiers)
     ld hl, keyboard_normal_map
     bit 0, a
@@ -135,22 +161,6 @@ kbd_get:
     jr z, unknown_scancode
     ret
 
-shift_change:
-    ld hl, keyboard_modifiers
-    res MODIFIER_BIT_SHIFT, (hl)
-    bit 7, b
-    ret nz
-    set MODIFIER_BIT_SHIFT, (hl)
-    ret
-
-ctrl_change:
-    ld hl, keyboard_modifiers
-    res MODIFIER_BIT_CTRL, (hl)
-    bit 7, b
-    ret nz
-    set MODIFIER_BIT_CTRL, (hl)
-    ret
-
 unknown_scancode:
     ld a, c
     call TTYPUT8
@@ -160,15 +170,15 @@ unknown_scancode:
 
 ; Returns Z if no keys are pending, NZ otherwise.
 kbd_test:
-    call kbd_scan
+    call kbd_poll
     or a
-    ret z               ; nope, nothing
+    ret z                   ; nope, nothing
 
-    ld (pending_scancode), a ; unget the key just pressed
+    ld (pending_key), a     ; unget the key just pressed
     or 1
     ret
 
-pending_scancode: db 0
+pending_key: db 0
 keyboard_bitmap: ds 8
 keyboard_modifiers: db 0
 
