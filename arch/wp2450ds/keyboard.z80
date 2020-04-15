@@ -165,7 +165,7 @@ kbd_test:
     ret z               ; nope, nothing
 
     ld (pending_scancode), a ; unget the key just pressed
-    xor a
+    or 1
     ret
 
 pending_scancode: db 0
