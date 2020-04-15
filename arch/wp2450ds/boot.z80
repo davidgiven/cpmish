@@ -16,7 +16,7 @@
     extrn FDDEBLK
 
 start:
-    dw 0xc181
+    dw 0xc181           ; Brother magic numbers
     dw 0x0101
     dw 0x0000
     db "BR"
@@ -26,6 +26,21 @@ start:
     xor a
     out0a CBAR          ; now the entire address space is RAM
     ld sp, 0x100        ; startup stack
+
+    ; Clear the screen
+
+    ld b, a
+    out0b PORT_VIDEO_ADDR_LO
+    out0b PORT_VIDEO_ADDR_HI
+    ld hl, SCREEN_WIDTH * SCREEN_HEIGHT * 8
+.2
+    out0b PORT_VIDEO_DATA_W
+    dec hl
+    ld a, h
+    or l
+    jr nz, .2
+
+    ; Set up the disk system.
 
     call FDCAL2
     ld a, 0x03          ; SPECIFY
