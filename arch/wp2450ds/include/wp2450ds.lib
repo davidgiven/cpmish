@@ -1,6 +1,4 @@
-BBR = 0x39
-CBR = 0x38
-CBAR = 0x3a
+        maclib z180
 
 LOAD_ADDRESS = 0xdc00
 BIOS_ADDRESS = 0xf200
@@ -21,88 +19,6 @@ PORT_KB              = 0xb8
 
 SCREEN_WIDTH = 728/8
 SCREEN_HEIGHT = 240/8
-
-out0a   macro port
-        dw 0x39ed
-        db port
-        endm
-
-out0b   macro port
-        dw 0x01ed
-        db port
-        endm
-
-out0c   macro port
-        dw 0x09ed
-        db port
-        endm
-
-out0d   macro port
-        dw 0x11ed
-        db port
-        endm
-
-out0e   macro port
-        dw 0x19ed
-        db port
-        endm
-
-out0h   macro port
-        dw 0x21ed
-        db port
-        endm
-
-out0l   macro port
-        dw 0x29ed
-        db port
-        endm
-
-in0a    macro port
-        dw 0x38ed
-        db port
-        endm
-
-in0b    macro port
-        dw 0x00ed
-        db port
-        endm
-
-in0c    macro port
-        dw 0x08ed
-        db port
-        endm
-
-in0d    macro port
-        dw 0x10ed
-        db port
-        endm
-
-in0e    macro port
-        dw 0x18ed
-        db port
-        endm
-
-in0h    macro port
-        dw 0x20ed
-        db port
-        endm
-
-in0l    macro port
-        dw 0x28ed
-        db port
-        endm
-
-mlthl	macro
-		dw 0x6ced
-		endm
-
-mltde 	macro
-		dw 0x5ced
-		endm
-
-mltbc	macro
-		dw 0x4ced
-		endm
 
 ; vim: ts=4 sw=4 et ft=asm
 
