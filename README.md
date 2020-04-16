@@ -74,7 +74,6 @@ install the dependencies. These are the names of the Debian packages:
   - netpbm
   - cpmtools
   - lua5.1
-  - lua-posix
   - ninja-build
   - libz80ex-dev
   - libreadline-dev
@@ -90,6 +89,11 @@ Once in place, just do:
 
 ...and it should build. You'll end up with some `.img` files in the project
 directory which are the bootable disk images.
+
+If you want more detailed build instructions, try [the script used for
+automatic
+builds](https://github.com/davidgiven/cpmish/blob/master/.github/workflows/ccpp.yml),
+which has got the exact commands needed buried inside it.
 
 For information on what to do with these, look in the READMEs in the
 individual [`arch/*`](https://github.com/davidgiven/cpmish/tree/master/arch)
