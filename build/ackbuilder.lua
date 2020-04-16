@@ -7,7 +7,6 @@
 --   is = { set of rule types which made the target }
 -- }
 
-local posix = require("posix")
 local emitter = {}
 local rules = {}
 local targets = {}
@@ -18,8 +17,39 @@ local vars = {}
 local parente = {}
 local loadingstack = {}
 
+local PWD = os.getenv("PWD")
+
 -- Forward references
 local loadtarget
+
+-- Posix replacement
+
+local function access(filename, mode)
+	local fp = io.open(filename, mode)
+	if not fp then
+		return false
+	end
+	fp:close()
+	return true
+end
+
+local function glob(path)
+	local _, _, lhs, rhs = path:find("(.*)/([^/]*)$")
+	if lhs:find("[*?]") then
+		error("directory part of glob may not contain wildcards")
+	end
+	if not rhs:find("[*?]") then
+		return {path}
+	end
+
+	local fp = io.popen("find '"..lhs.."' -name '"..rhs.."' -type f 2> /dev/null", "r")
+	local files = {}
+	for f in fp:lines() do
+		files[#files+1] = f
+	end
+	fp:close()
+	return files
+end
 
 local function print(...)
 	local function print_no_nl(list)
@@ -227,7 +257,7 @@ local function abspath(...)
 		function(filename)
 			assertString(filename, 1)
 			if not filename:find("^[/$]") then
-				filename = concatpath(posix.getcwd(), filename)
+				filename = concatpath(PWD, filename)
 			end
 			return filename
 		end
@@ -401,13 +431,13 @@ end
 
 local function loadbuildfilefor(filepart, targetpart)
 	local normalname = concatpath(filepart, "/build.lua")
-	if posix.access(normalname, "r") then
+	if access(normalname, "r") then
 		loadbuildfile(normalname)
 		return
 	end
 
 	local extendedname = concatpath(filepart, "/build-"..targetpart..".lua")
-	if posix.access(extendedname, "r") then
+	if access(extendedname, "r") then
 		loadbuildfile(extendedname)
 		return
 	end
@@ -424,7 +454,7 @@ loadtarget = function(targetname)
 	if not targetname:find("%+") then
 		local files
 		if targetname:find("[?*]") then
-			files = posix.glob(targetname)
+			files = glob(targetname)
 			if not files then
 				files = {}
 			end
@@ -830,8 +860,6 @@ local function parse_arguments(argmap, arg)
 end
 
 globals = {
-	posix = posix,
-
 	abspath = abspath,
 	asstring = asstring,
 	basename = basename,
