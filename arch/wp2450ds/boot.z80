@@ -40,16 +40,40 @@ start:
     or l
     jr nz, .2
 
+    ; Configure the serial port.
+
+    ld a, 01100100b     ; RE, TE, MOD2(8n1)
+    out0a CNTLA1
+    ld a, 00000010b     ; SS1(/4 clock divider)
+    out0a CNTLB1
+
     ; Set up the disk system.
 
+    ld a, 'A'
+    call putserial
     call FDCAL2
+
+    ld a, 'B'
+    call putserial
     ld a, 0x03          ; SPECIFY
     call FDTX
+
+    ld a, 'C'
+    call putserial
     ld a, 0xdf          ; SRT, HUT
     call FDTX
+
+    ld a, 'D'
+    call putserial
     ld a, 0x0d          ; HLT, ND
     call FDTX
+
+    ld a, 'E'
+    call putserial
     call FDRSTAT
+
+    ld a, 'F'
+    call putserial
 
     ld d, 1             ; current track
     ld e, 0             ; current sector
@@ -69,7 +93,20 @@ start:
     cp e
     jr nz, .1           ; loop again
 
+    ld a, 'G'
+    call putserial
+
     jp BIOS_ADDRESS
+
+putserial:
+    push af
+.1
+    in0a STAT1
+    and 1<<1            ; TDRE
+    jr z, .1            ; loop until ready to transmit
+    pop af
+    out0a TDR1
+    ret
 
 ; vim: ts=4 sw=4 et ft=asm
 

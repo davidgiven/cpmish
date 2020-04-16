@@ -9,6 +9,11 @@ TDR1:   equ 0x07
 RDR0:   equ 0x06
 RDR1:   equ 0x07
 
+ASTC0L: equ 0x1a
+ASTC1L: equ 0x1c
+ASTC0H: equ 0x1b
+ASTC1H: equ 0x1d
+
 BBR:    equ 0x39
 CBR:    equ 0x38
 CBAR:   equ 0x3a
