@@ -21,6 +21,7 @@ start:
     dw 0x0000
     db "BR"
 
+entry:
     di                  ; The Brother OS is not at home
 
     xor a
@@ -79,9 +80,14 @@ start:
     ld e, 0             ; current sector
     ld hl, LOAD_ADDRESS ; destination address
 .1
+    ld a, 'a'
+    add e
+    call putserial
+
     push de
     push hl
     call FDR512
+    jr z, entry
     pop de
     ld bc, 512
     ldir                ; copy buffer data to memory
