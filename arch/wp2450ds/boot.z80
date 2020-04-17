@@ -65,7 +65,7 @@ start:
 
     ld a, 'D'
     call putserial
-    ld a, 0x0d          ; HLT, ND
+    ld a, 0x0c          ; HLT, !ND
     call FDTX
 
     ld a, 'E'

@@ -119,5 +119,9 @@ mltbc   macro
         dw 0x4ced
         endm
 
+otimr	macro
+		dw 0x93ed
+		endm
+
 ; vim: ts=4 sw=4 et ft=asm
 

@@ -34,11 +34,51 @@ fd765_nudge_tc:
 fd765_pause:
     ret
 
+; Reads a sector (512 bytes) from the FDC into HL.
+fd765_read_sector:
+    ld (read_sector_dma + DAR0L - SAR0L), hl
+    ld b, read_sector_dma.end - read_sector_dma
+    ld hl, read_sector_dma
+    otimr
+    ld a, 00001100b         ; IO -> memory++
+    out0a DMODE
+    ld a, 01000000b
+    out0a DSTAT             ; start the transfer
+wait_for_dma_completion:
+    in0a DSTAT
+    and 01000000b           ; test for DE0
+    jr nz, wait_for_dma_completion
+    ret
+read_sector_dma:
+    dw PORT_HD63266_DATA    ; SAR0
+    db 0                    ; SAR0B
+    dw 0                    ; DAR0
+    db 0x06                 ; DAR0B
+    dw 512                  ; BCR0
+read_sector_dma.end:
+
+; Writes a sector (512 bytes) to the FDC from HL.
+fd765_write_sector:
+    ld (write_sector_dma), hl
+    ld b, write_sector_dma.end - write_sector_dma
+    ld hl, write_sector_dma
+    otimr
+    ld a, 00110000b         ; memory++ -> IO
+    out0a DMODE
+    ld a, 01000000b
+    out0a DSTAT             ; perform the transfer
+    jr wait_for_dma_completion
+write_sector_dma:
+    dw 0                    ; SAR0
+    db 0x06                 ; SAR0B
+    dw PORT_HD63266_DATA    ; DAR0
+    db 0                    ; DAR0B
+    dw 512                  ; BCR0
+write_sector_dma.end:
+
 DBS_BLOCK_SHIFT = 9
 DBS_WANT_DB_CAP = 0
     maclib deblocker
-
-FD_DRIVE_READY_COUNTS = 0
 
 fd765_read_st_a macro
     in0a PORT_HD63266_STATUS
@@ -56,7 +96,8 @@ fd765_write_dt_a macro
     out0a PORT_HD63266_DATA
     endm
 
-FD765_DMA_TRANSFERS = 0
+FD765_DRIVE_READY_COUNTS = 0
+FD765_DMA_TRANSFERS = 1
     maclib upd765
 
 ; Reads the physical sector at track=D, sector=E, and returns

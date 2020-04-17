@@ -47,7 +47,7 @@ data.fd765_status:
 ; Returns nz on success, z on failure
 fd765_wait_until_drive_ready:
 	call fd765_motor_on
-	ld hl, FD_DRIVE_READY_COUNTS
+	ld hl, FD765_DRIVE_READY_COUNTS
 fd765_wait_until_drive_ready_loop:
 	push hl
 	call fd765_sense_drive_state
@@ -184,7 +184,7 @@ fd_write512:
 	jr nz, .1
 .2
 	else
-	call fd765_read_sector
+	call fd765_write_sector
 	endif
 	jr fd765_complete_transfer
 
