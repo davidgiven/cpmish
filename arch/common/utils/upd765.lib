@@ -31,8 +31,8 @@ fd765_read_status:
 	ld hl, data.fd765_status
 read_status_loop:
 	fd765_read_st_a
-	rla 						; RQM...
-	jr nc, read_status_loop 	; ...low, keep waiting 
+	rla							; RQM...
+	jr nc, read_status_loop		; ...low, keep waiting 
 	rla							; DIO...
 	ret nc						; ...low, no more data
 	fd765_read_dt_a
@@ -89,7 +89,7 @@ fd765_recalibrate:
 	; falls through
 ; Waits for a SEEK or RECALIBRATE command to finish by polling SENSE INTERRUPT STATUS.
 fd765_wait_for_seek_ending:
-	ld a, 8	    				; SENSE INTERRUPT STATUS
+	ld a, 8						; SENSE INTERRUPT STATUS
 	call fd765_tx
 	call fd765_read_status
 
@@ -190,6 +190,7 @@ fd_write512:
 
 ; Finish up a read or write transfer.
 ; Returns nz on success, z on failure.
+	export XXX, fd765_complete_transfer
 fd765_complete_transfer:
 	call fd765_nudge_tc
 	call fd765_read_status
@@ -202,24 +203,27 @@ fd765_complete_transfer:
 	rla                         ; IC6->C, IC7->b0, EN->b1
 	rla                         ; IC6->b0, IC7->b1, EN->b2
 	and 7                       ; clip off stray bits
-	ld hl, data.fd765_status_codes
-	ld b, 0
-	ld c, a
-	add hl, bc
-	ld a, (hl)
-	or a						; return nz on success, z on failure
-	ret
-
-data.fd765_status_codes:
+	; This gives us a number from 0..7 which is our error. We use this
+	; bitmap to determine whether it's fatal or not.
 	; EN, IC7, IC6
-	db 1    ; OK
-	db 0    ; readfail
-	db 0    ; unknown command
-	db 0    ; disk removed
-	db 1    ; OK
-	db 1    ; reached end of track
-	db 0    ; unknown command
-	db 0    ; disk removed
+	; 1    ; OK
+	; 0    ; readfail
+	; 0    ; unknown command
+	; 0    ; disk removed
+	; 1    ; OK
+	; 1    ; reached end of track
+	; 0    ; unknown command
+	; 0    ; disk removed
+	inc a
+	ld b, a
+	ld a, 10001100b
+.1
+	add a
+	djnz .1
+	; The appropriate bit from the bitmap is now in C.
+	ld a, 0
+	rla							; copy carry to bit 0, set z or nz
+	ret
 
 ; On entry, A contains the opcode, and IX is the deblocker structure.
 ; Returns nz on success, z on failure.
@@ -285,5 +289,5 @@ data.readwritecommand:
 	db 0        ; 8: sector length (unused)
 data.readwritecommand.end:
 
-; vim: sw=4 ts=4 expandtab ft=asm
+; vim: sw=4 ts=4 et ft=asm
 
