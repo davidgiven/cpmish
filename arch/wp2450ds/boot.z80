@@ -8,6 +8,7 @@
 
     maclib wp2450ds
     maclib cpmish
+    maclib cpm
 
     extrn FDCAL2
     extrn FDTX
@@ -51,30 +52,30 @@ entry:
     ; Set up the disk system.
 
     ld a, 'A'
-    call putserial
+    call TTYPUTC
     call FDCAL2
 
     ld a, 'B'
-    call putserial
+    call TTYPUTC
     ld a, 0x03          ; SPECIFY
     call FDTX
 
     ld a, 'C'
-    call putserial
+    call TTYPUTC
     ld a, 0xdf          ; SRT, HUT
     call FDTX
 
     ld a, 'D'
-    call putserial
+    call TTYPUTC
     ld a, 0x0c          ; HLT, !ND
     call FDTX
 
     ld a, 'E'
-    call putserial
+    call TTYPUTC
     call FDRSTAT
 
     ld a, 'F'
-    call putserial
+    call TTYPUTC
 
     ld d, 1             ; current track
     ld e, 0             ; current sector
@@ -82,7 +83,7 @@ entry:
 .1
     ld a, 'a'
     add e
-    call putserial
+    call TTYPUTC
 
     push de
     push hl
@@ -100,11 +101,11 @@ entry:
     jr nz, .1           ; loop again
 
     ld a, 'G'
-    call putserial
+    call TTYPUTC
 
     jp BIOS_ADDRESS
 
-putserial:
+label TTYPUTC
     push af
 .1
     in0a STAT1
@@ -112,6 +113,27 @@ putserial:
     jr z, .1            ; loop until ready to transmit
     pop af
     out0a TDR1
+    ret
+
+label TTYPUT8
+    ld c, a
+    rra
+    rra
+    rra
+    rra
+    call .1
+    ld a, c
+.1
+    and 15
+    add a, 0x90
+    daa
+    adc a, 0x40
+    daa
+    push hl
+    push bc
+    call TTYPUTC
+    pop bc
+    pop hl
     ret
 
 ; vim: ts=4 sw=4 et ft=asm
