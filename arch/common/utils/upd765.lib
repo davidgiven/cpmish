@@ -134,7 +134,7 @@ fd_read512:
 	ret z
 	; fall through
 ; Read DE bytes from the 765 into HL.
-fd765_read_bytes_from_controller:
+	if !FD765_DMA_TRANSFERS
 .1
 	fd765_read_st_a
 	rla							; RQM...
@@ -151,6 +151,9 @@ fd765_read_bytes_from_controller:
 	or e
 	jr nz, .1
 .2
+	else
+	call fd765_read_sector
+	endif
 	jr fd765_complete_transfer
 
 ; Given a deblocker structure in IX, writes the described sector out of the
@@ -159,11 +162,11 @@ fd765_read_bytes_from_controller:
 
 fd_write512:
 	ld a, 0x65 ; WRITE SECTORS MULTITRACK
-	call fd765_setup_read_or_write ; sets HL or DE
+	call fd765_setup_read_or_write ; sets HL and DE
 	ret z
 	; fall through
 ; Writes de bytes to the 765 from HL.
-fd765_write_bytes_to_controller:
+	if !FD765_DMA_TRANSFERS
 .1
 	fd765_read_st_a
 	rla							; RQM...
@@ -180,6 +183,9 @@ fd765_write_bytes_to_controller:
 	or e
 	jr nz, .1
 .2
+	else
+	call fd765_read_sector
+	endif
 	jr fd765_complete_transfer
 
 ; Finish up a read or write transfer.

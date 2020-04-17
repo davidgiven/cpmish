@@ -56,6 +56,7 @@ fd765_write_dt_a macro
     out0a PORT_HD63266_DATA
     endm
 
+FD765_DMA_TRANSFERS = 0
     maclib upd765
 
 ; Reads the physical sector at track=D, sector=E, and returns
