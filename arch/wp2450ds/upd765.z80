@@ -36,6 +36,10 @@ fd765_pause:
 
 ; Reads a sector (512 bytes) from the FDC into HL.
 fd765_read_sector:
+    push hl
+;    ld a, '{'
+;    call TTYPUTC
+    pop hl
     ld (read_sector_dma + DAR0L - SAR0L), hl
     ld b, read_sector_dma.end - read_sector_dma
     ld c, SAR0L
@@ -47,10 +51,13 @@ fd765_read_sector:
     out0a DCNTL
     ld a, 01100000b         ; DE0 enable, DWE1 disable
     out0a DSTAT             ; start the transfer
-wait_for_dma_completion:
-    in0a DSTAT
-    and 01000000b           ; test for DE0
-    jr nz, wait_for_dma_completion
+wait_for_fdc_completion:
+    in0a PORT_HD63266_SR2
+    and 0x40                ; 0x40 seems to mirror the 'IRQ happened' flag
+    jr z, wait_for_fdc_completion
+    ld a, 00100000b         ; DE0 disable, stop any pending DMA
+;    ld a, '}'
+;    call TTYPUTC
     ret
 read_sector_dma:
     dw PORT_HD63266_DATA    ; SAR0
@@ -73,7 +80,7 @@ fd765_write_sector:
     out0a DCNTL
     ld a, 01100000b         ; DE0 enable, DWE1 disable
     out0a DSTAT             ; perform the transfer
-    jr wait_for_dma_completion
+    jr wait_for_fdc_completion
 write_sector_dma:
     dw 0                    ; SAR0
     db 0x06                 ; SAR0B
