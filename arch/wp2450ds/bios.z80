@@ -138,14 +138,24 @@ CONOUTE:
     ld a, c
     jp TTYPUTC
 
-LISTE:
 PUNCHE:
+    in0a STAT1
+    and 00000010b       ; TDRE
+    jr z, PUNCHE        ; loop until ready to transmit
+    out0c TDR1
     ret
 
-LISTSTE:
 READERE:
-return_error:
+    in0a STAT1
+    and 10000000b       ; RDRF
+    jr z, READERE       ; loop until data received
+    in0a RDR1
+    ret
+
+; List device unsupported.
+LISTSTE:
     ld a, 0xff
+LISTE:
     ret
 
 ; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
