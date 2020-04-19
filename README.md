@@ -21,6 +21,7 @@ What you get is a working CP/M 2.2 clone consisting of:
     of them [written by me](http://cowlark.com/2019-06-01-cpm-asm)
   - [R.T. Russell's superb BBC Basic](http://www.bbcbasic.co.uk/bbcbasic.html),
     Z80 edition (with integrated assembler)
+  - Richard Surwilo's Z8E full-screen symbolic debugger
   - a build system which provides a turnkey cross-compilation system for
     producing bootable disk images for any of the supported platforms
   - a classic CP/M syntax assembler and linker for cross-compiling ancient
@@ -170,3 +171,8 @@ Specifically:
 	clone, written by lots of people but mainly Cameron W. Cotrill and Harold
 	F. Bower. This is available under the terms of the General Public License
 	version 2. See the `third_party/zsdos/COPYING` file for more details.
+
+  - `third_party/z8e` contains a (modified) copy of the Z8E symbolic
+    debugger, mostly written by Richard Surwilo and Jon Saxton. It is in the
+	public domain.
+
