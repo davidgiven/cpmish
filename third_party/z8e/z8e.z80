@@ -1,5 +1,5 @@
         title   *   *** Z8E - Z80 Debug Monitor ***    *
-        subttl  (C) Copyright 1984, 1985   by Richard A. Surwilo  
+;       subttl  (C) Copyright 1984, 1985   by Richard A. Surwilo  
 
 ;------------------------------------------------------------------------------
 ;
@@ -769,7 +769,7 @@ zsym10: ld      (bias),hl       ;Bias to add to each symbol address
         jp      z,.sym          ;.SYM file loaded differently from .PRN
         cp      'L'
         jp      nz,.prn         ;If not .LST then must be .PRN
-        ld      de,.lst??       ;Look for .LST string id string         
+        ld      de,lstsig       ;Look for .LST string id string         
         ld      (pstrng),de     ;Store pointer to string to find
         call    fstrng
 
@@ -838,7 +838,7 @@ zsym10: ld      (bias),hl       ;Bias to add to each symbol address
         cp      'P'             ;macro 80 v3.4?
         jp      nz,.sym20
 .sym23:
-        ld      de,.lst??       ;Bypass inter-page verbiage
+        ld      de,lstsig       ;Bypass inter-page verbiage
         ld      (pstrng),de
         call    fstrng
         cp      eof
@@ -922,7 +922,7 @@ zsym10: ld      (bias),hl       ;Bias to add to each symbol address
         cpir
         jr      nz,.prnBB       ;If no tab then not an M80 .prn file
         ex      de,hl           ;Point at strings to be compared
-        ld      hl,.m80??
+        ld      hl,m80sig
         ld      b,(hl)          ;Number of bytes to compare
         inc     hl
 .prnAA:
@@ -939,7 +939,7 @@ zsym10: ld      (bias),hl       ;Bias to add to each symbol address
 
         ; End of dirty trick code
 
-        ld      de,.prn??
+        ld      de,prnsig
         ld      (pstrng),de
         call    fstrng
         cp      eof
@@ -947,7 +947,7 @@ zsym10: ld      (bias),hl       ;Bias to add to each symbol address
 .prnCC:
         ld      de,msymnf       ;display symbol table not found message   
         call    print
-        jp      .eof50          ;check for more symbol files to load
+        jp      eof50           ;check for more symbol files to load
 
 .prn00:
         ld      bc,(ntpa)       ;bc - current end of the tpa
@@ -1187,14 +1187,14 @@ zsym10: ld      (bias),hl       ;Bias to add to each symbol address
 ; SLR Z80ASM symbol table loading routines
 
 .slr:
-        ld      de,.slr??       ;If this .prn file really is a Z80ASM
+        ld      de,slrsig       ;If this .prn file really is a Z80ASM
         ld      (pstrng),de     ;product then we can use existing code
         call    fstrng          ;to load the symbols.
         cp      eof
         jp      nz,.sym
         ld      de,msymnf       ;display symbol table not found message   
         call    print
-        jp      .eof50          ;check for more symbol files to load
+        jp      eof50           ;check for more symbol files to load
 
 
 .eof:                           ;We always pre-decrement the symbol table
@@ -1262,7 +1262,7 @@ zsym10: ld      (bias),hl       ;Bias to add to each symbol address
                                 ;table to search thru if the user specified a
                                 ;symbol name bias as part of the command line
 
-.eof50: ld      a,(delim)       ;check command line delimter
+eof50:  ld      a,(delim)       ;check command line delimter
         and     a               ;test for end of line null
         jp      nz,zsym         ;nz - not null means more files
 
@@ -1450,7 +1450,7 @@ read:   push    bc
         ld      de,msymnf       ;display symbol table not found message   
         call    print
         ld      sp,stack        ;reinit stack
-        jp      .eof50          ;check for more symbol files to load
+        jp      eof50           ;check for more symbol files to load
 
 
 ;hexc
@@ -1579,12 +1579,12 @@ zstx:   ld      a,(prsbf)
         call    crlf
         ld      de,msntx        ;now display syntax error
         call    print
-        jp      .eof50          ;check for more files to load
+        jp      eof50           ;check for more files to load
 
 
 zfnf:   ld      de,mfilnf       ;display file not found 
         call    print
-        jp      .eof50
+        jp      eof50
 
 
 zmem:   ld      de,mmem??       ;display out of memory message
@@ -1625,26 +1625,26 @@ fstr20: pop     de
         pop     bc      
         ret
 
-.lst??: defb    .lstsz          ;string length
+lstsig: defb    lstsz          ;string length
         defb    'Symbol Table:'
         defb    cr,lf,cr,lf
-.lstsz  equ     $ - .lst?? - 1
+lstsz:  equ     $ - lstsig - 1
 
 
-.prn??: defb    .prnsz          ;string length  
+prnsig: defb    prnsz           ;string length  
         defb    'Symbols:'      ;string to search for in M80's .prn files 
                                 ;indicating start of symbol table
         defb    cr,lf
-.prnsz  equ     $ - .prn?? - 1
+prnsz   equ     $ - prnsig - 1
 
-.slr??: defb    .slrsz
+slrsig: defb    slrsz
         defb    'Symbols Detected.'
         defb    cr,lf
-.slrsz  equ     $ - .slr?? - 1
+slrsz   equ     $ - slrsig - 1
 
-.m80??: defb    .m80sz
+m80sig: defb    m80sz
         defb    'MACRO-80'
-.m80sz  equ     $ - .m80?? - 1
+m80sz:  equ     $ - m80sig - 1
 
 tsym:
 tsymhi: defb    0
@@ -6193,7 +6193,7 @@ opn830: call    zhex20          ;convert to ascii
 zndx:   ld      hl,(zasmpc)     ;fetch current instruction pointer
         ex      de,hl           ;de - instruction pointer   hl - buffer
         ld      a,(de)
-        add     a,-0fdh         ;iy check
+        add     a,(-0fdh)&0ffh  ;iy check
         ret     z
         sub     0ddh-0fdh       ;ix check
         ret     z
