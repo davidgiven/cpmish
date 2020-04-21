@@ -190,7 +190,7 @@ fd_write512:
 
 ; Finish up a read or write transfer.
 ; Returns nz on success, z on failure.
-	export XXX, fd765_complete_transfer
+
 fd765_complete_transfer:
 	call fd765_nudge_tc
 	call fd765_read_status
