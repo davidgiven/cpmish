@@ -44,47 +44,30 @@ entry:
 
     ; Configure the serial port.
 
-    ld a, 01100100b     ; RE, TE, MOD2(8n1)
+    ld a, 01110100b     ; RE, TE, CKA1D, MOD2(8n1)
     out0a CNTLA1
     ld a, 00000010b     ; SS1(/4 clock divider)
     out0a CNTLB1
 
     ; Set up the disk system.
 
-    ld a, 'A'
-    call TTYPUTC
     call FDCAL2
 
-    ld a, 'B'
-    call TTYPUTC
     ld a, 0x03          ; SPECIFY
     call FDTX
 
-    ld a, 'C'
-    call TTYPUTC
     ld a, 0xdf          ; SRT, HUT
     call FDTX
 
-    ld a, 'D'
-    call TTYPUTC
     ld a, 0x0c          ; HLT, !ND
     call FDTX
 
-    ld a, 'E'
-    call TTYPUTC
     call FDRSTAT
-
-    ld a, 'F'
-    call TTYPUTC
 
     ld d, 1             ; current track
     ld e, 0             ; current sector
     ld hl, LOAD_ADDRESS ; destination address
 .1
-    ld a, 'a'
-    add e
-    call TTYPUTC
-
     push de
     push hl
     call FDR512
@@ -100,41 +83,7 @@ entry:
     cp e
     jr nz, .1           ; loop again
 
-    ld a, 'G'
-    call TTYPUTC
-
     jp BIOS_ADDRESS
-
-label TTYPUTC
-    push af
-.1
-    in0a STAT1
-    and 1<<1            ; TDRE
-    jr z, .1            ; loop until ready to transmit
-    pop af
-    out0a TDR1
-    ret
-
-label TTYPUT8
-    ld c, a
-    rra
-    rra
-    rra
-    rra
-    call .1
-    ld a, c
-.1
-    and 15
-    add a, 0x90
-    daa
-    adc a, 0x40
-    daa
-    push hl
-    push bc
-    call TTYPUTC
-    pop bc
-    pop hl
-    ret
 
 ; vim: ts=4 sw=4 et ft=asm
 
