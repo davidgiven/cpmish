@@ -265,8 +265,8 @@ fd765_setup_read_or_write:
 	inc hl
 	djnz .3
 
-	ld d, ixh
-	ld e, ixl
+	push ix
+	pop de
 	ex de, hl
 	ld de, DBS_BUFFER
 	add hl, de					; HL is address of buffer
