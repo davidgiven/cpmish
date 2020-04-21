@@ -115,7 +115,10 @@ calc_address:
     ret
 
 SETCURS:
-    ld hl, (tty_cursorx)
+    ld de, (tty_cursorx)
+    call calc_address
+    ld de, 91 * 6           ; move to the bottom scanline
+    add hl, de
     out0l PORT_VIDEO_CURSOR_LO
     out0h PORT_VIDEO_CURSOR_HI
     ret
