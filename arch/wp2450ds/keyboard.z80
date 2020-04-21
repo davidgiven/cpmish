@@ -26,7 +26,16 @@ kbd_scan:
     ld d, 0                 ; matrix probe counter
 x_loop:
     out0d PORT_KB
-    nop
+
+    ; Delay loop to wait for the keyboard.
+    ; 4 is not enough, 128 is too much.
+    ; The formula here is 13*B-2 cycles.
+    public XXX
+XXX: equ $+1
+    ld b, 10                ; 7 cycles
+.1
+    djnz .1                 ; 13*(B-1) + 8
+
     in0a PORT_KB            ; read the matrix
     cpl                     ; bits are set to 0 when a key is pressed
     xor (hl)                ; test for changed keys
