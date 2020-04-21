@@ -1,0 +1,28 @@
+Z8E version 3.6
+===============
+
+Z8E is a brilliant debugger for the Z80.  It is about the same
+size as ZSID but offers so much more, including interactive
+full-screen animated display of instructions and registers.
+
+Originally written by Rick Surwilo in 1984 it underwent a series
+of revisions over the next few years.  Apart from contributing
+some enhancements of my own, I integrated patches from several
+others and attempted to maintain a unified source.  In this I
+was largely successful.
+
+This is the first update to Z8E since 1989 and its sole purpose
+is to support operation on terminals with more than 24 lines.
+For CP/M 2.2 the height of the terminal can be patched but on
+CP/M Plus the terminal height is obtained by interrogating the
+System Control Block.  No extra bytes were added to the re-
+locatable portion of Z8E.
+
+As always, if you make changes to this program then please
+update the documentation and post it along with the source
+code to somewhere accessible to interested people.  Ongoing
+development depends on having source code available.
+
+Jon Saxton
+tesseract@triton.vg
+August 2011
