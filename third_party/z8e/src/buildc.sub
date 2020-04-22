@@ -1,0 +1,23 @@
+; CP/M Plus script to build Z8E variants using Cromemco assembler and linker.
+; The assembler and linker are asssumed to be named ZASMB.COM and LINKB.COM
+; respectively.  This is to avoid naming conflicts with other tools.
+; The Cromemco linker is a clone of Microsoft's LINK-80 (L80.COM) so that can
+; be used of LINKB.COM (as in this script)..
+;
+; Z8E.Z80 must be edited to enable ZASMB.
+
+pip config.inc=18e1.inc
+zasm z8e
+l80 z8e,18e1/n/e
+
+pip config.inc=18e2.inc
+zasm z8e
+l80 z8e,18e2/n/e
+
+pip config.inc=z8e1.inc
+zasm z8e
+l80 z8e,z8e1/n/e
+
+pip config.inc=z8e2.inc
+zasm z8e
+l80 z8e,z8e2/n/e

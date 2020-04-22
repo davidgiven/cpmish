@@ -1,0 +1,24 @@
+; A CP/M Plus script to build all four configurations of Z8E using the SLR
+; assembler Z80ASM.  This script is easily adapted to work on CP/M 2.2 or
+; to use any of the other SLR assemblers which recognise Zilog mnemonics
+; (e.g. SLR180, Z80ASMP)
+
+pip config.inc=18e1.inc
+z80asm z8e/a
+erase 18e1.com
+rename 18e1.com=z8e.com
+
+pip config.inc=18e2.inc
+z80asm z8e/a
+erase 18e2.com
+rename 18e2.com=z8e.com
+
+pip config.inc=z8e1.inc
+z80asm z8e/a
+erase z8e1.com
+rename z8e1.com=z8e.com
+
+pip config.inc=z8e2.inc
+z80asm z8e/a
+erase z8e2.com
+rename z8e2.com=z8e.com
