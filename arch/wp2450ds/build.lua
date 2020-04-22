@@ -139,7 +139,7 @@ diskimage {
 		["submit.com"] = "cpmtools+submit",
         ["-readme.txt"] = "+readme",
         ["qe.com"] = "cpmtools+qe_BROTHER_WP2450DS",
-		["z8e.com"] = "third_party/z8e+z8e",
+		["z8e.com"] = "third_party/z8e+z8e_WP2450DS",
 	},
 }
 

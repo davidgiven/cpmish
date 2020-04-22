@@ -3,6 +3,7 @@ include "third_party/zmac/build.lua"
 
 local VERSIONS = {
 	"NC200",
+	"WP2450DS",
 }
 
 for _, version in ipairs(VERSIONS) do
