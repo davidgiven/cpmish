@@ -91,7 +91,7 @@ diskimage {
         ["flash.com"] = "arch/nc200/tools+flash",
         ["mkfs.com"] = "cpmtools+mkfs",
         ["rawdisk.com"] = "cpmtools+rawdisk",
-		["z8e.com"] = "third_party/z8e+z8e",
+		["z8e.com"] = "third_party/z8e+z8e_NC200",
         ["-readme.txt"] = "+readme",
     },
 }

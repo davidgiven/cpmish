@@ -1,0 +1,20 @@
+Z8E is a CP/M-hosted screen-oriented assembly-language debugger for the Z80
+and Z180 (HD64180) processors. It can take advantage of a second monitor if
+one is available to separate the debugging dialogue from the console I/O of
+the application program being analysed.
+
+These notes apply to version 4.2 of Z8E.
+
+Z8E version 4.2
+===============
+
+Version 4.2 fixes a bug in the symbol table load routine: if the file
+ended exactly at a record boundary, a "Symbol Table Not Found" error was
+displayed and no symbols were loaded.
+
+In addition, clearing of the screen is now done by sending the appropriate
+control sequences to the terminal. The old method of clearing the screen
+with a string of line-feeds left garbage on the screen in certain cases.
+
+Hector Peraza
+peraza@newsguy.com

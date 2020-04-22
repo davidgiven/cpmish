@@ -1,0 +1,23 @@
+pip config.inc=18e1.inc
+m80 =z8e.z80
+l80 z8e,z8e/n/y/e
+erase 18e1.com
+rename 18e1.com=z8e.com
+
+pip config.inc=18e2.inc
+m80 =z8e.z80
+l80 z8e,z8e/n/y/e
+erase 18e2.com
+rename 18e2.com=z8e.com
+
+pip config.inc=z8e1.inc
+m80 =z8e.z80
+l80 z8e,z8e/n/y/e
+erase z8e1.com
+rename z8e1.com=z8e.com
+
+pip config.inc=z8e2.inc
+m80 =z8e.z80
+l80 z8e,z8e/n/y/e
+erase z8e2.com
+rename z8e2.com=z8e.com

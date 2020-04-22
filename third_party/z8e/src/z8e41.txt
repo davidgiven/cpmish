@@ -1,0 +1,53 @@
+Z8E is a CP/M-hosted screen-oriented assembly-language debugger for the Z80
+and Z180 (HD64180) processors.  It can take advantage of a second monitor if
+one is available to separate the debugging dialogue from the console I/O of
+the application program being analysed.
+
+These notes apply to version 4.1 of Z8E.
+
+Z8E version 4.1
+===============
+
+Version 4.1 introduces a minor optimisation to Z8E which applies when the
+secondary terminal is the same as the primary.  That makes it possible for
+both terminals to share code and data and in so doing reduces the amount of
+memory used by the debugger itself.
+
+Adaptation of Z8E to various hardware and software environments has been
+substantially reworked.  Versions prior to 4.0 allowed binary patching for
+terminal configuration but that was abandoned on the premise that anyone
+debugging at the assembly language level is likely to have the ability to
+write or modify an assembly language source file to tailor Z8E to his needs.
+
+The source code in 4.0 was a bit of a mess and hard to modify.  Just figuring
+out what needed to be done was difficult.  That issue has been addressed.
+Small external source files containing the environment-specific code and data
+are included during assembly.  It is just a matter of copying two or three
+suitably-tailored source files to have the expected names and then assembling
+Z8E from the source code.
+
+The behaviour of Z8E at the command level was a bit inconsistent, particularly
+in respect to repeating the same command and in recognising command changes.
+An attempt has been made to clean that up.
+
+The Z8E manual has been updated.
+
+Some CP/M Plus submit files are supplied, each tailored to a different
+assembler toolset
+
+	BUILDM.SUB	Microsoft M80/L80
+	BUILDZ.SUB	SLR's Z80ASM or equivalent
+	BUILDC.SUB	Cromemco CDOS Z80 Macro Assembler
+
+These srcipts generate all four versions of Z8E:
+
+	18E1.COM	Z180 support, one terminal
+	18E2.COM	Z180 support, two terminals
+	Z8E1.COM	Z80, one terminal ("standard" version)
+	Z8E2.COM	Z80, two terminals
+
+To use any of the scripts the requirements for assembling Z8E must be met.
+The Z8E manual describes the build process.  These scripts merely automate it.
+
+Jon Saxton
+tesseract@triton.vg
