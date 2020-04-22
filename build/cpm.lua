@@ -76,11 +76,11 @@ definerule("diskimage",
 				error("all references must have a destination")
 			else
 				local f = filenamesof(src)
-				if (#f ~= 1) then
-					error("installable can only cope with targets emitting single files")
+				if not f[1] then
+					error("target must return at least one file (only the first of which will be installed)")
 				end
 
-				deps[#deps+1] = f
+				deps[#deps+1] = {f[1]}
 				commands[#commands+1] = "cpmcp -f "..e.format.." %{outs} "..f[1].." 0:"..dest
 			end
 		end

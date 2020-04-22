@@ -1,5 +1,5 @@
 	title	*   *** Z8E - Z80 Debug Monitor ***    *
-	subttl	(C) Copyright 1984, 1985   by Richard A. Surwilo  
+;	subttl	(C) Copyright 1984, 1985   by Richard A. Surwilo  
 
 ;------------------------------------------------------------------------------
 ;
@@ -258,8 +258,9 @@ false	equ	0
 ; the following equates to true.  If you use an assembler not mentioned
 ; below then make up a new equate for it.
 
-ZASMB	equ	false		;Cromemco CDOS macro assembler
-M80	equ	true		;Microsoft's Macro-80
+ZMAC    equ     true            ;ZMAC
+ZASMB	equ	false 		;Cromemco CDOS macro assembler
+M80	equ	false		;Microsoft's Macro-80
 SLR	equ	false 		;SLR's lightning-fast Z80ASM assembler
 				;(or the Z180 version)
 
@@ -277,6 +278,22 @@ SLR	equ	false 		;SLR's lightning-fast Z80ASM assembler
 ; one of the macros is needed immediately it is worthwhile defining all of
 ; them.
 ;---------------------------------------------------------------------------
+
+    if  zmac
+export  macro   L
+        public  L
+L:
+        endm
+  
+.lall   macro
+        endm
+  
+.sall   macro
+        endm
+  
+.xall   macro
+        endm
+    endif
 
     if	zasmb
 include: macro	#file
@@ -347,9 +364,9 @@ auxiliary equ	2		; auxiliary terminals
 ;   .	Type of terminal (if any) attached to the serial port 
 ;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-	include	TERMINAL.INC	; Load terminal types in preparation for
+	include	terminal.inc	; Load terminal types in preparation for
 				; CONFIG.INC
-	include	CONFIG.INC	;(Must be UPPER CASE for M80!)
+	include	config.inc	; (Change to UPPER CASE for M80!)
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ; The following EQUate should normally be set to 0 (false).  It is only
@@ -433,7 +450,9 @@ getSCB	equ	49
 	abs
       endif
 
+    if not zmac
 	org	100h
+    endif
 
 	jp	nint
 
@@ -863,7 +882,7 @@ zsym10:	ld	(bias),hl	;Bias to add to	each symbol address
 	jp	z,.sym		;.SYM file loaded differently from .PRN
 	cp	'L'
 	jp	nz,.prn		;If not .LST then must be .PRN
-	ld	de,.lst??	;Look for .LST string id string  	
+	ld	de,lstid	;Look for .LST string id string  	
 	ld	(pstrng),de	;Store pointer to string to find
 	call	fstrng
 
@@ -932,7 +951,7 @@ zsym10:	ld	(bias),hl	;Bias to add to	each symbol address
 	cp	'P'		;macro 80 v3.4?
 	jp	nz,.sym20
 .sym23:
-	ld	de,.lst??	;Bypass inter-page verbiage
+	ld	de,lstid	;Bypass inter-page verbiage
 	ld	(pstrng),de
 	call	fstrng
 	cp	eof
@@ -1015,7 +1034,7 @@ zsym10:	ld	(bias),hl	;Bias to add to	each symbol address
 	cpir
 	jr	nz,.prnBB	;If no tab then not an M80 .prn file
 	ex	de,hl		;Point at strings to be compared
-	ld	hl,.m80??
+	ld	hl,m80id
 	ld	b,(hl)		;Number of bytes to compare
 	inc	hl
 .prnAA:
@@ -1032,7 +1051,7 @@ zsym10:	ld	(bias),hl	;Bias to add to	each symbol address
 
 	; End of M80/Z80ASM disambiguation
 
-	ld	de,.prn??
+	ld	de,prnid
 	ld	(pstrng),de
 	call	fstrng
 	cp	eof
@@ -1040,7 +1059,7 @@ zsym10:	ld	(bias),hl	;Bias to add to	each symbol address
 .prnCC:
 	ld	de,msymnf       ;display symbol table not found message   
 	call	print
-	jp	.eof50          ;check for more symbol files to load
+	jp	eof50           ;check for more symbol files to load
 
 .prn00:
 	ld	bc,(ntpa)       ;bc - current end of the tpa
@@ -1281,14 +1300,14 @@ zsym10:	ld	(bias),hl	;Bias to add to	each symbol address
 ; SLR Z80ASM symbol table loading routines
 
 .slr:
-	ld	de,.slr??	;If this .prn file really is a Z80ASM
+	ld	de,slrid	;If this .prn file really is a Z80ASM
 	ld	(pstrng),de	;product then we can use existing code
 	call	fstrng		;to load the symbols.
 	cp	eof
 	jp	nz,.sym
 	ld	de,msymnf       ;display symbol table not found message   
 	call	print
-	jp	.eof50          ;check for more symbol files to load
+	jp	eof50           ;check for more symbol files to load
 
 
 .eof:                           ;We always pre-decrement the symbol table
@@ -1356,7 +1375,7 @@ zsym10:	ld	(bias),hl	;Bias to add to	each symbol address
                                 ;table to search thru if the user specified a
                                 ;symbol name bias as part of the command line
 
-.eof50:	ld	a,(delim)       ;check command line delimter
+eof50:	ld	a,(delim)       ;check command line delimter
 	and	a               ;test for end of line null
 	jp	nz,zsym         ;nz - not null means more files
 
@@ -1673,12 +1692,12 @@ zstx:	ld	a,(prsbf)
 	call	crlf
 	ld	de,msntx	;now display syntax error
 	call	print
-	jp	.eof50		;check for more files to load
+	jp	eof50		;check for more files to load
 
 
 zfnf:	ld	de,mfilnf	;display file not found 
 	call	print
-	jp	.eof50
+	jp	eof50
 
 
 zmem:	ld	de,mmem??	;display out of memory message
@@ -1719,26 +1738,26 @@ fstr20:	pop	de
 	pop	bc	
 	ret
 
-.lst??:	defb	.lstsz		;string length
+lstid: 	defb	.lstsz		;string length
 	defb	'Symbol Table:'
 	defb	cr,lf,cr,lf
-.lstsz	equ	$ - .lst?? - 1
+.lstsz	equ	$ - lstid - 1
 
 
-.prn??:	defb	.prnsz		;string length	
+prnid: 	defb	.prnsz		;string length	
 	defb	'Symbols:'	;string to search for in M80's .prn files 
 				;indicating start of symbol table
 	defb	cr,lf
-.prnsz	equ	$ - .prn?? - 1
+.prnsz	equ	$ - prnid - 1
 
-.slr??:	defb	.slrsz
-	defb	'Symbol Table:'		;Could use .lst?? instead
+slrid: 	defb	.slrsz
+	defb	'Symbol Table:'		;Could use lstid instead
 	defb	cr,lf
-.slrsz	equ	$ - .slr?? - 1
+.slrsz	equ	$ - slrid - 1
 
-.m80??:	defb	.m80sz
+m80id: 	defb	.m80sz
 	defb	'MACRO-80'
-.m80sz	equ	$ - .m80?? - 1
+.m80sz	equ	$ - m80id - 1
 
 tsym:
 tsymhi:	defb	0
@@ -6582,7 +6601,7 @@ aed30:	pop	bc		;Restore registers.
 zndx:	ld	hl,(zasmpc)	;fetch current instruction pointer
 	ex	de,hl		;de - instruction pointer   hl - buffer
 	ld	a,(de)
-	add	a,-0fdh		;iy check
+	add	a,(-0fdh)&0ffh	;iy check
 	ret	z
 	sub	0ddh-0fdh	;ix check
 	ret	z
@@ -6773,12 +6792,12 @@ bcde:	call	iedtbc
 defcode	defl	true		; Load code here
 defdata	defl	false		; Do not load data yet
 terminal defl	console		; Load console routines
-	include	TERMINAL.INC	; 	Must be UPPER CASE for M80
+	include	terminal.inc	; Change to UPPER CASE for M80
 	if	m80
 	conincl
 	endif
 terminal defl	auxiliary	; Load auxiliary routines
-	include TERMINAL.INC	; 	Must be UPPER CASE for M80
+	include terminal.inc	; Change to UPPER CASE for M80
 	if	m80 and auxterm ne none
 	auxincl
 	endif
@@ -8379,12 +8398,12 @@ auxon:	defb	0
 defdata	defl	true		; Load data here
 defcode	defl	false		; Inhibit code
 terminal defl	console		; Load console data
-	include	TERMINAL.INC	; 	Must be UPPER CASE for M80
+	include	terminal.inc	; Change to UPPER CASE for M80
 	if	m80
 	conincl
 	endif
 terminal defl	auxiliary	; Load auxiliary data
-	include TERMINAL.INC	; 	Must be UPPER CASE for M80
+	include	terminal.inc	; Change to UPPER CASE for M80
 	if	m80 and auxterm ne none
 	auxincl
 	endif
@@ -8472,3 +8491,6 @@ nmem	equ	((($+255) and 0ff00h)-z8eorg) and 0ff00h
 	.list			;enable printer output for symbol table
 	endif
 	end
+
+; vim: ts=8 sw=8 et filetype=asm
+

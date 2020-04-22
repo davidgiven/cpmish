@@ -35,23 +35,23 @@ termdef	defl	false		; Don't touch this
 ; Include console terminal code or data upon request
 ;-----------------------------------------------------------------------------
 
-  if	slr or zasmb
+  if	slr or zasmb or zmac
     if	terminal eq console
 
       if	conterm eq adm3a
-	include	ADM3A.TTY
+	include	adm3a.tty
       endif
 
       if	conterm eq ansi
-	include	ANSI.TTY
+	include	ansi.tty
       endif
 
       if	conterm eq d8227
-	include	D8227.TTY
+	include	d8227.tty
       endif
 
       if	conterm eq vt52
-	include	VT52.TTY
+	include	vt52.tty
       endif
 
     endif ; console
@@ -61,19 +61,19 @@ termdef	defl	false		; Don't touch this
 
     if terminal eq auxiliary
       if	auxterm eq adm3a
-	include	ADM3A.TTY
+	include	adm3a.tty
       endif
 
       if	auxterm eq ansi
-	include	ANSI.TTY
+	include	ansi.tty
       endif
 
       if	auxterm eq d8227
-	include	D8227.TTY
+	include	d8227.tty
       endif
 
       if	auxterm eq vt52
-	include	VT52.TTY
+	include	vt52.tty
       endif
     endif ;terminal eq auxiliary
   endif	  ; slr or zasmb
@@ -141,3 +141,6 @@ auxincl	macro
     endif ; terminal eq auxiliary
   endif ; M80
  endif ; termdef
+
+; vim: ts=8 sw=8 et filetype=asm
+
