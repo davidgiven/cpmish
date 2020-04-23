@@ -23,9 +23,9 @@
 	.Z80
 
 	title	TED - Text Editor
-	subttl	Terminal I/O routines
+;	subttl	Terminal I/O routines
 
-	include	TED.INC
+	include	ted.inc
 
 VT100	equ	TRUE
 
@@ -47,7 +47,7 @@ VT100	equ	TRUE
 
 ; Display patch area
 
-	org	10h-3
+;	org	10h-3
 
 	if	VT100
 
@@ -101,7 +101,7 @@ vscrlrg:db	0,0,0,0,0,0,0,0
 
 	endif
 
-	org	0B0h-3
+;	org	0B0h-3
 
 ;--------------------------------------------------------------
 

@@ -23,9 +23,9 @@
 	.Z80
 
 	title	TED - Text Editor
-	subttl	Root section
+;	subttl	Root section
 
-	include	TED.INC
+	include	ted.inc
 
 ;=======================================================================
 

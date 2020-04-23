@@ -23,9 +23,9 @@
 	.Z80
 
 	title	TED - Text Editor
-	subttl	Delete, Copy, Move and Substitute commands
+;	subttl	Delete, Copy, Move and Substitute commands
 
-	include	TED.INC
+	include	ted.inc
 
 ;=======================================================================
 

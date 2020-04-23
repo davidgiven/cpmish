@@ -23,24 +23,24 @@
 	.Z80
 
 	title	TED - Text Editor
-	subttl	I/O routines - CP/M version
+;	subttl	I/O routines - CP/M version
 
-	include	TED.INC
+	include	ted.inc
 
 WBOOT	equ	0
 BDOS	equ	5
 
-.DIRIO	equ	06h
-.OPEN	equ	0Fh
-.CLOSE	equ	10h
-.ERASE	equ	13h
-.READ	equ	14h
-.WRITE	equ	15h
-.MAKE	equ	16h
-.GETDSK equ	19h
-.SETDMA equ	1Ah
-.RREAD	equ	21h
-.RWRITE equ	22h
+DIRIO	equ	06h
+OPEN	equ	0Fh
+CLOSE	equ	10h
+ERASE	equ	13h
+READ	equ	14h
+WRITE	equ	15h
+MAKE	equ	16h
+GETDSK  equ	19h
+SETDMA  equ	1Ah
+RREAD	equ	21h
+RWRITE  equ	22h
 
 CPMFCB	equ	5Ch
 CPMBUF	equ	80h
@@ -78,7 +78,7 @@ PUTC:	push	hl
 	push	af
 	and	7Fh
 	ld	e,a
-	ld	c,.DIRIO
+	ld	c,DIRIO
 	call	BDOS
 	pop	af
 	pop	bc
@@ -179,10 +179,10 @@ FCREAT:	push	hl
 	ld	de,CPMFCB
 fcr1:	push	de
 	call	RSTFCB		; ensure FCB is clear
-	ld	c,.ERASE
+	ld	c,ERASE
 	call	BDOS
 	pop	de
-	ld	c,.MAKE
+	ld	c,MAKE
 	call	BDOS
 	ld	hl,0
 	ld	(NUMWR),hl	; clear output byte count
@@ -204,7 +204,7 @@ FOPEN:	push	hl
 	push	bc
 	ld	de,CPMFCB
 	call	RSTFCB		; ensure FCB is clear
-	ld	c,.OPEN
+	ld	c,OPEN
 	call	BDOS
 	ld	hl,0
 	ld	(NUMRD),hl	; clear number of bytes read
@@ -231,7 +231,7 @@ FCLOSE:	push	hl
 	push	de
 	push	bc
 	ld	de,CPMFCB
-fcl1:	ld	c,.CLOSE
+fcl1:	ld	c,CLOSE
 	call	BDOS
 	pop	bc
 	pop	de
@@ -267,10 +267,10 @@ fr1:	ld	(TMPFCB+33),hl	; set record number in TMPFCB
 	push	hl
 	push	de
 	push	bc
-	ld	c,.SETDMA
+	ld	c,SETDMA
 	call	BDOS
 	ld	de,TMPFCB
-	ld	c,.RREAD
+	ld	c,RREAD
 	call	BDOS
 	pop	bc
 	pop	de
@@ -303,10 +303,10 @@ fw1:	ld	(TMPFCB+33),hl	; set record number in TMPFCB
 	push	hl
 	push	de
 	push	bc
-	ld	c,.SETDMA
+	ld	c,SETDMA
 	call	BDOS
 	ld	de,TMPFCB
-	ld	c,.RWRITE
+	ld	c,RWRITE
 	call	BDOS
 	pop	bc
 	pop	de
@@ -360,10 +360,10 @@ RDREC:	push	hl
 	ld	hl,CPMBUF
 	ld	(FIOPTR),hl	; set file buffer address
 	ex	de,hl
-	ld	c,.SETDMA
+	ld	c,SETDMA
 	call	BDOS
 	ld	de,CPMFCB
-	ld	c,.READ
+	ld	c,READ
 	call	BDOS
 	or	a
 	jr	z,r1
@@ -401,10 +401,10 @@ WRREC:	push	hl
 	ld	hl,CPMBUF
 	ld	(FIOPTR),hl	; reset output file buffer address
 	ex	de,hl
-	ld	c,.SETDMA
+	ld	c,SETDMA
 	call	BDOS
 	ld	de,CPMFCB
-	ld	c,.WRITE
+	ld	c,WRITE
 	call	BDOS
 	or	a
 	jr	z,w1
@@ -428,7 +428,7 @@ FDELET:	push	hl
 	push	de
 	push	bc
 	ld	de,CPMFCB
-fd1:	ld	c,.ERASE
+fd1:	ld	c,ERASE
 	call	BDOS
 	pop	bc
 	pop	de
@@ -529,7 +529,7 @@ PRFNAM:	push	hl
 	or	a		; zero disk code?
 	jr	nz,prfn1
 	push	hl
-	ld	c,.GETDSK
+	ld	c,GETDSK
 	call	BDOS		; get default disk from CP/M if not
 	pop	hl
 	inc	a
