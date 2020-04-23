@@ -2,7 +2,8 @@ include "third_party/ld80/build.lua"
 include "third_party/zmac/build.lua"
 
 local PLATFORMS = {
-	"NC200"
+	"NC200",
+	"WP2450DS",
 }
 
 -- These files are the same for all platforms.
@@ -38,8 +39,9 @@ for _, platform in ipairs(PLATFORMS) do
 	   name = "ted_"..platform,
 	   address = 0x100,
 	   srcs = {
-		   "+termdef_"..platform,
+		   "-P0100",
 		   "+main",
+		   "+termdef_"..platform,
 		   "+fileio", 
 		   "+scrn_"..platform,
 		   "+cmds",

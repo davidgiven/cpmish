@@ -1,0 +1,4 @@
+HSIZE	equ 91
+VSIZE	equ 30
+ADM3A	equ TRUE
+
