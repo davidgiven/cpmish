@@ -38,8 +38,9 @@ for _, platform in ipairs(PLATFORMS) do
 	   name = "ted_"..platform,
 	   address = 0x100,
 	   srcs = {
-		   "+termdef_"..platform,
+		   "-P0100",
 		   "+main",
+		   "+termdef_"..platform,
 		   "+fileio", 
 		   "+scrn_"..platform,
 		   "+cmds",
