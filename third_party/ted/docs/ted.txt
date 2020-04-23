@@ -1,0 +1,383 @@
+                            TED - Text Editor
+
+1. Introduction
+ 
+TED is a screen-oriented text editor that can be used to create new files
+and edit existing ones. It is a clone of an editor of the same name that
+ran under RT-11, although not an identical one. In particular, this
+version implements smart tab handling the way the old Borland editors
+did, and has a different set of screen editing commands which is more
+WordStar-like.
+
+The editor does not operate directly on the original text file. Instead, it
+loads the text file entirely into its virtual memory buffer, where the
+modifications are actually made. When TED is first started, the buffer is
+empty. A Read command loads the contents of the file to be edited into the
+internal buffer, making it available for edit. Another command, Write, saves
+the buffer back into a file.
+
+The three main operations (read, edit and write) are independent of each
+other and can be executed in any arbitrary order. To create a new file,
+just enter the screen editor and start typing. After saving the text into
+a file, we can edit it again and save a different version under a different
+file name. With a buffer CLear command we can start again from the beginning.
+
+The editor has two main modes of operation: command and screen. Command mode
+is used mainly for those operations that require one or more parameters to be
+specified (e.g. deleting or moving a number of lines, reading a file
+fully of partially, etc.) In screen mode, the user can modify the text
+directly by positioning the cursor using the arrow keys and typing or
+deleting characters and lines.
+
+The maximum line length allowed by the editor is 162 characters. The maximum
+file size is limited to about 1 Mbyte, and does not depend on the amount of
+RAM available.
+
+
+2. Command mode
+
+In the command description below we use the following terms and conventions:
+
+ * Square brackets enclose optional parameters.
+
+ * FILE represents a standard file specification by the operating system
+   standards.
+
+ * N, N1, N2 are decimal numeric values, often representing line numbers.
+   The special dollar-sign character "$" can be used to address the last
+   line in the text buffer or file, depending of the context.
+
+ * P, P1, P2 are text indexes, and represent a specific position in the
+   text buffer. Text indexes specify both line number and character position
+   within the line. The first character in a line has always an index value
+   of zero. The index specification can be:
+
+   - A decimal line number, the character $ (representing the number of
+     the last line of text) and/or an expression using the arithmetic + and
+     and - operators. If the resulting value of the expression is greater
+     than the number of lines currently in the buffer, then the number of
+     the last line is used. This type of text index specification always
+     sets the character position to the start of the line.
+
+   - A search string consisting of at least one character. The editor will
+     try to find the string in the text buffer and, if found, the index will
+     be set to the first character of the matched string in the text. The
+     search string must be delimited with one of the following characters:
+
+        !  "  %  &  '  =  :  \  /  ?  <  >
+
+     The search string in the description that follow will be represented as:
+
+     /STRING/
+
+     where in place of "/" any of the characters listed above can be used,
+     and STRING is any non-empty sequence of characters that does not
+     contain the delimiter. When such an index is specified, the search
+     begins from the current cursor position until the end of the text is
+     reached. If desired, a different start line number can be specified
+     like this:
+
+     /STRING/(N)
+
+     in this case, search starts from the N-th line (see above for the N 
+     specification). Search limits can also be specified as:
+
+     /STRING/(N1,N2)
+
+     The following forms are also allowed:
+
+     /STRING/(,N2)
+     /STRING/(N1,N2)+N
+
+
+2.1 Command descriptions
+
+TED commands are one or two character long, optionally followed by one or
+more arguments separated by spaces, tabs or a comma.
+
+Commands are ended with either Return or Ctrl-C. When Ctrl-C is used, the
+screen editor is entered after command execution.
+
+An empty command is also allowed (e.g. by pressing Return or Ctrl-C at the
+prompt). That simply causes the editor to enter the screen mode.
+
+The commands are described below:
+
+Ctrl-Z or EX
+
+   Exit the editor and return to the operating system. The current buffer
+   contents are not saved, so any changes made will be lost.
+
+CL
+
+   Clear the text buffer. Any modifications or new text added will be lost
+   unless saved to a file first.
+
+R [(P)] FILE (N1,N2)
+
+   Read the file FILE into the text buffer:
+
+   * If N1 and N2 are specified, only the fragment from line N1 to N2 is
+     read, otherwise the whole file is loaded.
+     
+   * If P is specified, then the file is inserted following the line P in
+     the current buffer, otherwise the file is appended to the end.
+
+   * The FILE parameter cannot be omitted.
+
+   * All trailing spaces in the line are removed.
+
+W [P1 P2] [FILE] [N]
+
+   Write the contents of the text buffer from line P1 to P2 into file FILE
+   after line N:
+
+   * If P1 and P2 are omitted, the whole contents of the text buffer is
+     written to the file. If only one parameter is specified, then only the
+     specified line is written.
+
+   * If FILE is omitted, the file name from the latest R command will be
+     used.
+
+   * N can be either zero of the dollar sign "$". In the first case the
+     output file is truncated, erasing any old file contents. In the second
+     case, the file will be opened in append mode and the contents of the
+     text buffer will be added following the last text line of the file.
+     If the parameter is not specified, zero is assumed.
+
+F
+
+   Display the name of the file read by the last R command. This is the
+   name that will be used by the W command if the FILE parameter is omitted.
+
+PR P1 [P2]
+
+   Output (PRint) text lines from P1 to P2 to the terminal. If P2 is omitted,
+   only one line will be displayed. P2 can also be the dollar sign, which
+   represents the last line of the text. Any control characters are output
+   as ^X.
+
+D P1 [P2]
+
+   Delete lines from P1 to P2 inclusive. If P2 is not specified, then only
+   a single line is deleted.
+
+M P1 P2 P3
+
+   Copy lines from P1 to P2 after line P3. If P2 equals P1, only a single
+   line is copied.
+
+MD P1 P2 P3 
+
+   Move lines from P1 to P2 after line P3. The original lines in the range
+   P1 to P2 are then deleted. If P2 equals P1 then only a single line is
+   moved.
+
+SU   /OLD/NEW/[(N1[,N2])]
+SU M /OLD/NEW/[(N1[,N2])]
+SU N /OLD/NEW/[(N1[,N2])]
+
+   Search and replace text (SUbstitute). OLD is the string to search for,
+   while NEW is the text that will replace OLD. NEW can be an empty string,
+   but OLD cannot. Valid delimiter characters are listed in the section 2
+   above.
+
+   The substitute command can work in one of the following modes:
+   
+   * The substitution is made everywhere in the text where OLD is found.
+     This is the default behavior.
+
+   * When M is specified as the first parameter, lines containing OLD are
+     displayed on the terminal with the OLD portion enclosed in double-quotes,
+     followed by a "Y-<CR>-^C" prompt:
+
+      - to replace text and continue, press Y.
+
+      - to skip the current matched string and continue, press Enter.
+
+      - to abort the current and all following substitutions, press Ctrl-C.
+
+   * If the number of substitutions to do is known beforehand, then the
+     value N can be specified in place of the first parameter. In this case
+     the editor will not ask for confirmation.
+
+   In every case the editor displays on the terminal the line after the
+   substitutions are made.
+
+   If necessary, a range of lines where substitutions should be made can be
+   specified right after NEW, enclosed in parenthesis.
+
+S [P]
+
+   Enter screen mode. The top line of the screen will be set to parameter
+   P, if specified, or to the current text marker.
+
+P [P]
+
+   Set text marker to line P. If P is not specified, the current cursor
+   position is displayed.
+
+FR
+
+   Displays the amount of available memory.
+
+
+2.2 Command line edition
+
+The command mode allows simple editing of command lines. The editor always
+remembers the last command entered, which can be later recalled fully or
+partially.
+
+Ctrl-U or Ctrl-^
+
+     Delete the current line.
+
+DEL, Backspace or Ctrl-H
+
+     Delete one character left.
+
+Left Arrow (Ctrl-S)
+
+     Delete one character left.
+
+Right Arrow (Ctrl-D)
+
+     Restore one character from the previous command at the current cursor
+     position.
+
+Up Arrow (Ctrl-E)
+
+     Restore (recall) all remaining characters from the previous command
+     starting from the current cursor position.
+
+Ctrl-G
+
+     Same as above, but the command is entered and executed immediately.
+     Used mostly to repeat the last command entered by typing Ctrl-G at
+     the editor prompt.
+
+
+3. Screen mode.
+
+This is the main mode of text edition. The cursor can be moved around the
+screen, text entered and/or deleted, etc.
+
+Printable characters are entered at the current cursor position, moving the
+cursor one column to the right afterwards. Other operations are performed
+via Ctrl-key combinations or dedicated terminal keys:
+
+Ctrl-C or Ctrl-Z
+
+     Exit screen mode back to command mode.
+
+Left Arrow (Ctrl-S)
+
+     Moves the cursor one column left.
+
+Right Arrow (Ctrl-D)
+
+     Moves the cursor one column right.
+
+Up Arrow (Ctrl-E)
+
+     Moves the cursor one row up. If the cursor is at the top of the
+     screen, the text is scrolled down.
+
+Down Arrow (Ctrl-X)
+
+     Moves the cursor one row down. If the cursor is at the bottom of the
+     screen, the text is scrolled up.
+
+Home (Ctrl-L)
+
+     Moves the cursor to the start of the line, or to the end if the cursor
+     was already on the start column.
+
+Ctrl-T
+
+     Moves the cursor to the top line of the screen, or to the bottom one
+     if the cursor already was on the top line.
+
+Ctrl-F
+
+     Moves the cursor to the next tab stop.
+
+Ctrl-Q
+
+     Moves the cursor to the previous tab stop.
+
+Tab (Ctrl-I)
+
+     Inserts a tab character.
+
+Return or Enter (Ctrl-M)
+
+     Splits the line at the current cursor location and moves the cursor
+     to the start of the next line.
+
+Ctrl-R or Ctrl-_
+
+     Redraws the screen.
+
+Ctrl-Y or Ctrl-^
+
+     Delete current line, shifting the lines below it one row up.
+
+LF (Ctrl-J)
+
+     Inserts an empty line below the current one. The cursor is moved down
+     to the new line, same column.
+
+Ctrl-K
+
+     Inserts an empty line at the current cursor position, shifting the
+     existing text one row down. The cursor remains on the same location.
+
+DEL or Backspace (Ctrl-H)
+
+     Delete char left, shifting the rest of the line one column left.
+
+Ctrl-] or Ctrl-G
+
+     Delete character right, shifting the rest of the line one column left.
+
+Ctrl-P
+
+     Duplicates the current line. The new line is placed below the current
+     one, shifting any existing text one row down.
+
+Ctrl-V
+
+     Toggle insert/overwrite mode. Default editing mode is overwrite, where
+     typed characters overwrite the existing text. In insert mode, the text
+     on the line is shifted one column to the right starting from the cursor
+     position before the typed character is stored.
+
+Ctrl-B or Ctrl-N
+
+     Enter "browse" mode. The cursor jumps to the bottom of the screen,
+     below the ruler and the number to the right shows the line number the
+     cursor was on. In browse mode the cursor movement keys work as
+     described below:
+
+     Left Arrow (Ctrl-S)
+
+          Shift screen window 10 columns left (the text appears to move 10
+          columns right).
+
+     Right Arrow (Ctrl-D)
+
+          Shift screen window 10 columns right (the text appears to move
+          10 columns left).
+
+     Up Arrow (Ctrl-E)
+
+          Shift screen window 21 lines up (the text appears to scroll 21
+          lines down, so the top line becomes the bottom one).
+
+     Down Arrow (Ctrl-X)
+
+          Shift screen window 21 lines down (the text appears to scroll 21
+          lines up, so the bottom line becomes the top one).
+
+     Ctrl-C, Ctrl-Z or Return exits browse mode.

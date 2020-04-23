@@ -1,0 +1,2235 @@
+;**********************************************************************;
+;                                                                      ;
+;   This file is part of TED, a clone of the screen-oriented text      ;
+;   editor that was once available for the RT-11 OS.                   ;
+;   Copyright (C) 2011-2020, Hector Peraza.                            ;
+;                                                                      ;
+;   This program is free software; you can redistribute it and/or      ;
+;   modify it under the terms of the GNU General Public License as     ;
+;   published by the Free Software Foundation; either version 2 of     ;
+;   the License, or (at your option) any later version.                ;
+;                                                                      ;
+;   This program is distributed in the hope that it will be useful,    ;
+;   but WITHOUT ANY WARRANTY; without even the implied warranty of     ;
+;   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      ;
+;   GNU General Public License for more details.                       ;
+;                                                                      ;
+;   You should have received a copy of the GNU General Public License  ;
+;   along with this program; if not, write to the Free Software        ;
+;   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.          ;
+;                                                                      ;
+;**********************************************************************;
+
+	.Z80
+
+	title	TED - Text Editor
+	subttl	Screen Editor
+
+	include	TED.INC
+
+HSIZE	equ	80		; terminal window width
+VSIZE	equ	24		; terminal window height
+
+;=======================================================================
+
+;   S C R E E N   E D I T O R   S E C T I O N
+
+	public	SCRNED,SCRX,UFLAG,UPDST
+
+	extrn	FSTREC,CURREC,CURLN,CURPOS,LASTLN,XLTESC
+	extrn	WFOV,DELBUF,CLNCR,PUTCN,GETC,TMPBUF,PSTRN
+	extrn	STORE,FNDBUF,LDREC,PUTC,EDLEN,INSBUF,EDREC
+	extrn	NXTREC,MLOOP,EXPAND,EDITBF,HLDEC,FATAL,CLS
+	extrn	HOME,CLREOL,CLREOS,PUTCUR,CSRUP,CSRDN,CSRLFT
+	extrn	CSRRGT,FWDIDX,REVIDX,CPDEHL,ADDHLA,SUBHLA
+	extrn	SCRLRG,HASSRG
+
+;-----------------------------------------------------------------------
+
+	cseg
+
+; Enter screen editor
+
+SCRNED:	call	CLS		; clear screen and home cursor
+	ld	hl,(CURLN)	; check current line number
+	ld	a,h
+	or	l
+	jr	nz,sce2		; jump if not zero (use it)
+	ld	hl,(FSTREC)	; else check number of first record of text
+	ld	a,h
+	or	l
+	jr	nz,sce1		; jump if not zero (use that instead)
+	ld	bc,0
+	ld	de,0		; zero means insert empty line
+	ld	hl,0		; zero means insert at the top of text buffer
+	call	INSBUF		; insert line into text buffer
+	jr	nc,sce1
+	ld	hl,24		; fatal error 24 - INSBUF error
+	jp	FATAL
+
+sce1:	ld	hl,1
+	ld	(CURLN),hl	; set current line to 1
+	ld	hl,(FSTREC)
+	ld	(CURREC),hl	; current record # <- 1st record #
+sce2:	ld	a,(CURPOS)	; get last cursor column
+	ld	(CURX),a	; set character index
+	ld	hl,(CURLN)	; get current line into HL
+	call	DSPLY		; display screen
+	call	HASSRG		; terminal supports scroll region?
+	ld	l,0
+	ld	h,VSIZE-3
+	call	nz,SCRLRG	; set region if yes
+	call	SETCUR		; postion cursor
+SLOOP:	ld	a,(CURY)	; get cursor line
+	ld	c,a
+	ld	hl,(TOPLN)
+	call	ADDHLA		; add it to top line number (obtain line #)
+	ld	(CURLN),hl	; and into CURLN (current line number)
+	ld	a,c		; get cursor line back into A
+	add	a,a		; obtain address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into table
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	ld	(CURREC),hl	; store value as current record number
+	call	GETC		; get input char into A
+	cp	' '		; control char?
+	jr	c,SCTRL		; jump if yes
+	cp	7Fh		; DEL?
+	jr	nz,sce5		; jump if not
+	call	DELCHL		; else handle it
+	jr	SLOOP		; loop
+
+sce5:	call	DOCHR		; handle printable char
+	jr	SLOOP		; loop
+
+SCTRL:	ld	hl,SLOOP
+	push	hl		; push return address
+	add	a,a		; obtain address offset
+	ld	hl,CTLTAB
+	call	ADDHLA		; index into table
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	jp	(hl)		; call handler
+
+; Control commands in screen mode
+
+CTLTAB:	dw	NOOP		; ^@ no-op
+	dw	NOOP		; ^A no-op
+	dw	BROWSE		; ^B browse mode
+	dw	EXSCR		; ^C exit to command mode
+	dw	CURRGT		; ^D cursor right
+	dw	CURUP		; ^E cursor up
+	dw	NXTTAB		; ^F move cursor to next tab stop
+	dw	DELCHR		; ^G delete char right
+	dw	DELCHL		; ^H delete char left
+	dw	DOTAB		; ^I tab
+	dw	INSLNB		; ^J insert new line below
+	dw	INSLNA		; ^K insert line above
+	dw	CURBGL		; ^L cursor begin/end of line
+	dw	SPLIT		; ^M split line at cursor pos
+	dw	BROWSE		; ^N browse mode
+	dw	NOOP		; ^O no-op
+	dw	DUPLN		; ^P duplicate line
+	dw	PRVTAB		; ^Q move cursor to prev tab stop
+	dw	REFRSH		; ^R refresh
+	dw	CURLFT		; ^S cursor left
+	dw	CURTB		; ^T cursor top/bottom
+	dw	NOOP		; ^U no-op
+	dw	INSOVR		; ^V toggle insert mode
+	dw	NOOP		; ^W no-op
+	dw	CURDN		; ^X cursor down
+	dw	DELLN		; ^Y delete line
+	dw	EXSCR		; ^Z exit to command mode
+	dw	DOESC		; ^[ escape sequence
+	dw	NOOP		; ^\ no-op
+	dw	DELCHR		; ^] delete char right
+	dw	DELLN		; ^^ delete line
+	dw	REFRSH		; ^_ refresh screen
+
+; ^C or ^Z - exit screen editor to command mode
+
+EXSCR:	call	STLREC		; store edited line back into records
+	call	HASSRG		; terminal supports scroll region?
+	ld	hl,0FFFFh
+	call	nz,SCRLRG	; reset region if yes
+	call	CLS		; clear screen and home cursor
+	ld	a,(CURX)	; get character index
+	ld	(CURPOS),a	; store result into CURPOS
+	jp	MLOOP		; go to main loop
+
+SCRERR:	call	CLS		; clear screen and home cursor
+	jp	WFOV		; print "WORK FILE OVERFLOW" and go back
+	;  to command mode
+
+; ^[ - handle escape sequence
+
+DOESC:	call	XLTESC		; translate escape sequence to ctrl char
+	pop	hl		; discard return address
+	jp	SCTRL		; process the ctrl command
+
+; DEL or ^H - delete char left
+
+DELCHL:	ld	a,(CURX)
+	or	a		; on leftmost column?
+	jp	z,JOIN		; join lines if yes
+
+	ld	a,(INSFLG)	; check insert mode
+	or	a
+	jr	z,dlc1		; jump if overwrite mode
+
+	call	LOADLC		; load line at cursor into edit buffer
+	ld	a,(CURX)	; get character index
+	dec	a		; backup one char
+	ld	c,a
+	ld	hl,EDITBF	; EDITBF = edit line buffer
+	call	ADDHLA
+	ld	a,(hl)		; get char
+	cp	TAB		; tab?
+	jr	nz,dlc03	; branch if not, simply remove it
+	inc	c
+dlc01:	dec	hl		; else scan backards
+	dec	c
+	jr	z,dlc02
+	ld	a,(hl)
+	cp	SSPC		; to backup all soft spaces
+	jr	z,dlc01
+dlc02:	inc	hl
+	ld	a,c
+	ld	(CURX),a	; set new character index
+	call	SETCUR		; position cursor
+	jp	DELCHR		; and delete char right
+
+dlc03:	call	CURLFT		; move cursor left
+	jp	DELCHR		; and delete char right
+
+dlc1:	call	CURLFT		; move cursor left
+	ld	a,' '		; and replace char with a space
+	call	PUTC		; output char
+	call	CSRLFT		; move cursor left
+
+	call	LOADLC		; load line at cursor into edit buffer
+	ld	a,(CURX)	; get character index
+	ld	c,a		; into C
+	ld	hl,EDITBF	; EDITBF = edit line buffer
+	call	ADDHLA
+	ld	a,(hl)
+	cp	' '		; space already there?
+	ret	z		; return if yes
+	ld	(hl),' '	; else store space
+	ld	a,1
+	ld	(LNMODF),a	; set modified flag
+	ld	a,c		; get char index back in A
+	ld	hl,CURLEN
+	cp	(hl)		; compare with current line length
+	ret	c		; return if lower
+	inc	a
+	ld	(hl),a		; else set new length to A+1
+	ret
+
+; Join lines
+
+JOIN:	ld	hl,(TOPLN)
+	ld	a,(CURY)
+	call	ADDHLA
+	dec	hl
+	ld	a,h		; at the top of file?
+	or	l
+	ret	z		; return if yes (no prev line)
+	call	LOADLC		; load cursor line into edit buffer
+	ld	hl,EDITBF
+	ld	de,TMPBUF
+	ld	a,(CURLEN)
+	ld	b,0		; B = segment length
+	or	a
+	jr	z,jln21
+	ld	c,a
+jln1:	ld	a,(hl)		; copy current line to temp buffer
+	cp	SSPC
+	jr	z,jln2		; do not store soft spaces
+	ld	(de),a
+	inc	de
+	inc	b
+jln2:	inc	hl
+	dec	c
+	jr	nz,jln1
+jln21:	push	bc		; remember segment length
+	call	DELLN		; delete current line
+	call	CURUP		; up one line [!!!not if line was last!!!]
+	call	LOADLC		; load line
+	ld	a,(CURLEN)
+	ld	(CURX),a	; position cursor after last char of line
+	pop	bc		; get old seg length back in B
+	inc	b
+	dec	b
+	jr	z,jln7		; if nothing to append
+	ld	c,a		; starting column in C
+	ld	hl,EDITBF
+	call	ADDHLA
+	ld	de,TMPBUF
+jln3:	ld	a,(de)
+	push	de		;;;
+	cp	TAB
+	jr	nz,jln6
+	ld	a,c		; expand tab
+	or	7
+	inc	a
+	sub	c
+	dec	a
+	jr	z,jln5
+jln4:	ld	e,a		;;;
+	ld	a,c
+	cp	MAXLEN-1
+	ld	a,e		;;;
+	jr	nc,jln8		; truncate line if too long
+	ld	(hl),SSPC	; TODO: leave the rest on old line
+	inc	hl
+	inc	c
+	dec	a
+	jr	nz,jln4
+jln5:	ld	a,TAB
+jln6:	ld	e,a		;;;
+	ld	a,c
+	cp	MAXLEN-1
+	ld	a,e		;;;
+	jr	nc,jln8		; truncate line if too long
+	ld	(hl),a		; append old line
+	inc	hl
+	pop	de		;;;
+	inc	de
+	inc	c
+	djnz	jln3
+	push	de		;;;
+jln8:	pop	de		;;;
+	ld	a,c
+	ld	(CURLEN),a
+	ld	a,1
+	ld	(LNMODF),a
+	call	SETCUR
+	call	LOADLC		; reload line, as SETCUR may have modif EDITBF
+	call	DISPLE		; display line segment right of cursor
+jln7:	call	SETCUR		; position cursor
+	ret
+
+; Handle printable char
+
+DOCHR:	ld	c,a		; save char
+	call	LOADLC		; load line at cursor into edit buffer
+	ld	a,(CURX)	; get character index
+	cp	MAXLEN-1
+	ret	nc
+	ld	b,a		;  into reg B
+	ld	hl,EDITBF	; EDITBF = edit line buffer
+	call	ADDHLA		; index into edit buffer
+	ld	a,(INSFLG)
+	or	a
+	jp	z,RPLCHR	; replace char
+	jp	INSCHR		; insert char
+
+; Replace char in buffer
+
+RPLCHR:	ld	a,(hl)
+	cp	TAB
+	jr	z,rplts		; if current location contains a tab
+	cp	SSPC
+	jr	z,rplts		; if current location contains a soft space
+	cp	c
+	jr	z,rplc1		; if same char
+rplc0:	ld	(hl),c		; else replace char
+	ld	a,1
+	ld	(LNMODF),a	; set modified flag
+rplc1:	ld	a,c
+	cp	TAB
+	jr	nz,rplc11
+	ld	a,' '
+rplc11:	call	PUTC
+	ld	a,b		; get char index back into A
+	ld	hl,CURLEN
+	cp	(hl)		; compare with current line length
+	jr	c,rplc2		; jump if lower
+	inc	a
+	ld	(hl),a		; else set new length to A+1
+rplc2:	ld	a,(SCRX)
+	ld	c,a
+	ld	a,(CURX)
+	inc	a
+;;	cp	MAXLEN-1
+;;	ret	nc
+	ld	(CURX),a	; inc cursor column
+	ld	b,a
+	sub	c		; compute screen cursor column
+	cp	HSIZE-1		; cursor on last column of the screen?
+	call	nc,SETCUR	; shift screen left if yes
+	ret
+
+rplts:	push	bc
+	push	hl
+	call	RMSSPC
+	pop	hl
+	pop	bc
+	jp	rplc0
+
+; Insert char into buffer. Called with C = char.
+
+INSCHR:	ld	a,(hl)
+	cp	TAB
+	jr	z,insc1		; if current location contains a tab
+	cp	SSPC
+	jr	z,insc2		; if current location contains a soft space
+insc:	ld	d,1
+	call	SHRLN		; shift line right to make space for char
+  if 0
+	ld	a,(CURLEN)
+	cp	MAXLEN
+	jp	nz,rplc0	; store char and redisplay line segment
+	inc	a
+	ld	(CURLEN),a
+  else
+	ld	a,c
+	cp	' '
+	ld	e,b
+	call	nz,ADJLEN
+  endif
+	jp	rplc0
+
+insc1:	push	hl
+	call	RMSSPC
+	pop	hl
+	inc	hl
+	ld	e,b
+	call	SHRLN8
+	call	DISPLE
+	call	SETCUR
+	dec	hl
+	jp	rplc0
+
+insc2:	push	hl
+	call	RMSSPC
+	pop	hl
+	jp	rplc0
+
+; ^V - toggle insert mode
+
+INSOVR:	ld	a,(INSFLG)	; toggle insert flag
+	cpl
+	ld	(INSFLG),a
+	call	SHOWST		; show new mode
+	call	SETCUR		; restore cursor position
+NOOP:	ret
+
+; ^I (TAB) - insert tab
+
+DOTAB:	call	LOADLC		; load line at cursor into edit buffer
+	ld	a,(CURX)	; get character index
+	ld	b,a
+	ld	hl,EDITBF	; EDITBF = edit line buffer
+	call	ADDHLA		; index into edit buffer
+	ld	a,(INSFLG)
+	or	a
+	jp	z,RPLTAB	; replace with tab
+	jp	INSTAB		; insert tab
+
+; Replace char with tab
+
+RPLTAB:	ld	a,b
+	and	7
+	cp	7
+	ld	c,TAB
+	jr	z,rplt2
+	ld	c,SSPC
+rplt2:	ld	a,(hl)
+	cp	c
+	jr	z,rplt3
+	ld	(hl),c		; insert char
+	ld	a,1
+	ld	(LNMODF),a
+rplt3:	inc	hl
+	inc	b
+	ld	a,' '
+	call	PUTC
+	ld	a,(CURX)
+	inc	a
+	cp	MAXLEN		; don't go above MAXLEN
+	ret	nc
+	ld	(CURX),a
+	ld	a,b
+	and	7
+	jr	nz,RPLTAB
+	ret
+
+; insert tab into edit buffer
+
+INSTAB:	ld	e,b		; save current index in reg E
+	ld	a,(hl)
+	ld	c,a
+	cp	TAB		; if the current pos contains a tab
+	jp	z,insc		;  then handle like normal char
+	cp	SSPC		; if a soft space
+	jp	z,inst3		;  then is easier (no text segment to move)
+
+	ld	a,e
+	or	7
+	inc	a
+	ld	c,a		; new column = new tab stop
+	sub	e		; compute distance to next tab stop (n)
+	ld	d,a
+	call	SHRLN		; shift line right n columns
+inst8:	dec	d
+	jr	z,inst9
+	ld	(hl),SSPC	; enter new tab field
+	inc	hl
+	jr	inst8
+inst9:	ld	(hl),TAB
+	ld	e,c		; set new column
+	dec	e
+	call	ADJLEN
+	jr	inst10
+
+inst3:	inc	hl
+	inc	e
+	ld	a,e
+	and	7
+	jr	nz,inst3	; advance cursor to next tab stop
+	call	SHRLN8		; insert new full tab field (tab + 7 soft spc)
+inst10:	ld	a,1
+	ld	(LNMODF),a
+	call	DISPLE
+	ld	a,(CURX)
+	or	7
+	inc	a
+	ld	(CURX),a
+;;	ld	b,a
+;;	ld	a,(SCRX)
+;;	ld	c,a
+;;	ld	a,b
+;;	sub	c
+;;	cp	HSIZE-1
+	call	SETCUR		; if > screen width, shift screen right
+	ret
+
+; Shift line 1..7 columns right (value in reg D) starting from current
+; column. Expand or contract tabs accordingly. Assumes that the line has
+; been loaded (LOADLC routine called).
+
+SHRLN:	push	hl
+	push	de
+	push	bc
+	ld	a,(CURX)	; get character index
+	ld	c,a
+	ld	e,a
+	ld	hl,EDITBF	; get address of edit line buffer into HL
+	call	ADDHLA		; obtain ptr to current pos
+	ld	a,(CURLEN)	; get current line length
+ IF 1
+	inc	c		; this so we can use jc instead of jc+jz below
+	sub	c		; subtract current index
+	jr	c,shr4		; return if curr index >= curr length
+	inc	a		; obtain tail length
+ ELSE
+	sub	c
+	jr	c,shr4
+	jr	z,shr4
+ ENDIF
+	ld	c,a		; C = tail length
+	ld	b,0		; B = segment length
+	push	de
+shr1:	ld	a,(hl)		; scan line forward
+	inc	hl
+	inc	e
+	inc	b
+	cp	SSPC		; soft space?
+	jr	z,shr2		; remove it
+	cp	TAB		; tab?
+	jr	z,shrtb		; insert new tab field
+	dec	c
+	jr	nz,shr1		; else loop until end of line
+	ld	a,e
+	add	a,d
+	ld	e,a
+	ld	a,d
+	call	ADDHLA
+	dec	hl
+	dec	e
+	call	ADJLEN
+	ld	a,e
+	cp	MAXLEN
+	jr	c,shr21
+	ld	c,a
+	ld	a,l
+	sub	c
+	ld	l,a
+	ld	a,h
+	sbc	a,0
+	ld	h,a
+	dec	hl
+	jr	shr21
+
+shrtb:	call	SHRLN8		; insert full tab field here
+shr2:	dec	d
+	jr	nz,shr1
+	dec	hl
+	dec	b
+shr21:	pop	de
+	inc	b
+	dec	b
+	jr	z,shr31
+	ex	de,hl		; dst in DE, columns to shift in H
+	ld	a,e
+	sub	h
+	ld	l,a
+	ld	a,d
+	sbc	a,0
+	ld	h,a		; src in HL
+shr3:	ld	a,(hl)		; shift segment
+	ld	(de),a
+	dec	de
+	dec	hl
+	djnz	shr3		; loop
+shr31:	ld	a,1
+	ld	(LNMODF),a	; set modified flag
+	call	DISPLE		; display line segment from cursor to end
+	call	SETCUR		; position cursor
+shr4:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Shift line from current pos to the end 8 positions to the right,
+; insert 7 soft spaces and a tab into the new opening. Called with
+; HL = current pos, E = current index
+
+SHRLN8:	push	bc
+	push	de
+	push	hl		; remember start
+	ld	a,(CURLEN)
+	sub	e		; if past current end of line, nothing to do
+	jr	c,shrt5		;  thus return
+	jr	z,shrt5
+	ld	c,a
+	ld	b,0		; BC = segment length
+	ld	a,e
+	add	a,8
+	cp	MAXLEN-1	; if src+8 is above limit - nothing to copy,
+	jr	nc,shrt3	;  all chars are lost
+	ld	a,(CURLEN)
+	add	a,8
+	sub	MAXLEN		; if dst+8 is above limit, then crop length
+	jr	c,shrt1
+	ld	a,MAXLEN-8
+	sub	e
+	ld	c,a
+shrt1:	add	hl,bc
+	dec	hl		; src in HL
+	ex	de,hl
+	ld	hl,8
+	add	hl,de
+	ex	de,hl		; dst in DE
+	lddr			; move segment up
+shrt3:	ld	a,(CURLEN)
+	add	a,7
+	ld	e,a
+	call	ADJLEN
+	pop	hl		; restore start
+	push	hl
+	ld	b,7
+	ld	a,SSPC
+shrt4:	ld	(hl),a		; insert 7 soft spaces
+	inc	hl
+	djnz	shrt4
+	ld	(hl),TAB	; and a tab
+shrt5:	pop	hl		; return HL = current pos
+	pop	de
+	pop	bc
+	ret
+
+; Shift line 1..n columns left (value in reg D) starting from current
+; position +n, expanding or contracting tabs accordingly. Assumes that
+; the line has been already loaded (LOADLC called) and that the char at
+; current position +n is not a soft space.
+
+SHLLN:	push	bc
+	push	de
+	push	hl
+	ld	a,(CURX)	; get character index
+	ld	c,a		; obtain current index
+	ld	e,c
+	ld	hl,EDITBF	; get address of edit line buffer into HL
+	call	ADDHLA		; obtain ptr to current pos
+	ld	a,(CURLEN)	; get current line length
+	sub	c		; subtract current index
+	jr	c,shl6		; return if at, or past end of line
+	jr	z,shl6
+	push	de		; save n
+	sub	d
+	ld	c,a		; C = tail length
+	ex	de,hl		; DE = dst
+	jr	c,shl2
+	jr	z,shl2		; branch if tail too short (disappears)
+	ld	a,l
+	add	a,h
+	ld	b,a		; B = src index
+	ld	l,h
+	ld	h,0
+	add	hl,de		; HL = src
+shl1:	ld	a,(hl)		; scan line forward
+	cp	SSPC
+	jr	z,shltb		; until tab
+	cp	TAB
+	jr	z,shltb		; or soft space found
+	ld	(de),a		; shift tail left
+	inc	hl
+	inc	de
+	inc	b
+	dec	c
+	jr	nz,shl1		; or until end of line
+shl2:	pop	bc		; restore n
+	ld	a,(CURLEN)
+	sub	b
+	ld	(CURLEN),a
+	ld	a,' '
+shl5:	ld	(de),a		; erase gap after tail
+	inc	de
+	djnz	shl5
+shl6:	pop	hl
+	pop	de
+	pop	bc
+	ret
+
+shltb:	pop	de
+	ld	e,b
+shl7:	ld	a,e
+	and	7		; see if we are at a tab sotop
+	ld	a,SSPC
+	jr	nz,shl3
+	call	SHLLN8		; and remove old tab field ("contract" tab)
+	ld	a,TAB
+shl3:	dec	e
+	dec	hl
+	ld	(hl),a
+	dec	d
+	jr	nz,shl7
+	jr	shl6
+
+; Shift line from current pos +8 to the end 8 columns to the left.
+; Callwed with HL = current pos, E = current index
+
+SHLLN8:	ld	a,(CURLEN)
+	sub	e
+	ret	c
+	ret	z
+	push	hl		; remember current pos
+	push	de
+	sub	8
+	jr	c,shlt3
+	jr	z,shlt3
+	ld	c,a		; BC = segment length
+	ld	b,0
+	ex	de,hl		; dst start in DE
+	ld	hl,8
+	add	hl,de		; src start in HL
+	ldir			; move segment down
+	xor	a
+	ex	de,hl
+shlt3:	add	a,8
+shlt4:	ld	(hl),' '	; erase last chars
+	inc	hl
+	dec	a
+	jr	nz,shlt4
+	ld	hl,CURLEN
+	ld	a,(hl)
+	sub	8
+	jr	nc,shlt6
+	xor	a
+shlt6:	ld	(hl),a
+	pop	de
+	pop	hl		; return HL = current pos
+	ret
+
+; Adjust CURLEN according to value in E
+
+ADJLEN:	push	hl
+	ld	hl,CURLEN
+	ld	a,e
+	inc	a
+	cp	(hl)
+	jr	c,adj1
+	cp	MAXLEN
+	jr	c,adj2
+	ld	a,MAXLEN
+adj2:	ld	(hl),a
+adj1:	pop	hl
+	ret
+
+; ^G or ^] - delete char right
+
+DELCHR:	call	LOADLC		; load line at cursor into edit buffer
+	ld	a,(CURX)	; get character index
+	ld	c,a
+	ld	hl,EDITBF	; get address of edit line buffer into HL
+	call	ADDHLA		; obtain ptr to current char
+	ld	a,(CURLEN)	; get current line length
+	inc	c		; this so we can use jc instead of jc+jz below
+	sub	c		; subtract current index
+	ret	c		; return if curr index >= curr length
+	dec	c
+	ld	a,(hl)
+	cp	TAB
+	jr	z,delc1
+	cp	SSPC
+	jr	z,delc2
+dch1:	ld	d,1
+	call	SHLLN
+dch2:	call	DISPLE		; display line segment from cursor to end
+	call	SETCUR
+	ld	a,1
+	ld	(LNMODF),a	; set modified flag
+	ret
+
+delc1:	push	hl
+	call	RMSSPC		; replace backwars soft-spaces by spaces
+	pop	hl
+	jp	dch1
+
+delc2:	ld	a,c
+	or	7
+	inc	a
+	sub	c
+	ld	d,a
+	call	SHLLN
+	call	RMSSPC
+	jr	dch2
+
+; ^S - cursor left
+
+CURLFT:	ld	a,(CURX)
+	or	a
+	ret	z
+	dec	a
+	ld	(CURX),a
+	ld	c,a
+	ld	a,(SCRX)
+	ld	b,a
+	ld	a,c		; check screen column
+	sub	b
+	jp	nc,CSRLFT	; if >= 0 move cursor left and return
+	jp	SETCUR
+
+; ^D - cursor right
+
+CURRGT:	ld	a,(CURX)
+	cp	MAXLEN-1	; cursor on last column?
+	ret	nc
+	inc	a
+	ld	(CURX),a	; else increment column value
+	ld	c,a
+	ld	a,(SCRX)
+	ld	b,a
+	ld	a,c
+	sub	b		; check screen column
+	cp	HSIZE-1
+	jp	c,CSRRGT	; if < HSIZE move cursor right and return
+	jp	SETCUR
+
+; ^Q - move cursor to prev tab stop
+
+PRVTAB:	ld	a,(CURX)	; get character index
+	ld	b,a		;  in reg B
+	or	a
+	jr	z,pt1		; jump if zero (already at line start)
+	dec	a
+	and	0F8h		; else compute prev tab column
+pt1:	inc	c		; (for single jnc below)
+	cp	c		; compare with current screen left offset
+	dec	c
+	jr	nc,pt2		; jump if greater
+	ld	a,c		; else get screen left offset
+pt2:	sub	b		; obtain distance
+	cpl
+	inc	a		;;; optimize
+	cp	1
+	ret	m		; return if <= 0
+	ld	b,a
+	ld	a,(CURX)	; compute new cursor column
+	sub	b		;;;
+	ld	(CURX),a
+	call	SETCUR		; position cursor
+	ret
+
+; ^F - move cursor to next tab stop
+
+NXTTAB:	push	bc
+	ld	a,(CURX)	; get char index
+	ld	c,a
+	or	7
+	inc	a		; compute next tab column
+	cp	MAXLEN		; beyond right end of line?
+	jr	c,nt1		; jump if not
+	ld	a,MAXLEN	; else force last column
+	dec	a
+nt1:	sub	c		; compute distance to next tab stop
+	jp	m,nt2		; return if zero or negative
+	ld	c,a
+	ld	a,(CURX)	; else add it to cursor column
+	add	a,c
+	ld	(CURX),a
+	call	SETCUR		; position cursor
+nt2:	pop	bc
+	ret
+
+; ^L - move cursor to begin/end of line
+
+CURBGL:	ld	a,(CURX)
+	or	a
+	ld	a,0
+	jr	nz,cbe1
+	call	LOADLC
+	ld	a,(CURLEN)
+cbe1:	ld	(CURX),a
+	jp	SETCUR		; position cursor and return
+
+; ^M (CR) - split line
+
+SPLIT:	call	LOADLC		; load line at cursor into edit buffer
+	ld	a,(CURLEN)	; get current line length
+	ld	b,a		;  into reg B
+	ld	a,(CURX)	; get current char index
+	ld	c,a
+	ld	hl,EDITBF	; current line buffer
+	call	ADDHLA		; HL = ptr to current pos in edit buffer
+	ld	de,TMPBUF	; DE = address of temp buffer
+	push	bc		; save current index (reg C)
+	ld	a,b
+	inc	c		; so we can use 'jc' instead of 'jc+jz' below
+	sub	c		; compute segment length
+	ld	b,0
+	jr	c,splt3		; skip if <= 0
+	inc	a
+	ld	c,a
+splt1:	ld	a,(hl)		; copy segment to temp buffer
+	cp	SSPC
+	jr	z,splt2		; ignore soft spaces
+	ld	(de),a
+	inc	de
+	inc	b
+splt2:	inc	hl
+	dec	c
+	jr	nz,splt1
+splt3:	ld	a,b
+	pop	bc		; restore current column (reg C)
+	ld	b,a		; remember segment length in reg B
+	ld	a,c
+	ld	(CURLEN),a	; truncate old line to current pos
+	call	CLREOL		; clear to end of line
+	ld	a,1
+	ld	(LNMODF),a	; set modified flag for the old line
+	call	INSLNB		; insert new line below
+	call	LOADLC		; load line at cursor into edit buffer
+	ld	c,0		; starting column in reg C
+	inc	b
+	dec	b
+	jr	z,splt8		; if segment empty
+	ld	hl,EDITBF	; address of edit line buffer
+	ld	de,TMPBUF	; DE = ptr to temp buffer
+splt4:	ld	a,(de)
+	cp	TAB
+	jr	nz,splt7
+	ld	a,c		; expand tabs
+	or	7
+	inc	a
+	sub	c
+	dec	a
+	jr	z,splt6
+splt5:	ld	(hl),SSPC
+	inc	hl
+	inc	c
+	dec	a
+	jr	nz,splt5
+splt6:	ld	a,TAB
+splt7:	ld	(hl),a		; copy segment to start of new line
+	inc	hl
+	inc	de
+	inc	c
+	djnz	splt4
+	ld	a,1
+	ld	(LNMODF),a	; set modified flag for the new line
+splt8:	ld	a,c
+	ld	(CURLEN),a
+	call	DISPLB		; display line in edit buffer
+	xor	a
+	ld	(CURX),a	; reset cursor to start of line
+	call	SETCUR		; position cursor
+	ret
+
+; ^P - duplicate line
+
+DUPLN:	push	hl
+	call	STLREC		; store edited line back into records
+	ld	a,(CURY)	; get cursor line
+	add	a,a		; obtain address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into record numbers table
+	ld	a,(hl)		; get line record number from table into HL
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	call	INSLNB		; insert blank line below
+	call	LOADLN		; load line into edit buffer
+	call	DISPLB		; display line in edit buffer
+	call	SETCUR		; position cursor
+	ld	a,(CURY)	; get cursor line
+	add	a,a		; obtain address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into record numbers table
+	ld	a,(hl)		; get line record number from table into HL
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	ld	(EDRECN),hl	; store line record# into EDRECN
+	ld	a,1
+	ld	(LNMODF),a	; set modified flag
+	pop	hl
+	ret
+
+; ^K - insert line above
+
+INSLNA:	push	hl
+	push	de
+	push	bc
+	ld	a,(CURY)	; get cursor line
+	dec	a		; one line above
+	ld	c,a		; remember it
+	jp	p,insa1		; jump if we weren't at the top of the screen
+	ld	hl,(LNADRS)	; get 1st line record# from table into HL
+	call	LDREC		; fetch record address into DE
+	inc	de
+	inc	de
+	inc	de
+	inc	de
+	ld	a,(de)
+	ld	l,a		; get record number of prev line
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	jr	insa2
+insa1:	add	a,a		; make address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into table
+	ld	a,(hl)		; get line record# from table into HL
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+insa2:	push	hl
+	ld	hl,(TOPLN)
+	ld	a,c
+	rla
+	sbc	a,a		; sign extend
+	ld	b,a		; BC now = CURY-1
+	add	hl,bc		; add top line number to cursor pos
+	ld	c,l
+	ld	b,h
+	pop	hl
+	ld	de,0		; zero means insert empty line
+	call	INSBUF		; insert a line into text buffer
+	jp	c,SCRERR	; on error, clear screen and home cursor,
+				;  print "WORK FILE OVERFLOW" and go back
+				;   to command mode
+	call	INSLN		; insert line on the screen
+	ld	hl,(EDREC)	; get record number of current line
+	ex	de,hl		;  into DE
+	ld	a,(CURY)	; get cursor line
+	add	a,a		; obtain address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into table
+	ld	(hl),e		; store record number of current line in table
+	inc	hl
+	ld	(hl),d
+	ld	a,(SCRLNS)
+	cp	VSIZE-2		; edit window full?
+	jr	z,insa3		; jump if yes
+	inc	a
+	ld	(SCRLNS),a	; else increment count of displayed lines
+insa3:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; ^J (LF) - insert new line below
+
+INSLNB:	push	hl
+	push	de
+	push	bc
+	ld	a,(CURY)	; get cursor line
+	ld	c,a		;  into C
+	ld	hl,(TOPLN)
+	call	ADDHLA		; add top line number, obtain current line
+	ld	a,c		; get cursor line back into A
+	ld	c,l		; get current line into BC
+	ld	b,h
+	ld	de,0		; zero means insert empty line in INSBUF
+	add	a,a		; obtain address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into record numbers table
+	ld	a,(hl)		; get line record number from table into HL
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	call	INSBUF		; insert a line in text buffer
+	jp	c,SCRERR	; on error, clear screen and home cursor,
+				;  print "WORK FILE OVERFLOW" and go back
+				;   to command mode
+	ld	a,(SCRLNS)
+	cp	VSIZE-2		; edit window full?
+	jr	nz,insb1	; jump if not
+	ld	a,(CURY)
+	cp	VSIZE-3		; cursor on last line of edit window?
+	jr	nz,insb1	; jump if not
+	ld	hl,(TOPLN)	; else increment top line number
+	inc	hl
+	ld	(TOPLN),hl
+	call	DELLNC		; delete line on the screen
+	ld	de,(EDREC)	; get record number of current line into DE
+	ld	a,(CURY)
+	add	a,a		; obtain address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into record numbers table
+	ld	(hl),e		; store record number of current line in table
+	inc	hl
+	ld	(hl),d
+	jr	insb2		; and return
+insb1:	call	CSRDN		; move cursor down
+	ld	a,1
+	ld	(UFLAG),a
+	ld	hl,CURY		; increment cursor line
+	inc	(hl)
+	call	INSLN		; insert line on the screen
+	ld	de,(EDREC)	; get record number of current line into DE
+	ld	a,(CURY)
+	add	a,a		; obtain address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into record numbers table
+	ld	(hl),e		; store record number of current line in table
+	inc	hl
+	ld	(hl),d
+	ld	a,(SCRLNS)
+	cp	VSIZE-2		; edit window full?
+	jr	z,insb2		; return if yes
+	inc	a
+	ld	(SCRLNS),a	; else increment count of displayed lines
+insb2:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; ^Y or ^^ - delete line
+
+DELLN:	push	hl
+	push	de
+	push	bc
+	ld	hl,(LASTLN)
+	dec	hl
+	ld	a,h
+	or	l		; only one line left?
+	jr	nz,dln1		; jump if not
+	call	CLNCR		; clear line and move cursor to start
+	xor	a
+	ld	(CURX),a	; cursor column <- 0
+	call	LOADLC		; load line at cursor into edit buffer
+	xor	a
+	ld	(CURLEN),a	; clear current line length
+	inc	a
+	ld	(LNMODF),a	; set modified flag
+	jp	dln18		; pop registers and return
+
+dln1:	ld	a,(CURY)	; get cursor line
+	ld	e,a		;  into E
+	ld	hl,(TOPLN)
+	call	ADDHLA		; add top line number
+	ld	c,l		; BC = current line number
+	ld	b,h
+	ld	a,e		; get cursor line back into A
+	add	a,a		; obtain address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into table
+	ld	a,(hl)		; get line record# from table into HL
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	push	hl		; push record number
+	call	DELBUF		; delete line from text buffer
+	call	SHFTUP		; shift lines up
+	ld	hl,SCRLNS	; decrement count of displayed lines
+	dec	(hl)
+	pop	de		; pop record number
+	ld	hl,(EDRECN)
+	call	CPDEHL		; compare with record# of line in edit buffer
+	jr	nz,dln2		; jump if not same
+	ld	hl,0
+	ld	(EDRECN),hl	; else clear record# of line in edit buffer
+dln2:	ld	a,(CURY)	; remember cursor line
+	ld	c,a
+	ld	a,(SCRLNS)	; get count of displayed lines
+	dec	a		;  obtain coordinate of last line
+	add	a,a		;   make address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into table
+	push	hl		; remember this table address
+	ld	a,(hl)		; get line record# from table into HL
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	call	LDREC		; fetch record address into DE
+	inc	de
+	inc	de
+	ld	a,(de)
+	ld	l,a		; get record number of next line
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	or	l
+	jr	z,dln6		; jump if zero (no more lines)
+	ld	a,VSIZE-3
+	ld	(CURY),a	; move cursor to bottom line of edit window
+	call	SHFTDN		; shift lines down (???)
+	push	bc		; remember C value (because of 'ld a,c' below)
+	ld	a,c
+	cp	0+(VSIZE-2)/2	; 11 (mid of the edit window)
+	jr	nc,dln4		; jump if old cursor line >= 11
+	call	SCRLUP		; else scroll up
+	call	HASSRG		; terminal supports scroll region?
+	jr	z,dln3		; branch if not to display ruler and line#
+	ld	a,1
+	ld	(UFLAG),a	; else set update status flag
+	ld	b,0
+	jr	dln5
+dln3:	call	STATUS		; display ruler and current line number
+	ld	b,0
+	jr	dln5
+dln4:	ld	b,c
+	ld	c,VSIZE-4	; 20
+dln5:	call	DRANGE		; display lines from cursor row in B to C
+	ld	a,VSIZE-3
+	ld	(CURY),a	; move cursor to bottom line of edit window
+	call	LOADLN		; load line into edit buffer
+	call	DISPLB		; display line in edit buffer
+	pop	bc		; pop saved C
+	ex	de,hl		; get record number of next line into DE
+	pop	hl		; pop saved table address
+	inc	hl		; point to next entry
+	inc	hl
+	ld	(hl),e		; store record number in table
+	inc	hl
+	ld	(hl),d
+	ld	hl,SCRLNS	; increment count of displayed lines
+	inc	(hl)
+	ld	a,c
+	ld	(CURY),a	; set cursor line
+	jp	dln17		; position cursor and return
+
+dln6:	pop	hl		; discard saved table address
+	ld	hl,(LNADRS)	; get 1st line record# from table into HL
+	call	LDREC		; fetch record address into DE
+	inc	de
+	inc	de
+	inc	de
+	inc	de
+	ld	a,(de)
+	ld	l,a		; get record number of prev line
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	or	l
+	jr	z,dln11
+	ld	a,(TOPLN)	; decrement top line number
+	dec	a
+	ld	(TOPLN),a
+	xor	a
+	ld	(CURY),a	; cursor line <- 0 (top)
+	call	SHFTDN		; shift lines down
+	push	bc		; save C value (because of 'ld c,a' below)
+	ld	a,c
+	cp	0+(VSIZE-2)/2	; 11 (mid of the edit window)
+	jr	nc,dln7		; jump if C >= 11
+	ld	b,1
+	jr	dln10
+dln7:	call	SCRLDN		; scroll down
+	call	HASSRG		; terminal supports scroll region?
+	jr	z,dln8		; branch if not to display ruler and line#
+	ld	a,1
+	ld	(UFLAG),a	; else set update status flag
+	jr	dln9
+dln8:	call	STATUS		; display ruler and current line number
+dln9:	ld	b,c
+	inc	b
+	ld	a,(SCRLNS)	; get count of displayed lines
+	ld	c,a		;  into C
+dln10:	call	DRANGE		; display lines from cursor row in B to C
+	xor	a
+	ld	(CURY),a	; cursor line <- 0 (top)
+	call	LOADLN		; load line into edit buffer
+	call	DISPLB		; display line in edit buffer
+	ld	(LNADRS),hl	; store rec# of prev ln into 1st table entry
+	pop	bc		; pop saved C value
+	ld	a,c
+	inc	a		; increment cursor line
+	ld	(CURY),a	; set cursor line
+	ld	hl,SCRLNS	; increment count of displayed lines
+	inc	(hl)
+	jr	dln16		; note CURY still in A
+
+dln11:	ld	a,VSIZE-3
+	ld	(CURY),a	; move cursor to last line of edit window
+	call	SHFTDN		; shift lines down (???)
+	ld	a,VSIZE-3
+	ld	(CURY),a	; move cursor to last line of edit window
+	call	SHFTDN		; shift lines down (???)
+	ld	a,(SCRLNS)	; get count of displayed lines
+	or	a
+	rra			; /2
+	push	bc		; save C value (because of 'ld c,a' below)
+	inc	c
+	cp	c
+	dec	c
+	jr	c,dln14		; jump if C >= A
+	call	SCRLUP		; scroll up
+	call	HASSRG		; terminal supports scroll region?
+	jr	z,dln12		; branch if not to display status and line#
+	ld	a,1
+	ld	(UFLAG),a	; else set update status flag
+	jr	dln13
+dln12:	call	STATUS		; display ruler and current line number
+dln13:	ld	a,VSIZE-3
+	ld	(CURY),a	; move cursor to last line of edit window
+	call	CLRLN		; clear it
+	ld	b,0
+	jr	dln15
+dln14:	ld	b,c
+	ld	a,(SCRLNS)	; get count of displayed lines
+	dec	a		; obtain coordinate of last displayed line
+	ld	c,a
+dln15:	call	DRANGE		; display lines from cursor row in B to C
+	ld	a,(SCRLNS)
+	ld	(CURY),a	; set cursor line to one below last displayed
+	call	CLRLN		; clear line
+	pop	bc		; pop saved C value
+	ld	a,c
+	ld	(CURY),a	; set cursor line
+dln16:	ld	hl,SCRLNS
+	cp	(hl)		; compare cursor line with number of disp lines
+	jr	c,dln17		; jump if CURY < SCRLNS
+	dec	a
+	ld	(CURY),a	; decrement cursor line
+dln17:	call	SETCUR		; position cursor
+dln18:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; ^E - cursor up
+
+CURUP:	push	hl
+	push	de
+	push	bc
+	ld	a,(CURY)	; check cursor line
+	or	a
+	jr	z,cu1		; jump if zero (top of the screen)
+	ld	a,1
+	ld	(UFLAG),a
+	call	CSRUP		; else move cursor up
+	ld	hl,CURY
+	dec	(hl)		;  decrement cursor line
+	jr	cu3		;   and return
+
+cu1:	ld	hl,(LNADRS)	; get 1st line record# from table into HL
+	call	LDREC		; fetch record address into DE
+	inc	de
+	inc	de
+	inc	de
+	inc	de
+	ld	a,(de)
+	ld	l,a		; get record number of prev line
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	or	l
+	jr	z,cu3		; return if zero (no prev line)
+	ex	de,hl
+	ld	hl,(TOPLN)	; else decrement top line number
+	dec	hl
+	ld	(TOPLN),hl
+	call	INSLN		; insert line at top of the screen, scroll down
+	ex	de,hl
+	ld	(LNADRS),hl	; set 1st line record number in table
+	call	LOADLN		; load line into edit buffer
+	call	DISPLB		; display line in edit buffer
+	ld	a,(SCRLNS)
+	cp	VSIZE-2		; edit window full?
+	jr	z,cu2		; jump if yes
+	inc	a
+	ld	(SCRLNS),a	; else increment count of displayed lines
+cu2:	call	SETCUR		; position cursor
+cu3:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; ^X - cursor down
+
+CURDN:	push	hl
+	push	de
+	push	bc
+	ld	a,(SCRLNS)	; get count of displayed lines
+	dec	a		;  obtain coordinate of last line
+	ld	hl,CURY
+	cp	(hl)		; cursor on last line?
+	jr	z,cd1		; jump if yes
+	ld	a,1
+	ld	(UFLAG),a
+	call	CSRDN		; else move cursor down
+	inc	(hl)		;  increment cursor line
+	jr	cd2		;   and return
+
+cd1:	add	a,a		; obtain address offset
+	ld	hl,LNADRS	; HL = table with screen line record numbers
+	call	ADDHLA		; index into table
+	ld	c,l		; remember table address
+	ld	b,h
+	ld	a,(hl)		; get line record# from table into HL
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	call	LDREC		; fetch record address into DE
+	inc	de
+	inc	de
+	ld	a,(de)
+	ld	l,a		; get record number of next line
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	or	l
+	jr	z,cd2		; return if zero (no next line)
+	ex	de,hl		; get record number into DE
+	ld	hl,(TOPLN)	; increment top line number
+	inc	hl
+	ld	(TOPLN),hl
+	call	DELLNC		; delete line on the screen, scroll up
+	ld	l,c		; get table address back into HL
+	ld	h,b
+	ld	(hl),e		; store line record# into table
+	inc	hl
+	ld	(hl),d
+	ex	de,hl		; get record number back into HL
+	call	LOADLN		; load line into edit buffer
+	call	DISPLB		; display line in edit buffer
+	call	SETCUR		; position cursor
+cd2:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; ^T - cursor top/bottom
+
+CURTB:	ld	a,(CURY)	; check cursor line
+	or	a
+	jr	nz,ctb1		; jump if not zero
+	ld	a,(SCRLNS)	; get count of displayed lines
+	dec	a		; obtain coordinate of last displayed line
+	jr	ctb2		; set cursor to bottom line and return
+ctb1:	xor	a		; set cursor on first line
+ctb2:	ld	(CURY),a	; set cursor line
+	jp	SETCUR		; position cursor and return
+
+; ^R or ^_ - refresh screen
+
+REFRSH:	push	hl
+	ld	a,(CURY)
+	push	af
+	call	CLS		; clear screen and home cursor
+	ld	hl,(TOPLN)	; get top line number into HL
+	call	DSPLY		; redisplay screen
+	pop	af
+	ld	(CURY),a
+	call	SETCUR		; position cursor
+	pop	hl
+	ret
+
+; ^B or ^N - browse mode
+
+BROWSE:	call	SHOWST		; cursor on bottom line, display line number
+	ld	a,'*'		; show we're in browse mode with a '*'
+	call	PUTC		;  on the status line
+brw1:	call	GETC		; get input char into A
+brw2:	ld	hl,BRWCMD	; HL = key table
+	cp	(hl)		; ESC?
+	inc	hl
+	jr	z,SESC
+	cp	(hl)		; ^C?
+	inc	hl
+	jr	z,EXITBR
+	cp	(hl)		; ^Z?
+	inc	hl
+	jr	z,EXITBR
+	cp	(hl)		; CR?
+	inc	hl
+	jr	z,EXITBR
+	cp	(hl)		; ^D?
+	inc	hl
+	jp	z,SRIGHT
+	cp	(hl)		; ^S?
+	inc	hl
+	jp	z,SLEFT
+	cp	(hl)		; ^E?
+	inc	hl
+	jp	z,PGUP
+	cp	(hl)		; ^X?
+	jp	z,PGDN
+	jr	brw1		; else loop, ignore invalid keys
+
+SESC:	call	XLTESC		; translate escape sequence to ctrl char
+	jp	brw2
+
+; CR, ^C or ^Z exits browse mode
+
+EXITBR:	call	CLNCR
+	call	SHOWST		; cursor on bottom line, display line number
+	jp	SETCUR		; position cursor and return
+
+; Browse mode - arrow right
+
+SRIGHT:	ld	a,(SCRX)
+	cp	MAXLEN-80	; screen left offs >= 72? (cols 82 to MAXLEN-1)
+	jp	nc,brw1		; loop if yes, can't shift screen further
+	add	a,10		; else increase offset by 10
+	ld	(SCRX),a
+sr1:	ld	hl,(TOPLN)	; get top line number into HL
+sr2:	call	DSPLY		; redisplay screen
+	jp	BROWSE		; and loop
+
+; Browse mode - arrow left
+
+SLEFT:	ld	a,(SCRX)
+	cp	10		; screen left offset < 10? (cols 0 to 79)
+	jp	c,brw1		; loop if yes, we are at the leftmost pos
+	sub	10		; else decrease offset by 10
+	ld	(SCRX),a
+	jp	sr1		; and redisplay screen
+
+; Browse mode - arrow up
+
+PGUP:	ld	hl,(TOPLN)	; get top line number into HL
+	dec	hl
+	ld	a,h
+	or	l
+	jp	z,brw1
+	ld	a,VSIZE-4	; 20
+	call	SUBHLA
+	jr	c,pg1
+	ld	a,h
+	or	l
+	jp	nz,sr2
+pg1:	ld	hl,1		; top line number = 1
+	jp	sr2		; redisplay screen and loop
+
+; Browse mode - arrow down
+
+PGDN:	ld	hl,(TOPLN)	; get top line number into HL
+	ld	a,(SCRLNS)
+	call	ADDHLA		; add count of displayed lines
+	dec	hl		;  obtain number of last line
+	ld	de,(LASTLN)
+	call	CPDEHL		; compare with last line number
+	jp	z,brw1		; jump if same
+	ld	hl,(TOPLN)	; get top line number into HL
+	ld	a,VSIZE-3	; 21
+	call	ADDHLA
+	ex	de,hl		; DE still has last line number
+	call	CPDEHL		; compare
+	ex	de,hl
+	jp	nc,sr2		; if LASTLN >= TOPLN+21 redisplay scr and loop
+	ex	de,hl		; else get last line# into HL (new top line)
+	jp	sr2		; redisplay screen and loop
+
+; Browse mode commands
+
+BRWCMD:	db	ESC		; ESC
+	db	3		; ^C - exit browse mode
+	db	1Ah		; ^Z - exit browse mode
+	db	CR		; CR - exit browse mode
+	db	04h		; ^D - scroll left
+	db	13h		; ^S - scroll right
+	db	05h		; ^E - prev page
+	db	18h		; ^X - next page
+	db	0
+
+; Display one screenful of text (assumes screen has been cleared)
+; Called with HL = top line number.
+
+DSPLY:	push	hl
+	push	de
+	push	bc
+	push	hl
+	call	STLREC		; store edited line back into records
+	ld	de,(LASTLN)	; get last line number into DE
+	ld	hl,VSIZE-2	; 22 (number of lines in edit window)
+	call	CPDEHL		; last line number > size of window?
+	jr	c,dp1		; jump if yes
+	ld	c,e		; else set C = last line
+	ld	hl,1		; and top line # = 1
+	jr	dp2
+dp1:	ld	c,l		; C = VSIZE-2
+	ex	de,hl		; LASTLN back in HL
+	ld	a,VSIZE-3	; 21
+	call	SUBHLA		; HL = last line number - 21
+	ex	de,hl		; now in DE
+	pop	hl		; get old top line number
+	push	hl
+	call	CPDEHL		; compare top line number with DE
+	ex	de,hl
+	jr	nc,dp2		; jump if higher or same
+	ex	de,hl		; top line # = LASTLN - 21
+dp2:	ld	(TOPLN),hl	; set top line number
+	ld	a,c
+	ld	(SCRLNS),a	; set count of displayed lines
+	ex	de,hl
+	call	FNDBUF		; find line in text buffer
+	ld	(LNADRS),hl	; set top line record# in table
+	xor	a
+	ld	(CURY),a	; cursor line <- 0 (top of the screen)
+	ld	de,LNADRS	; get address of table of record #s into DE
+dp3:	ld	a,(de)
+	ld	l,a		; get record number into HL, advance ptr
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	inc	de
+	call	LOADLN		; load line into edit buffer
+	ld	hl,(NXTREC)
+	ld	a,l
+	ld	(de),a		; store next line record#
+	inc	de
+	ld	a,h
+	ld	(de),a
+	dec	de
+	call	DISPLB		; display line in edit buffer
+	ld	a,(CURY)	; increment cursor line
+	inc	a
+	ld	(CURY),a
+	dec	c		; decrement counter of screen lines
+	jr	nz,dp3		; and loop
+	pop	de
+	ld	hl,(TOPLN)
+	ld	a,e
+	sub	l
+	ld	l,a
+	ld	a,d		;;;
+	sbc	a,h		;;;
+	ld	h,a		;;;
+	ld	a,l
+	ld	(CURY),a	; set cursor line
+	call	STATUS		; display ruler and current line number
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Display ruler at the bottom of the screen
+
+RULER:	push	hl
+	push	de
+	push	bc
+	ld	l,VSIZE-2	; line 22 (ruler line)
+	ld	h,0		; column 0
+	call	PUTCUR		; move cursor to ruler line
+	call	CLREOS
+	ld	e,0
+	ld	b,0
+	ld	a,(SCRX)	; get screen left offset into A
+rl1:	cp	10		; A < 10?
+	jr	c,rl2		; exit loop if yes, B = start left offs / 10.
+	sub	10		;  else subtract 10 (divide)
+	inc	b		;   increment quotient
+	jr	rl1		;    and loop
+
+rl2:	ld	hl,RULSEG	; ruler segment 'N----+----'
+rl3:	ld	a,b
+	cp	10
+	jr	c,rl4		; branch if B < 10
+	ld	a,1
+rl4:	add	a,'0'
+	ld	(hl),a		; store digit at start of ruler segment
+	inc	hl
+	ld	a,b
+	cp	10
+	ld	a,'-'-'0'
+	jr	c,rl41
+	ld	a,b
+	sub	10
+rl41:	add	a,'0'
+	ld	(hl),a
+	dec	hl
+	ld	a,HSIZE-1	; 80 = screen width
+	sub	e
+	jr	c,rl6
+	inc	a
+	cp	RLEN		; < 10? (ruler segment size)
+	jr	c,rl5		; jump if yes, display partial segment
+	ld	a,RLEN		; else truncate remaining length to full seg
+rl5:	ld	c,a
+	add	a,e
+	ld	e,a
+	call	PSTRN		; output string @HL, length in C
+	inc	b
+	jr	rl3		; loop
+rl6:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Display status: ruler and current line number
+
+STATUS:	call	RULER		; display ruler
+	; fall thru		; cursor on bottom line, display line number
+
+; Place cursor on bottom line, display 5-digit line number
+
+SHOWST:	push	hl
+	push	bc
+	ld	l,VSIZE-1	; line 23 (below ruler)
+	ld	h,0		; column 0
+	call	PUTCUR		; position cursor
+	call	CLREOL		; clear line
+	ld	h,HSIZE-10
+	call	PUTCUR
+	ld	a,(INSFLG)
+	or	a
+	ld	hl,INSMSG
+	ld	c,3
+	call	nz,PSTRN	; show insert mode, if active
+	call	SHOWLN		; show line number
+	ld	a,CR
+	call	PUTC		; position cursor on column 0
+	pop	bc
+	pop	hl
+	ret
+
+INSMSG:	db	'Ins'
+
+SHOWLN:	push	hl
+	push	bc
+	ld	l,VSIZE-1
+	ld	h,HSIZE-6	; column 74 (where number is), same line
+	call	PUTCUR		; position cursor
+	ld	hl,(TOPLN)	; get top line number into HL
+	ld	a,(CURY)
+	call	ADDHLA		; add cursor line
+	ld	a,'0'		; filler
+	call	HLDEC		; display value
+	pop	bc
+	pop	hl
+	ret
+
+; Update line number when we move the cursor around
+
+UPDST:	call	SHOWLN		; show line number
+	call	SETCUR		; restore cursor
+	xor	a
+	ld	(UFLAG),a
+	ret
+
+; Load line corresponding to current cursor row into edit buffer
+
+LOADLC:	push	hl
+	push	de
+	ld	a,(CURY)	; get cursor line
+	ld	l,a		;  into HL
+	ld	h,0
+	add	hl,hl		; *2 (obtain address offset)
+	ld	de,LNADRS
+	add	hl,de		; index into table
+	ld	a,(hl)		; get line record# from table into HL
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	call	LOADLN		; load line into edit buffer
+	pop	de
+	pop	hl
+	ret
+
+; Load line into edit buffer. Called with HL = line record number
+
+LOADLN:	push	hl
+	push	de
+	push	bc
+	ld	de,(EDRECN)	; compare with record# of line in edit buffer
+	call	CPDEHL
+	jr	z,lln4		; line already loaded, return
+	call	STLREC		; store edited line back into records
+	ld	de,EDITBF	; get address of edit line buffer into DE
+	call	EXPAND		; expand line
+	ld	(EDRECN),hl	; store record number in EDRECN
+	ld	a,(EDLEN)	; get expanded length into
+	sub	2		; strip trailing CR/LF
+	cp	MAXLEN+1	; compare with max allowed line length
+	jr	c,lln1		; jump if length <= MAXLEN
+	ld	a,MAXLEN	; else truncate to max line length
+lln1:	ld	(CURLEN),a	; store current line length
+	ex	de,hl
+	ld	c,a
+	call	ADDHLA		; get address of end of line into HL
+	ld	a,c
+lln2:	cp	MAXLEN
+	jr	z,lln3
+	ld	(hl),' '	; pad up to MAXLEN with spaces
+	inc	hl
+	inc	a
+	jr	lln2
+lln3:	xor	a
+	ld	(LNMODF),a	; clear modified flag
+lln4:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Display line in edit buffer
+
+DISPLB:	ld	a,(CURX)
+	push	af
+	ld	a,(SCRX)
+	ld	(CURX),a	; set cursor to left to refresh whole line
+	call	SETCUR		; position cursor
+	call	DISPLE		; display segment from cursor to end
+	pop	af
+	ld	(CURX),a
+	ret
+
+; Display line segment from current cursor position to end
+
+DISPLE:	push	hl
+	push	de
+	push	bc
+	call	CLREOL
+	ld	a,(CURX)	; get current cursor column
+	push	af		;  remember it
+	ld	c,a
+	ld	a,(SCRX)	; get screen left offset
+	ld	b,a		;  into B
+	ld	a,c
+	ld	hl,EDITBF	; get address of edit line buffer into HL
+	call	ADDHLA		; HL = start of segment to display
+	ld	a,(CURLEN)	; get current line length
+	inc	b
+	sub	b		; subtract screen offset
+	jr	c,dple8		; return if there are no characters to display
+	inc	a
+	cp	HSIZE		; segment length > screen width?
+	jr	c,dple1		; jump if not
+	ld	a,HSIZE		; else truncate to number of display cols
+dple1:	inc	c		; (so we can use 'jc' instead of 'jc'+'jz')
+	dec	b		;;note inc b above
+	add	a,b
+	sub	c		; subtract cursor position
+	jr	c,dple8		; return if result <= 0
+	inc	a		; get number of characters to display
+	ld	b,a		;  into B
+	dec	c
+	ld	e,c		; E = column on screen
+	ld	c,0		; C will count spaces
+dple2:	ld	a,(hl)
+	cp	SSPC		; soft space?
+	jr	z,dple3		; display as space
+	cp	TAB		; TAB?
+	jr	z,dple3		; display as space
+	cp	' '		; space?
+	jr	nz,dple4	; jump if not
+dple3:	inc	hl		; else advance pointer
+	inc	c		; increment space count
+	inc	e		; increment column pos
+	jr	dple7		; and jump to process next column
+dple4:	ld	a,c		; any spaces?
+	or	a
+	jr	z,dple6		; jump if not
+	cp	6		; optimum is 4 for VT52, 8 for VT100
+	jr	nc,dple5	; jump if yes, repos. the cursor is faster
+	ld	a,' '
+	call	PUTCN		; else output space to terminal C times
+	jr	dple6		; jump to process the char after the space
+dple5:	ld	a,e
+	ld	(CURX),a	; set cursor column
+	call	SETCUR		; position cursor
+dple6:	ld	a,(hl)		; get char back into A
+	inc	hl		; advance pointer
+	inc	e
+	call	PUTC		; output char
+	ld	c,0		; clear count of spaces
+dple7:	djnz	dple2		; loop until all columns are output
+;;	ld	a,HSIZE-1
+;;	ld	(CURX),a	; set cursor on last column of the screen
+;;	call	SETCUR		;  (in case a long line wrapped around)
+dple8:	pop	af
+	ld	(CURX),a	; restore saved cursor column
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Store the line currently in edit buffer back into records.
+
+STLREC:	push	hl
+	push	de
+	push	bc
+	ld	hl,(EDRECN)	; check record# of line in edit buffer
+	ld	a,h
+	or	l
+	jr	z,st3		; return if zero (no line loaded)
+	ld	a,(LNMODF)	; check modified flag
+	or	a
+	jr	z,st3		; return if zero (line not changed)
+	ld	hl,EDITBF	; get address of edit line buffer into HL
+	ld	a,(CURLEN)	; get current line length
+	ld	c,a		;  into C
+	call	ADDHLA		; point to end of string
+	inc	c
+st1:	dec	c		; start of edit line buffer reached?
+	jr	z,st2		; jump if yes
+	dec	hl
+	ld	a,(hl)		; else look at prev char
+	cp	' '		; space?
+	jr	z,st1		; loop (ignore) if yes
+	cp	SSPC		; soft space?
+	jr	z,st1		; loop (ignore) as well
+	cp	TAB		; TAB?
+	jr	z,st1		; loop (ignore) as well
+	inc	hl		; end found, point to 1st trailing space
+st2:	ld	(hl),LF		; store LF
+	ld	de,EDITBF	; get address of edit line buffer into DE
+	ld	hl,(EDRECN)	; get record number into HL
+	call	STORE		; store line into record(s)
+	jp	c,SCRERR	; on error, clear screen and home cursor,
+				;  print "WORK FILE OVERFLOW" and go back
+				;   to command mode
+st3:	ld	hl,0
+	ld	(EDRECN),hl	; clear record# of line in edit buffer
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Shift entries up in table of record numbers from current cursor pos to end
+
+SHFTUP:	push	hl
+	push	de
+	push	bc
+	ld	a,(CURY)	; get cursor line
+	ld	c,a		;  into C
+	add	a,a		; obtain address offset
+	ld	hl,LNADRS
+	call	ADDHLA		; index into table of line record numbers
+	ld	a,VSIZE-3
+	sub	c
+	jr	z,slu2
+slu1:	inc	hl
+	inc	hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	dec	hl
+	dec	hl
+	ld	(hl),d		; shift entries up
+	dec	hl
+	ld	(hl),e
+	inc	hl
+	inc	hl
+	dec	a
+	jr	nz,slu1		; loop
+slu2:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Shift entries down in table of record numbers from current cursor pos to end
+
+SHFTDN:	push	hl
+	push	de
+	push	bc
+	ld	a,(CURY)	; get cursor line
+	ld	c,a		;  into C
+	ld	a,VSIZE-3
+	sub	c
+	jr	z,sld2
+	ld	hl,LNADRS+(VSIZE-3)*2 ; address of last entry (end of table)
+sld1:	dec	hl
+	dec	hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(hl),e		; shift lines down
+	inc	hl
+	ld	(hl),d
+	dec	hl
+	dec	hl
+	dec	hl
+	dec	a
+	jr	nz,sld1		; loop
+sld2:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Insert line on the screen at the current cursor position
+
+INSLN:	push	hl
+	push	de
+	push	bc
+	ld	hl,(EDREC)	; push record number of current line
+	push	hl
+	ld	a,(CURY)	; push cursor line
+	push	af
+	ld	c,a
+	ld	a,VSIZE-3	; 21 = last line of edit window into
+	sub	c		; subtract cursor line
+	ld	hl,LNADRS+(VSIZE-3)*2 ; address of last entry (end of table)
+ins1:	dec	hl
+	dec	hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(hl),e		; shift lines down
+	inc	hl
+	ld	(hl),d
+	dec	hl
+	dec	hl
+	dec	hl
+	dec	a
+	jp	p,ins1		; loop
+
+	ld	a,(CURY)
+ if 0
+	cp	0+(VSIZE-2)/2+1	; cursor line > 11? (mid of edit window)
+	jr	nc,ins4		; jump if yes
+ else
+	cp	2		; cursor line > 2??
+	jr	nc,ins4		; jump if yes
+ endif
+	call	SCRLDN		; else scroll down
+	call	HASSRG		; terminal supports scroll region?
+	jr	z,ins2		; branch if not
+	ld	a,1
+	ld	(UFLAG),a	; else set update status flag
+	jr	ins3
+ins2:	call	STATUS		; display ruler and current line number
+ins3:	call	CLRLN		; clear cursor line
+	ld	b,0
+	ld	a,(CURY)	; get cursor line
+	dec	a		; one line above
+	jr	ins5
+
+ins4:	call	CLRLN		; clear cursor line
+	ld	a,(CURY)	; get cursor line
+	inc	a		; one line below
+	ld	b,a
+	ld	a,(SCRLNS)	; get count of displayed lines
+	cp	VSIZE-2		; edit window full?
+	jr	nz,ins5		; jump if not
+	dec	a		; else obtain coordinate of last line
+ins5:	ld	c,a
+	call	DRANGE		; display lines from cursor row in B to C
+	pop	af		; pop saved cursor line
+	ld	(CURY),a
+	call	SETCUR		; position cursor
+	pop	hl		; pop saved record number of current line
+	ld	(EDREC),hl
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Delete line on the screen at the current cursor position
+
+DELLNC:	push	hl
+	push	de
+	push	bc
+	ld	hl,(EDREC)	; push record number of current line
+	push	hl
+	ld	a,(CURY)	; push cursor line
+	push	af
+	ld	hl,LNADRS	; get start of line record number table into HL
+shu1:	inc	hl
+	inc	hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	dec	hl
+	dec	hl
+	ld	(hl),d		; shift lines up
+	dec	hl
+	ld	(hl),e
+	inc	hl
+	inc	hl
+	dec	a
+	jp	p,shu1		; loop
+	ld	a,(CURY)
+	cp	0+(VSIZE-2)/2	; cursor line < 11? (mid of edit window)
+	jp	c,ins3		; jump if yes (finish via insert code)
+	call	SCRLUP		; else scroll up
+	call	HASSRG		; terminal supports scroll region?
+	jr	z,shu2		; branch if not to display ruler and line#
+	ld	a,1
+	ld	(UFLAG),a	; else set update status flag
+	jp	ins4		; continue via common code
+shu2:	call	STATUS		; display ruler and current line number
+	jp	ins4		; to common code
+
+; Position cursor, line in CURY, column in CURX
+
+SETCUR:	push	bc
+	ld	a,(SCRX)
+	ld	c,a
+set1:	ld	a,(CURX)
+	sub	c		; compute screen column
+	ld	b,a
+	jr	c,set2		; branch if < 0 (shift screen right)
+	cp	HSIZE
+	jr	c,set3		; branch if < HSIZE (in window)
+	ld	a,c
+;;	cp	MAXLEN-80	; screen left offs >= 72? (cols 82 to MAXLEN-1)
+;;	jr	nc,set3		; exit loop if yes, we're at end of line
+	add	a,10		; else increase offset by 10
+	ld	c,a
+	jr	set1
+
+set2:	ld	a,c
+	or	a		; screen left offset = 0?
+	jr	z,set3
+	sub	10
+	ld	c,a
+	jr	set1
+
+set3:	ld	a,(SCRX)
+	cp	c
+	jr	z,set4
+	ld	a,c
+	ld	(SCRX),a
+	ld	a,(CURY)
+	push	af
+	ld	hl,(TOPLN)
+	call	DSPLY
+	pop	af
+	ld	(CURY),a
+set4:	push	hl
+	ld	a,(CURY)
+	ld	l,a		; cursor line
+	ld	h,b		; cursor column
+	call	PUTCUR
+	pop	hl
+	pop	bc
+	ret
+
+; Delete soft-spaces left. Called with HL = ptr to current pos in edit
+; buffer, B = current column. 
+
+RMSSPC:	inc	b
+rmss1:	dec	b
+	ret	z
+	dec	hl
+	ld	a,(hl)		; scan the line backwards
+	cp	SSPC
+	ret	nz
+	ld	(hl),' '	; replace soft-spaces with a space
+	jr	rmss1
+
+; Position cursor at the start of CURY line and clear to end of it
+
+CLRLN:	push	hl
+	ld	a,(CURY)	; cursor line
+	ld	l,a
+	ld	h,0		; column 0
+	call	PUTCUR		; position cursor
+	call	CLREOL		; clear to end of line
+	pop	hl
+	ret
+
+; Scroll down
+
+SCRLDN:	call	HOME		; home cursor
+	jp	REVIDX		; reverse index
+
+; Scroll up
+
+SCRLUP:	push	hl
+  if 0
+	call	HASSRG		; terminal supports scroll region?
+	ld	l,VSIZE-3	; line 21 (last line of text area)
+	jr	nz,su1		; branch if yes
+	inc	l
+	inc	l		; line 23 (last line of screen)
+su1:	ld	h,0		; column 0
+	call	PUTCUR		; position cursor
+	call	FWDIDX		; forward index
+  else
+	call	HASSRG		; terminal supports scroll region?
+	ld	l,VSIZE-3	; line 21 (last line of text area)
+	push	af
+	jr	nz,su1		; branch if yes
+	inc	l		; line 22 (ruler line)
+su1:	ld	h,0		; column 0
+	call	PUTCUR		; position cursor
+	pop	af
+	jr	nz,su2
+	call	CLREOS
+	call	FWDIDX		; forward index
+su2:	call	FWDIDX
+  endif
+	pop	hl
+	ret
+
+; Display lines from rows in reg B to C
+
+DRANGE:	push	hl
+	ld	hl,(EDREC)	; push record number of current line
+	push	hl
+	ld	a,b
+	ld	(CURY),a	; set cursor line
+	inc	c		; so we do not have to do jnc+jz below
+dr1:	cp	c		; compare cursor line with C
+	jr	nc,dr2		; return if greater
+	call	LOADLC		; load line at cursor into edit buffer
+	call	DISPLB		; display line in edit buffer
+	ld	a,(CURY)	; increment cursor line
+	inc	a
+	ld	(CURY),a
+	jr	dr1		; loop
+dr2:	pop	hl		; pop saved record number of current line
+	ld	(EDREC),hl
+	pop	hl
+	ret
+
+;-----------------------------------------------------------------------
+
+	dseg
+
+RULSEG:	db	'0----+----'
+RLEN	equ	$-RULSEG
+
+TOPLN:	dw	0		; top line number
+SCRLNS:	db	0		; number of lines displayed on the screen
+
+SCRX:	db	0		; screen left offset
+CURX:	db	0		; current character index
+CURY:	db	0		; cursor line
+
+INSFLG:	db	0FFh		; insert mode flag
+UFLAG:	db	0
+
+LNADRS:	ds	(VSIZE-1)*2	; addresses of lines on the screen
+				; (note one additional entry is allocated)
+
+EDRECN:	dw	0		; record number of line in edit buffer
+CURLEN:	db	0		; length of line in edit buffer
+LNMODF:	db	0		; line modified flag
+
+	end

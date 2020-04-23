@@ -1,0 +1,655 @@
+;**********************************************************************;
+;                                                                      ;
+;   This file is part of TED, a clone of the screen-oriented text      ;
+;   editor that was once available for the RT-11 OS.                   ;
+;   Copyright (C) 2011-2020, Hector Peraza.                            ;
+;                                                                      ;
+;   This program is free software; you can redistribute it and/or      ;
+;   modify it under the terms of the GNU General Public License as     ;
+;   published by the Free Software Foundation; either version 2 of     ;
+;   the License, or (at your option) any later version.                ;
+;                                                                      ;
+;   This program is distributed in the hope that it will be useful,    ;
+;   but WITHOUT ANY WARRANTY; without even the implied warranty of     ;
+;   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      ;
+;   GNU General Public License for more details.                       ;
+;                                                                      ;
+;   You should have received a copy of the GNU General Public License  ;
+;   along with this program; if not, write to the Free Software        ;
+;   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.          ;
+;                                                                      ;
+;**********************************************************************;
+
+	.Z80
+
+	title	TED - Text Editor
+	subttl	I/O routines - CP/M version
+
+	include	TED.INC
+
+WBOOT	equ	0
+BDOS	equ	5
+
+.DIRIO	equ	06h
+.OPEN	equ	0Fh
+.CLOSE	equ	10h
+.ERASE	equ	13h
+.READ	equ	14h
+.WRITE	equ	15h
+.MAKE	equ	16h
+.GETDSK equ	19h
+.SETDMA equ	1Ah
+.RREAD	equ	21h
+.RWRITE equ	22h
+
+CPMFCB	equ	5Ch
+CPMBUF	equ	80h
+
+;=======================================================================
+
+;   S Y S T E M - D E P E N D E N T   R O U T I N E S
+
+	public	GETC,UNGETC,PUTC,TTQCLR,TTINIT,UCASE,HLDEC
+
+	public	FCREAT,WCREAT,FOPEN,FCLOSE,WCLOSE,FREAD,FWRITE
+	public	FDELET,WDELET,MKFCB,PRFNAM,FGETC,FPUTC,PADEOF
+	public	GETTOP,GETCML,EXIT
+
+	extrn	UFLAG,UPDST,CPDEHL
+
+;-----------------------------------------------------------------------
+
+	cseg
+
+; Terminal routines
+
+; init terminal (attach, etc)
+
+TTINIT:	call	TTQCLR
+	ret
+
+; release terminal
+
+; Output char in A to terminal
+
+PUTC:	push	hl
+	push	de
+	push	bc
+	push	af
+	and	7Fh
+	ld	e,a
+	ld	c,.DIRIO
+	call	BDOS
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Get input char into A. If the input queue is empty, wait for character.
+
+GETC:	push	hl
+	push	de
+	push	bc
+	ld	a,(TTQLEN)	; check TTY queue length
+	or	a
+	jr	nz,gc1
+	call	WAITC
+	jr	gc3
+gc1:	ld	hl,(TTQOUT)	; get TTY queue out pointer into HL
+	ld	a,(hl)		; get byte from queue
+	inc	hl
+	and	7Fh		; strip parity bit, leave ASCII
+	ld	c,a
+	ld	de,TTFIFO+64
+	call	CPDEHL		; pointer at end of buffer?
+	jr	nz,gc2		; jump if not
+	ld	hl,TTFIFO	; else wrap back to start
+gc2:	ld	(TTQOUT),hl	; store pointer
+	ld	hl,TTQLEN
+	dec	(hl)		; decrement TTY input queue length
+	ld	a,c
+gc3:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Wait for character from terminal
+
+WAITC:	ld	b,200
+wtc1:	push	bc
+	ld	e,0FFh
+	ld	c,6
+	call	BDOS
+	pop	bc
+	and	7Fh		; strip parity bit, leave ASCII
+	ret	nz
+	djnz	wtc1
+	ld	a,(UFLAG)
+	or	a
+	call	nz,UPDST
+	jr	WAITC
+
+; Store char in C to console queue.
+
+UNGETC:	push	hl
+	push	de
+	ld	a,(TTQLEN)
+	cp	64		; check console input queue length
+	jr	z,tti2		; return if queue full
+	ld	hl,(TTQIN)	; else get queue in pointer into HL
+	ld	(hl),c		; store incoming char
+	inc	hl		;  and advance pointer
+	ld	de,TTFIFO+64
+	call	CPDEHL		; pointer at end of buffer?
+	jr	nz,tti1		; jump if not
+	ld	hl,TTFIFO	; else wrap back to start
+tti1:	ld	(TTQIN),hl	; store pointer back
+	ld	hl,TTQLEN	; increment queue length
+	inc	(hl)
+tti2:	pop	de
+	pop	hl
+	ret
+
+; Reset console input queue
+
+TTQCLR:	ld	hl,(TTQOUT)
+	ld	(TTQIN),hl	; make out ptr = in ptr
+	xor	a
+	ld	(TTQLEN),a	; clear queue length (no bytes stored)
+	ret
+
+;-----------------------------------------------------------------------
+
+; Disk I/O routines
+
+; Create work file. Returns CY set on error.
+
+WCREAT:	push	hl
+	push	de
+	push	bc
+	ld	de,TMPFCB
+	jr	fcr1
+
+; Create output file. Returns CY set on error.
+
+FCREAT:	push	hl
+	push	de
+	push	bc
+	ld	de,CPMFCB
+fcr1:	push	de
+	call	RSTFCB		; ensure FCB is clear
+	ld	c,.ERASE
+	call	BDOS
+	pop	de
+	ld	c,.MAKE
+	call	BDOS
+	ld	hl,0
+	ld	(NUMWR),hl	; clear output byte count
+	ld	hl,CPMBUF
+	ld	(FIOPTR),hl	; set output file buffer address
+	pop	bc
+	pop	de
+	pop	hl
+	inc	a
+	or	a
+	ret	nz
+	scf
+	ret
+
+; Open input file. Returns CY set on error.
+
+FOPEN:	push	hl
+	push	de
+	push	bc
+	ld	de,CPMFCB
+	call	RSTFCB		; ensure FCB is clear
+	ld	c,.OPEN
+	call	BDOS
+	ld	hl,0
+	ld	(NUMRD),hl	; clear number of bytes read
+	pop	bc
+	pop	de
+	pop	hl
+	inc	a
+	or	a
+	ret	nz
+	scf
+	ret
+
+; Close work file
+
+WCLOSE:	push	hl
+	push	de
+	push	bc
+	ld	de,TMPFCB
+	jr	fcl1
+
+; Close input and/or edited file
+
+FCLOSE:	push	hl
+	push	de
+	push	bc
+	ld	de,CPMFCB
+fcl1:	ld	c,.CLOSE
+	call	BDOS
+	pop	bc
+	pop	de
+	pop	hl
+	inc	a
+	or	a
+	ret	nz
+	scf
+	ret
+
+; Pad last disk record with EOF characters and save it before closing file
+
+PADEOF:	ld	hl,(NUMWR)	; check output byte count
+	ld	a,l
+	cp	128		; record full?
+	jr	z,pad1		; jump if yes (last record)
+	ld	c,1Ah
+	call	FPUTC		; fill rest of record with EOF marker
+	jr	PADEOF		; loop
+pad1:	call	WRREC		; write last disk record
+	ret
+
+; Read 512-byte block from work file. HL = disk I/O address, DE = blk number
+
+FREAD:	push	hl
+	push	de
+	push	bc
+	ex	de,hl		; HL = blk num, DE = I/O buffer address
+	add	hl,hl
+	add	hl,hl		; obtain CP/M record number
+	ld	c,4		; 4 CP/M records to read
+fr1:	ld	(TMPFCB+33),hl	; set record number in TMPFCB
+	push	hl
+	push	de
+	push	bc
+	ld	c,.SETDMA
+	call	BDOS
+	ld	de,TMPFCB
+	ld	c,.RREAD
+	call	BDOS
+	pop	bc
+	pop	de
+	ld	hl,80h
+	add	hl,de
+	ex	de,hl
+	pop	hl
+	inc	hl		; increment CP/M record number
+	or	a
+	scf
+	jp	nz,fr2
+	dec	c
+	jp	nz,fr1
+	xor	a
+fr2:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Write 512-byte block to work file. HL = disk I/O address, DE = blk number
+
+FWRITE:	push	hl
+	push	de
+	push	bc
+	ex	de,hl		; HL = blk num, DE = I/O buffer address
+	add	hl,hl
+	add	hl,hl		; obtain CP/M record number
+	ld	c,4		; 4 CP/M records to write
+fw1:	ld	(TMPFCB+33),hl	; set record number in TMPFCB
+	push	hl
+	push	de
+	push	bc
+	ld	c,.SETDMA
+	call	BDOS
+	ld	de,TMPFCB
+	ld	c,.RWRITE
+	call	BDOS
+	pop	bc
+	pop	de
+	ld	hl,80h
+	add	hl,de
+	ex	de,hl
+	pop	hl
+	inc	hl		; increment CP/M record number
+	or	a
+	scf
+	jp	nz,fw2
+	dec	c
+	jp	nz,fw1
+	xor	a
+fw2:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Get byte from input file
+; Return CY set on error or EOF
+
+FGETC:	push	hl
+	ld	hl,(NUMRD)	; check byte count
+	ld	a,h
+	or	l
+	jr	nz,fgc1		; jump if not zero
+	call	RDREC		; else read next disk record
+	jr	c,fgc2		; on error return
+fgc1:	ld	hl,(FIOPTR)
+	ld	a,(hl)		; get char from file buffer
+	inc	hl		; inc ptr
+	ld	(FIOPTR),hl
+	ld	hl,(NUMRD)
+	dec	hl
+	ld	(NUMRD),hl	; decrement byte count
+	cp	1Ah		; EOF?
+	scf			; return with CY set if yes
+	jr	z,fgc2
+	or	a
+fgc2:	pop	hl
+	ret
+
+; Read 128-byte disk record from input file
+
+RDREC:	push	hl
+	push	de
+	push	bc
+	ld	hl,128
+	ld	(NUMRD),hl	; set byte count
+	ld	hl,CPMBUF
+	ld	(FIOPTR),hl	; set file buffer address
+	ex	de,hl
+	ld	c,.SETDMA
+	call	BDOS
+	ld	de,CPMFCB
+	ld	c,.READ
+	call	BDOS
+	or	a
+	jr	z,r1
+	scf
+r1:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Write byte in C to output file
+
+FPUTC:	ld	hl,(NUMWR)	; get output byte count
+	ld	a,l
+	cp	128		; record buffer full?
+	jr	nz,fpc1		; jump if not
+	call	WRREC		; write disk record to file
+	ret	c		; on error return
+fpc1:	ld	hl,(NUMWR)
+	inc	hl		; inc output byte count
+	ld	(NUMWR),hl
+	ld	hl,(FIOPTR)	; store byte in output file buffer
+	ld	(hl),c
+	inc	hl		; advance ptr
+	ld	(FIOPTR),hl
+	or	a
+	ret
+
+; Write 128-byte disk record to output file
+
+WRREC:	push	hl
+	push	de
+	push	bc
+	ld	hl,0
+	ld	(NUMWR),hl	; clear byte count
+	ld	hl,CPMBUF
+	ld	(FIOPTR),hl	; reset output file buffer address
+	ex	de,hl
+	ld	c,.SETDMA
+	call	BDOS
+	ld	de,CPMFCB
+	ld	c,.WRITE
+	call	BDOS
+	or	a
+	jr	z,w1
+	scf
+w1:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Delete work file
+
+WDELET:	push	hl
+	push	de
+	push	bc
+	ld	de,TMPFCB
+	jr	fd1
+
+; Delete output file
+
+FDELET:	push	hl
+	push	de
+	push	bc
+	ld	de,CPMFCB
+fd1:	ld	c,.ERASE
+	call	BDOS
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Reset FCB for FOPEN/FCREAT
+
+RSTFCB:	push	hl
+	ld	hl,12
+	add	hl,de
+	ex	de,hl
+	ld	b,35-12
+	call	MKFILL
+	ex	de,hl
+	pop	hl
+	ret
+
+; Parse file name and build FCB from string in HL.
+
+MKFCB:	ld	de,CPMFCB
+	push	bc
+	xor	a
+	ld	(de),a		; clear disk field
+	ld	a,(hl)
+	cp	CR
+	jr	z,nodsk
+	cp	LF
+	jr	z,nodsk
+	inc	hl
+	ld	a,(hl)
+	dec	hl
+	cp	':'		; explicit disk specification?
+	jr	nz,nodsk
+	ld	a,(hl)
+	call	UCASE
+	sub	'A'
+	jr	c,badfn
+	cp	10h
+	ccf
+	jr	c,badfn
+	inc	a
+	ld	(de),a
+	inc	hl		; skip over disk spec
+	inc	hl
+nodsk:	inc	de
+	ld	b,8
+	call	GETNAM
+mkf1:	ld	a,(hl)
+	call	CKENDF
+	jr	z,mkf2
+	inc	hl
+	cp	'.'
+	jr	nz,mkf1
+mkf2:	ld	b,3
+	call	GETNAM
+	ld	b,24
+	xor	a
+	call	MKFILL		; clear rest of FCB
+	or	a
+badfn:	pop	bc
+	ret
+
+GETNAM:	ld	a,(hl)
+	call	CHKDOT
+	jr	z,endnam
+	call	UCASE
+	ld	(de),a
+	inc	hl
+	inc	de
+	djnz	GETNAM
+endnam:	xor	a
+	or	b
+	ret	z
+	ld	a,' '		; fill rest of name field with spaces
+MKFILL:	ld	(de),a
+	inc	de
+	djnz	MKFILL
+	ret
+
+CHKDOT:	cp	'.'
+	ret	z
+CKENDF:	cp	CR
+	ret	z
+	cp	LF
+	ret	z
+	cp	' '
+	ret
+
+; Display file name using system conventions
+
+PRFNAM:	push	hl
+	push	de
+	push	bc
+	ld	hl,CPMFCB
+	ld	a,(hl)
+	inc	hl
+	or	a		; zero disk code?
+	jr	nz,prfn1
+	push	hl
+	ld	c,.GETDSK
+	call	BDOS		; get default disk from CP/M if not
+	pop	hl
+	inc	a
+prfn1:	add	a,'A'-1
+	call	PUTC
+	ld	a,':'
+	call	PUTC
+	ld	b,8
+	call	prfn2
+	ld	a,'.'
+	call	PUTC
+	ld	b,3
+	call	prfn2
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+prfn2:	ld	a,(hl)
+	cp	' '
+	call	nz,PUTC
+	inc	hl
+	djnz	prfn2
+	ret
+
+;-----------------------------------------------------------------------
+
+; Misc routines
+
+; Get top of memory
+
+GETTOP:	ld	hl,(BDOS+1)
+	ret
+
+; Get CLI command line
+
+GETCML:	ld	hl,CPMBUF
+	ld	b,(hl)		; return command length in B
+	inc	hl		; and string address in HL
+	ret
+
+; Exit to system
+
+EXIT:	jp	WBOOT
+
+; Convert char in A to uppercase
+
+UCASE:	cp	'a'
+	ret	c
+	cp	'z'+1
+	ret	nc
+	and	5Fh
+	ret
+
+; Display value in HL as decimal (with trailing zeros).
+
+HLDEC:	ld	(FILLER),a
+	push	hl
+	push	de
+	push	bc
+	ld	b,0		; 0 for no trailing zeros
+	ld	de,-10000
+	call	SBCNT
+	ld	de,-1000
+	call	SBCNT
+	ld	de,-100
+	call	SBCNT
+	ld	de,-10
+	call	SBCNT
+	ld	a,l
+	add	a,'0'
+	call	PUTC
+	inc	b
+	res	7,b
+	ld	a,b
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+SBCNT:	ld	c,'0'-1
+sb1:	inc	c
+	add	hl,de
+	jr	c,sb1
+	sbc	hl,de
+	bit	7,b
+	jr	nz,sb3
+	ld	a,c
+	cp	'0'
+	jr	nz,sb2
+	ld	a,(FILLER)
+	or	a
+	ret	z
+	ld	c,a
+	jr	sb3
+sb2:	set	7,b
+sb3:	ld	a,c
+	call	PUTC
+	inc	b
+	ret
+
+;-----------------------------------------------------------------------
+
+	dseg
+
+TTQLEN:	db	0		; TTY queue length (number of chars in queue)
+TTQOUT:	dw	TTFIFO		; TTY queue out pointer
+TTQIN:	dw	TTFIFO		; TTY queue in pointer
+
+TTFIFO:	ds	64		; 64 bytes used for input queue
+
+TMPFCB:	db	0,'EDITOR  TMP'	; temporary work file on current disk
+	db	0,0,0,0
+	dw	0,0,0,0,0,0
+	dw	0,0,0,0,0,0
+	db	0,0,0
+
+FILLER:	ds	1
+FIOPTR:	dw	0		; file I/O pointer
+NUMRD:	dw	0		; number of bytes read
+NUMWR:	dw	0		; number of bytes written
+
+	end

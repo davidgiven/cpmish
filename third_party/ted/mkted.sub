@@ -1,0 +1,8 @@
+m80 =main
+m80 =termdef
+m80 =fileio
+m80 =scrn
+m80 =cmds
+m80 =cpmio
+link ted=termdef,main,fileio,scrn,cmds,cpmio
+

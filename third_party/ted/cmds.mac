@@ -1,0 +1,548 @@
+;**********************************************************************;
+;                                                                      ;
+;   This file is part of TED, a clone of the screen-oriented text      ;
+;   editor that was once available for the RT-11 OS.                   ;
+;   Copyright (C) 2011-2020, Hector Peraza.                            ;
+;                                                                      ;
+;   This program is free software; you can redistribute it and/or      ;
+;   modify it under the terms of the GNU General Public License as     ;
+;   published by the Free Software Foundation; either version 2 of     ;
+;   the License, or (at your option) any later version.                ;
+;                                                                      ;
+;   This program is distributed in the hope that it will be useful,    ;
+;   but WITHOUT ANY WARRANTY; without even the implied warranty of     ;
+;   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      ;
+;   GNU General Public License for more details.                       ;
+;                                                                      ;
+;   You should have received a copy of the GNU General Public License  ;
+;   along with this program; if not, write to the Free Software        ;
+;   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.          ;
+;                                                                      ;
+;**********************************************************************;
+
+	.Z80
+
+	title	TED - Text Editor
+	subttl	Delete, Copy, Move and Substitute commands
+
+	include	TED.INC
+
+;=======================================================================
+
+;   D E L E T E ,   C O P Y ,   M O V E ,   S U B S T I T U T E
+
+	public	CMDPR,CMDD,CMDSU,CMDM,CMDMD
+
+	extrn	CURREC,CURLN,CURPOS,EDLEN,STRBUF,EDREC,NXTREC
+	extrn	CMDPTR,N1D,N3,ARGLEN,ARGSTR,CKDSTR,SEARCH,UCASE
+	extrn	WFOV,GTDSTR,GETPAR,GETC,TMPBUF,ADDHLA,PSTRN
+	extrn	DELBUF,STORE,GETARG,PUTC,EEXTRA,GETTXP,CPDEHL
+	extrn	INSBUF,GTTXP0,SETTXP,EXPAND,PUTSTR,HLDEC,EDITBF
+	extrn	UCASE,NUMVAL
+
+;-----------------------------------------------------------------------
+
+	cseg
+
+; PR command
+
+CMDPR:	call	GETARG		; process arguments
+	ret	c		; on error return
+	call	GTTXPA
+	ret	c		; on error return
+	call	SETTXP		; curr rec <- HL, curr ln <- DE, chr pos <- B
+	ld	(CLINE),de	; store start line
+	ld	(CREC),hl	; and it's record number
+	ld	a,h
+	or	l
+	ret	z		; return if zero, no lines to print
+	call	GETTXP
+	ret	c		; on error return
+	ld	hl,(CLINE)
+	ex	de,hl
+	ld	(ENDLN),hl	; store end line
+	call	CPDEHL
+	ex	de,hl
+	jr	nc,cmdpr1	; jump if end line >= start line
+	ld	hl,IBERR	; else error - 'ILLEGAL BOUNDS'
+	jp	PUTSTR		; output string and return
+
+cmdpr1:	call	EEXTRA		; display error if extra parameters
+	ret	c		; on error return
+cmdpr2:	ld	de,(CLINE)	; check current line
+	ld	hl,(ENDLN)
+	call	CPDEHL		; past end line?
+	ret	c		; return if yes
+	ld	hl,(CREC)	; get record number into HL
+	ld	a,h
+	or	l
+	ret	z		; return if zero (no more lines)
+	ld	de,STRBUF	; get buffer address into DE
+	call	EXPAND		; expand line
+	ld	hl,(NXTREC)
+	ld	(CREC),hl	; store next line's record#
+	ld	hl,(CLINE)	; get line number into HL
+	ld	a,'0'		; filler
+	call	HLDEC		; output decimal value
+	ld	a,TAB		;  and a TAB
+	call	PUTC		;   to align text line on next tab stop
+	ld	hl,STRBUF
+	ld	a,(EDLEN)	; get expanded length
+	ld	c,a		;  into C
+	call	PSTRN		; output string @HL, length in C
+	ld	hl,(CLINE)	; increment line number
+	inc	hl
+	ld	(CLINE),hl
+	jp	cmdpr2		; loop
+
+IBERR:	db	'Illegal bounds',LF,CR,0
+
+; D command
+
+CMDD:	call	GETARG		; process arguments
+	ret	c		; on error return
+	push	hl
+	ld	hl,0
+	ld	(COUNT),hl	; init line count
+	pop	hl
+	call	GTTXPA
+	ret	c		; on error return
+	call	SETTXP		; curr rec <- HL, curr ln <- DE, chr pos <- B
+	ld	(CLINE),de	; store start line
+	ld	(CREC),hl	; and it's record number
+	ld	a,h
+	or	l
+	jr	z,cmdd3		; jump if zero, no lines to delete
+	call	GETTXP
+	ret	c		; on error return
+	ld	hl,(CLINE)
+	ex	de,hl
+	call	CPDEHL
+	ex	de,hl
+	jr	nc,cmdd1	; jump if end line >= start line
+	ld	hl,IBERR	; else error - 'ILLEGAL BOUNDS'
+	jp	PUTSTR		; output string and return
+
+cmdd1:	call	EEXTRA		; display error if extra parameters
+	ret	c		; on error return
+	ld	bc,(CLINE)	; get start line into BC
+	ld	hl,(CREC)	; and it's record number into HL
+	ld	a,e
+	sub	c
+	ld	e,a
+	ld	a,d
+	sbc	a,b
+	ld	d,a		; DE = end line - start line
+	inc	de		; now number of lines to delete
+cmdd2:	call	DELBUF		; delete line from text buffer
+	ld	hl,(COUNT)	; increment number of lines deleted
+	inc	hl
+	ld	(COUNT),hl
+	ld	hl,(NXTREC)	; get next line's record number into HL
+	ld	a,h
+	or	l
+	jr	z,cmdd3		; jump if zero (no next line)
+	dec	de		; decrement line count
+	ld	a,d		; (note no need to adjust line number in BC
+	or	e		;  since we always delete the current line)
+	jr	nz,cmdd2	; loop
+cmdd3:	ld	hl,(COUNT)
+	call	DECOUT		; output decimal value and a space
+	ld	hl,LDMSG	; 'LINES DELETED'
+	jp	PUTSTR		; output string and return
+
+; M command - copy lines
+
+CMDM:	xor	a
+	jr	cmdm1
+
+; MD command - move lines
+
+CMDMD:	ld	a,1
+cmdm1:	ld	(OPMODE),a	; set mode
+	ld	hl,(CURREC)
+	ld	(SAVREC),hl	; save current record number
+	ld	hl,(CURLN)
+	ld	(SAVLN),hl	; save current line number
+	ld	a,(CURPOS)
+	ld	(SAVCI),a	; save current character index
+	ld	hl,0
+	ld	(COUNT),hl	; clear number of lines copied/moved
+	call	GETARG		; process arguments
+	ret	c		; on error return
+	call	GTTXPA
+	ret	c		; on error return
+	call	SETTXP		; curr rec <- HL, curr ln <- DE, chr pos <- B
+	ld	(CLINE),de	; store start line number
+	ld	(CREC),hl	; and its record number
+	call	GTTXPA
+	ret	c		; on error return
+	ld	hl,(CLINE)
+	ex	de,hl
+	ld	(ENDLN),hl	; store end line number
+	call	CPDEHL		; compare with start line number
+	jr	c,cmdm2		; error if end line < start line
+	sbc	hl,de		; HL = end line - start line (note CY clear)
+	inc	hl
+	ld	(COUNT2),hl	; save number of lines to move
+	ld	hl,(SAVREC)
+	ld	(CURREC),hl	; restore saved current record number
+	ld	hl,(SAVLN)
+	ld	(CURLN),hl	; restore saved current line number
+	ld	a,(SAVCI)
+	ld	(CURPOS),a	; restore saved character index
+	call	GTTXPA
+	ret	c		; on error return
+	call	SETTXP		; curr rec <- HL, curr ln <- DE, chr pos <- B
+	ld	(DSTREC),hl	; store record number of dest line
+	ld	hl,(CLINE)	; get start line number
+	ex	de,hl		;  into DE
+	ld	(DSTLN),hl	; store dest line number
+	call	CPDEHL		; compare with start line number
+	jr	c,cmdm3		; jump if dest line < start line
+	ex	de,hl		; get dest line number back into DE
+	ld	hl,(ENDLN)	; get end line number into HL
+	call	CPDEHL		; compare line numbers
+	jr	c,cmdm3		; jump if dest line > end line
+cmdm2:	ld	hl,IBERR	; else error (overlap) - 'ILLEGAL BOUNDS'
+	jp	PUTSTR		; output string and return
+
+cmdm3:	call	EEXTRA		; display error if extra parameters
+	ret	c		; on error return
+cmdm4:	ld	bc,(CLINE)	; get next line number into BC
+				;  (for call to DELBUF)
+	ld	hl,(CREC)	; check next record number
+	ld	a,h
+	or	l
+	jp	z,cmdm7		; exit loop if zero (no more lines)
+	ld	de,EDITBF	; get address of edit line buffer into DE
+	call	EXPAND		; expand line
+	push	hl
+	ld	hl,(NXTREC)
+	ld	(CREC),hl	; store next line's record#
+	pop	hl
+	ld	a,(OPMODE)	; check M/MD mode
+	or	a
+	jr	z,cmdm5		; jump if M (copy lines)
+	call	DELBUF		; else delete line from text buffer
+	ld	hl,(DSTLN)
+	ex	de,hl
+	ld	l,c
+	ld	h,b
+	call	CPDEHL
+	jr	nc,cmdm5	; jump if BC >= DSTLN
+	ex	de,hl
+	dec	hl
+	ld	(DSTLN),hl
+cmdm5:	ld	bc,(DSTLN)
+	ld	hl,(DSTREC)
+	ld	de,EDITBF	; get address of edit line buffer into DE
+	call	INSBUF		; insert a line into text buffer
+	jp	c,WFOV		; on error print 'WORK FILE OVERFLOW'
+				;  and go back to command mode
+	ld	hl,(EDREC)
+	ld	(DSTREC),hl	; save record number of current line
+	ld	e,c
+	ld	d,b
+	ld	hl,(CLINE)
+	jr	c,cmdm6		; jump if BC > current line
+	inc	hl
+	ld	(CLINE),hl
+cmdm6:	ld	hl,(COUNT)	; increment number of lines copied
+	inc	hl
+	ld	(COUNT),hl
+	ld	hl,(COUNT2)
+	dec	hl		; decrement number of lines to copy
+	ld	(COUNT2),hl
+	ld	a,h
+	or	l		; reached zero?
+	jp	nz,cmdm4	; loop if not
+cmdm7:	ld	hl,(COUNT)	; get number of lines moved/deleted
+	call	DECOUT		; output decimal value and a space
+	ld	a,(OPMODE)	; check M/MD mode
+	or	a		;  and output message accordingly
+	ld	hl,LMMSG	; 'LINES MOVED'
+	jp	nz,PUTSTR
+	ld	hl,LCMSG	; 'LINES COPIED'
+	jp	PUTSTR		; output string
+
+; SU command - substitute
+
+CMDSU:	xor	a
+	ld	(OPMODE),a	; set default SU mode
+	ld	hl,0
+	ld	(COUNT2),hl	; init substitutions counter
+	ld	hl,(CMDPTR)	; get pointer to command into HL
+	call	CKDSTR		; look for delimited string
+	ret	c		; on error return
+	jr	z,cmds1		; jump if alphanumeric
+	jp	cmds7		; else delimited string found
+
+cmds1:	call	GETARG		; process arguments
+	ret	c		; on error return
+	ld	a,c
+	cp	1		; argument type = single numeric?
+	jr	nz,cmds2	; jump if not
+	ld	a,(OPMODE)
+	or	40h		; else set flag
+	ld	(OPMODE),a
+	ld	hl,(NUMVAL)
+	ld	(COUNT),hl	; COUNT = numeric value
+	ld	a,h
+	or	a
+	jp	m,cmds4		; error if <= 0
+	or	l
+	jr	z,cmds4
+	jr	cmds6
+
+cmds2:	cp	3		; argument type = string?
+	jr	nz,cmds5	; jump if not
+	ld	hl,STRBUF	; get addr of string arg buffer into HL
+	ld	a,(hl)		; fetch byte
+	call	UCASE
+	cp	'M'		; 'M' (multiple) option?
+	jr	nz,cmds3	; jump if not
+	ld	a,(OPMODE)
+	or	80h		; else set flag
+	ld	(OPMODE),a
+	inc	hl		; advance pointer
+	ld	a,(hl)
+cmds3:	cp	LF		; LF? (ensure single char specified)
+	jr	z,cmds6		; jump if yes
+cmds4:	ld	hl,IPERR	; else error - 'ILLEGAL PARAMETER'
+	jp	PUTSTR		; output string and return
+
+cmds5:	or	a		; any other kind of argument?
+	jr	nz,cmds4	; error if yes - ILLEGAL PARAMETER
+cmds6:	ld	hl,(CMDPTR)	; else get pointer to command into HL
+	call	CKDSTR		; look for delimited string
+	ret	c		; on error return
+	jr	z,cmds4		; error if alphanumeric
+cmds7:	ld	a,b
+	ld	(ARGLEN),a	; store string arg length
+	or	a
+	jr	nz,cmds8	; jump if not zero
+	ld	hl,ESERR	; else error - 'EMPTY SEARCH STRING'
+	jp	PUTSTR		; output string and return
+
+cmds8:	ld	(ARGSTR),de	; store string arg address
+	call	GTDSTR		; get delimited string (delimiter still in C)
+	ret	c		; return on error (delimiter not found)
+	ld	a,b
+	ld	(WLEN),a	; store word length
+	ld	(WSTART),de	; store word start
+	call	GETPAR		; process argument of type (N1,N2)+N3
+	ret	c		; return on error
+	ld	de,(N3)		; check N3
+	ld	a,d
+	or	e
+	jr	z,cmds9		; jump if N3 is zero
+	ld	hl,IDERR	; else error - 'ILLEGAL DISPLACEMENT'
+	jp	PUTSTR		; output string and return
+
+cmds9:	ld	(CMDPTR),hl	; store command line pointer
+	call	GETTXP
+	ret	c		; on error return
+	call	EEXTRA		; display error if extra parameters
+	ret	c		; on error return
+cmds10:	call	SETTXP		; curr rec <- HL, curr ln <- DE, chr pos <- B
+	ld	a,(OPMODE)
+	and	80h		; check mode
+	jp	z,cmds11	; jump if M option not set
+	ld	hl,(CURLN)
+	call	DECOUT		; output current line number and a space
+	ld	hl,EDITBF	; get address of edit line buffer into HL
+	ld	c,b		; get current char pos into C
+	call	PSTRN		; output string @HL, length in C
+	ld	a,'"'
+	call	PUTC		; output quote
+	ld	a,c
+	call	ADDHLA		; HL = current char address
+	ld	a,(ARGLEN)	; get string arg length
+	ld	c,a		;  into C
+	call	PSTRN		; output string @HL, length in C
+	ld	a,'"'
+	call	PUTC		; output quote
+	ld	a,c
+	call	ADDHLA
+	ld	a,(EDLEN)	; get line length
+	sub	c		; subtract string arg length
+	sub	b		; subtract current char pos
+	ld	c,a		; and we have tail length
+	call	PSTRN		; output string @HL, length in C
+	ld	a,(ARGLEN)
+	add	a,c		; add string arg length to C
+	ld	(N1D),a		; and we have next char index for SEARCH
+	call	ASK		; Y-CR-^C ?
+	jp	c,cmds16	;  if ^C
+	jr	z,cmds14	;  if CR
+cmds11:	ld	hl,EDITBF	;  else here if Y - get src into HL
+	ld	de,TMPBUF	;   and dst into DE
+	ld	a,(CURPOS)	; get current character index
+	ld	c,a		;  into C
+	ld	b,0		; reset resulting string length
+	call	STNCPY		; copy string @HL to @DE, length in C
+	ld	hl,(WSTART)
+	ld	a,(WLEN)
+	ld	c,a
+	call	STNCPY		; copy string @HL to @DE, length in C
+	ld	a,b		; get resulting string length
+	cp	MAXLEN+1	; compare to max line length
+	jr	c,cmds12
+	ld	a,MAXLEN	; truncate if necessary
+cmds12:	ld	(N1D),a		; set next char index for SEARCH
+	ld	a,(CURPOS)	; get current character index
+	ld	c,a
+	ld	a,(ARGLEN)	; add string arg length
+	add	a,c
+	ld	c,a		; save value
+	ld	hl,EDITBF
+	call	ADDHLA		; index into edit buffer
+	ld	a,(EDLEN)	; get line length
+	sub	c		; subtract (CURPOS + ARGLEN)
+	ld	c,a
+	call	STNCPY		; copy string @HL to @DE, length in C
+	ld	hl,(CURLN)
+	call	DECOUT		; output current line number and a space
+	ld	hl,TMPBUF
+	ld	a,b		; get cumulated length
+	cp	MAXLEN+1	; cpmpare to max line length
+	jr	c,cmds13
+	ld	a,MAXLEN	; truncate if necessary
+cmds13:	ld	c,a
+	push	hl
+	call	ADDHLA
+	dec	hl
+	ld	(hl),LF
+	dec	hl
+	ld	(hl),CR
+	pop	hl
+	call	PSTRN		; output string @HL, length in C
+	ld	de,TMPBUF
+	ld	hl,(CURREC)	; get current record number into HL
+	call	STORE		; store line into record(s)
+	jp	c,WFOV		; on error print 'WORK FILE OVERFLOW'
+				;  and go back to command mode
+	ld	hl,(COUNT2)
+	inc	hl		; increment substitutions counter
+	ld	(COUNT2),hl
+cmds14:	ld	a,(OPMODE)
+	and	40h		; check mode
+	jr	z,cmds15	; jump if not SU #
+	ld	hl,(COUNT)
+	dec	hl		; else decrement #
+	ld	(COUNT),hl
+	ld	a,h
+	or	l
+	jr	z,cmds16	; finish when # reaches zero
+cmds15:	call	SEARCH		; search for ARGSTR string in N1..N2
+	jp	nc,cmds10	; loop while match found
+cmds16:	ld	hl,(COUNT2)
+	call	DECOUT		; output decimal value and a space
+	ld	hl,SUMSG	; 'SUBSTS'
+	jp	PUTSTR		; output string and return
+
+IPERR:	db	'Illegal parameter',LF,CR,0
+IDERR:	db	'Illegal displacement',LF,CR,0
+ESERR:	db	'Empty search string',LF,CR,0
+
+LDMSG:	db	'lines deleted',LF,CR,0
+LMMSG:	db	'lines moved',LF,CR,0
+LCMSG:	db	'lines copied',LF,CR,0
+SUMSG:	db	'substitutions',LF,CR,0
+
+; Get text pointer (record #, line # and char index) from argument type
+
+GTTXPA:	ld	a,c
+	dec	a		; argument type = single numeric?
+	jp	z,GTTXP0	; if yes, setup text pointers and return
+	dec	a		; argument type = (N1,N2)+N3?
+	jp	z,GTTXP0	; if yes, setup text pointers and return
+	ld	hl,MPERR	; else error - 'MISSING PARAMETER'
+	call	PUTSTR		; output string
+	scf			; and return with CY set
+	ret
+
+MPERR:	db	'Missing parameter',LF,CR,0
+
+; Display Y-CR-^C prompt and get response
+; Returns CY if ^C, Z if CR, else is 'Y'
+
+ASK:	push	hl
+	ld	hl,YNSTR	; 'Y-<CR>-<^C>? '
+	call	PUTSTR		; output prompt
+ask1:	call	GETC		; get input char into A
+	call	UCASE		; convert to uppercase
+	cp	3		; ^C?
+	scf
+	jr	z,ask2		;  return with CY set if yes
+	cp	CR		; CR?
+	jr	z,ask2		;  return with Z set if yes
+	cp	'N'
+	jr	z,ask2		; also accept an explicit 'N'
+	cp	'Y'		; 'Y'?
+	jr	nz,ask1		;  loop if not
+	call	PUTC		;   else output char
+	or	0FFh		;    and return NZ
+ask2:	push	af
+	ld	a,LF		; LF
+	call	PUTC		; output char
+	ld	a,CR		; CR
+	call	PUTC		; output char
+	pop	af
+	pop	hl
+	ret
+
+YNSTR:	db	'Y-<CR>-<^C> ? ',0
+
+; Copy string @HL to @DE (up to MAXLEN chars), length in C
+; B accumulates resulting string size, up to MAXLEN.
+
+STNCPY:	ld	a,c
+	or	a
+	ret	z
+	ret	m
+scpy1:	ld	a,(hl)
+	inc	hl
+	push	hl
+	ld	l,a
+	ld	a,b
+	cp	MAXLEN
+	ld	a,l
+	pop	hl
+	jr	nc,scpy2	; jump if B >= MAXLEN
+	ld	(de),a
+	inc	de
+	inc	b
+scpy2:	dec	c
+	jr	nz,scpy1
+	ret
+
+; Output HL as decimal number followed by a space
+
+DECOUT:	ld	a,'0'		; filler
+	call	HLDEC		; output value
+	ld	a,' '
+	jp	PUTC
+
+;-----------------------------------------------------------------------
+
+	dseg
+
+COUNT:	ds	2		; number of lines moved, deleted, etc.
+CLINE:	ds	2		; current line number in PR, M, MD, etc.
+ENDLN:	ds	2		; end line number
+CREC:	ds	2		; current record number
+COUNT2:	ds	2		; number of lines to move, subst count, etc.
+DSTLN:	ds	2		; dest line number in copy/move
+DSTREC:	ds	2		; dest record number
+OPMODE:	ds	1		; M/MD cmd: 0 = copy lines, 1 = move lines
+				; SU cmd: 0 = normal, 40h = SU #, 80h = SU M
+SAVREC:	ds	2		; saved record number
+SAVLN:	ds	2		; saved line number
+SAVCI:	ds	1		; saved character index
+
+WSTART:	ds	2		; start of word during substitution
+WLEN:	ds	1		; word length
+
+	end

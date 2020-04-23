@@ -1,0 +1,531 @@
+;**********************************************************************;
+;                                                                      ;
+;   This file is part of TED, a clone of the screen-oriented text      ;
+;   editor that was once available for the RT-11 OS.                   ;
+;   Copyright (C) 2011-2020, Hector Peraza.                            ;
+;                                                                      ;
+;   This program is free software; you can redistribute it and/or      ;
+;   modify it under the terms of the GNU General Public License as     ;
+;   published by the Free Software Foundation; either version 2 of     ;
+;   the License, or (at your option) any later version.                ;
+;                                                                      ;
+;   This program is distributed in the hope that it will be useful,    ;
+;   but WITHOUT ANY WARRANTY; without even the implied warranty of     ;
+;   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      ;
+;   GNU General Public License for more details.                       ;
+;                                                                      ;
+;   You should have received a copy of the GNU General Public License  ;
+;   along with this program; if not, write to the Free Software        ;
+;   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.          ;
+;                                                                      ;
+;**********************************************************************;
+
+	.Z80
+
+	title	TED - Text Editor
+	subttl	File I/O routines
+
+	include	TED.INC
+
+;=======================================================================
+
+;   F I L E   I / O   S E C T I O N
+
+	public	CMDF,CMDR,CMDW
+
+	extrn	GETARG,PUTC,EEXTRA,EDLEN,STRBUF,GETTXP,INSBUF
+	extrn	NUMD,GTTXP0,SETTXP,LASTLN,EDREC,NXTREC,ARGTYP
+	extrn	NUMVAL,EXPAND,HLDEC,CRLF,PUTSTR,CPDEHL,UCASE
+	extrn	FOPEN,FMODF,FCREAT,FCLOSE,FGETC,FPUTC,PADEOF
+	extrn	PRFNAM,MKFCB,ERRWFO
+
+;-----------------------------------------------------------------------
+
+	cseg
+
+; R command - read file
+
+CMDR:	call	GETARG		; process argument
+	ret	c		; return if error
+	ld	de,(LASTLN)	; get last line number into DE
+	call	GETTXP
+	ret	c		; on error return
+	call	SETTXP		; curr rec <- HL, curr ln <- DE, chr pos <- B
+	ld	(EDREC),hl	; store curr rec# for initial INSBUF call below
+	ld	c,e
+	ld	b,d		; get current line number into BC (for INSBUF)
+	call	RARGS		; process R command arguments
+	ret	c		; on error return
+	call	EEXTRA		; display error if extra parameters
+	ret	c		; on error return
+	ld	a,(FMODF)
+	push	af		; save current file modified flag
+	ld	a,MAXLEN+2	; 164 = size of STRBUF buffer
+	ld	(RDMAX),a	; store it for file I/O routine
+	ld	hl,STRBUF	; get address of line buffer into HL
+	ld	(RDPTR),hl	; store for file I/O routine
+	ld	hl,0
+	ld	(LNCNT),hl	; clear line count
+rloop:	call	FRDLIN		; open file, read a line
+	jr	c,rdeof		; jump on error (EOF)
+	ld	hl,(EDREC)	; get record number of current line into HL
+	ld	de,STRBUF
+	call	INSBUF		; insert line into text buffer
+	jr	c,rdwfov	; jump on error - WORK FILE OVERFLOW
+	inc	bc		; increment current line number
+	ld	hl,(LNCNT)
+	inc	hl		; increment number of lines read
+	ld	(LNCNT),hl
+	ld	a,l
+	and	7		; check lower 3 bits of line count
+	call	z,PRLINE	; output number of lines read every 8
+	jr	rloop		; loop until all lines read
+
+rdwfov:	ld	hl,ERRWFO	; '*WORK FILE OVERFLOW'
+	call	PUTSTR		; output string
+rdeof:	pop	af
+	ld	(FMODF),a	; restore old file modified flag
+	ld	hl,(LNCNT)
+	call	PRLINE		; output ' NNNNN LINES ' (value in HL)
+	ld	hl,MSGRDF	; 'READ FROM "'
+	call	PUTSTR		; output string
+	call	PRFNAM
+	call	PUTSTR
+	call	CLSINP		; close input file
+	ret
+
+; F command
+
+CMDF:	ld	a,(VALIDF)	; valid filename?
+	or	a
+	jr	z,nofn		; jump if not
+	call	PRFNAM		; else output current file name
+	call	CRLF
+	call	GETARG		; process arguments
+	ret	c		; on error return
+	jp	EEXTRA		; display error if extra parameters
+nofn:	ld	hl,MSGIFN	; 'MISSING OR ILLEGAL FILE NAME'
+	jp	PUTSTR		; display message
+
+MSGIFN:	db	'Missing or illegal file name',LF,CR,0
+
+; W command - write to file
+
+CMDW:	call	GETARG		; process arguments
+	ret	c		; on error return
+	ld	de,1
+	call	GTTXP0
+	ret	c		; on error return
+	call	SETTXP		; curr rec <- HL, curr ln <- DE, chr pos <- B
+	ld	(CREC),hl	; save current record
+	ld	(CLINE),de	; set start line = current line
+	ld	a,(ARGTYP)	; check argumnet type from GETARG above
+	dec	a		; arg type = 1? (number)
+	jr	z,wr2		; jump if yes
+	dec	a		; end line = 2? (N1,N2)+N3
+	jr	z,wr2		; jump if yes
+	ld	de,(LASTLN)	; get last line number into DE
+wr2:	call	GETTXP
+	ret	c		; on error return
+	ld	hl,(CLINE)
+	ex	de,hl
+	ld	(ENDLN),hl	; set end line
+	call	CPDEHL
+	jr	nc,wr3		; jump if end line >= start line
+	ld	hl,MSGILB	; 'ILLEGAL BOUNDS'
+	call	PUTSTR		; else error - output string
+	ret			;  and return
+
+wr3:	call	WARGS		; process arguments for W command
+	ret	c		; on error return
+	call	EEXTRA		; display error if extra parameters
+	ret	c		; on error return
+	ld	hl,STRBUF	; get address of line buffer
+	ld	(WRPTR),hl	;  into WRPTR
+wloop:	ld	de,(CLINE)
+	ld	hl,(ENDLN)
+	call	CPDEHL		; past end line?
+	jr	c,wend		; exit loop if yes
+	ld	hl,(CREC)	; get record number into HL
+	ld	a,h
+	or	l
+	jr	z,wend		; exit loop if zero (no more lines)
+	ld	de,STRBUF	; get buffer address into DE
+	call	EXPAND		; expand line
+	ld	a,(EDLEN)
+	ld	(WRLEN),a	; store expanded length for file write function
+	ld	hl,(NXTREC)
+	ld	(CREC),hl	; store next line's record#
+	call	FWRLIN		; write line to output file
+	jr	c,wend		; on error, close file and return
+	ld	hl,(CLINE)	; increment number of lines written
+	inc	hl
+	ld	(CLINE),hl
+	ld	hl,(LNCNT)
+	ld	a,l
+	and	7		; check lower 3 bits of line count
+	call	z,PRLINE	; output number of lines written every 8
+	jr	wloop		; loop
+wend:	xor	a
+	ld	(FMODF),a	; clear file modified flag
+	ld	hl,(LNCNT)
+	call	PRLINE		; output number of lines written
+	ld	hl,MSGWRT	; 'WRITTEN INTO "'
+	call	PUTSTR
+	call	PRFNAM
+	call	PUTSTR
+	call	CLSOUT		; close output file
+	ret
+
+MSGILB:	db	'Illegal bounds',LF,CR,0
+
+; Process arguments for R command (parse filename, get line numbers, etc.)
+
+RARGS:	push	hl
+	push	de
+	push	bc
+	ld	hl,0
+	ld	(NREAD),hl	; clear number of lines read
+	ld	a,(ARGTYP)
+	cp	3		; arg type = string?
+	jr	z,ra1		; jump if yes
+	ld	hl,MSGIFN	; else error - 'MISSING OR ILLEGAL FILE NAME'
+	call	PUTSTR		; display message
+	scf			;  set error flag
+	jr	ra6		;   and return
+
+ra1:	call	GETFN		; get file name
+	jr	c,ra6		; on error return
+	ld	hl,1
+	ld	(CLINE),hl	; default start line = 1
+	ld	hl,65535
+	ld	(ENDLN),hl	; default end line = 65535
+	call	GETARG		; process additional arguments
+	jr	c,ra6		; on error return
+	ld	a,c
+	or	a		; any arguments?
+	jr	z,ra2		; jump if not
+	dec	a		; argument type = single numeric?
+	jr	nz,ra5		; jump if not
+	ld	hl,(NUMVAL)
+	ld	(CLINE),hl	; else set start line
+	ld	a,(NUMD)	; check displacement flag
+	or	a
+	jp	m,ra4		; error if from end of file
+ra2:	call	GETARG		; process more arguments
+	jr	c,ra6		; on error return
+	ld	a,c
+	cp	1		; argument type = single numeric?
+	jr	nz,ra5		; jump if not
+	ld	a,(NUMD)	; check displacement flag
+	or	a
+	jp	p,ra3		; jump if absolute or relative
+	ld	a,d		; if from end, offset is zero?
+	or	e
+	jr	nz,ra4
+	ld	de,65535	; if yes, set end line = 65535
+ra3:	ld	hl,(NUMVAL)
+	ld	(ENDLN),hl	; set end line
+	call	GETARG		; process more arguments
+	jr	c,ra6		; on error return
+	jr	ra5
+ra4:	ld	hl,MSGILB	; error - 'ILLEGAL BOUNDS'
+	call	PUTSTR		; output string
+	scf			;  set error flag
+	jr	ra6		;   and return
+
+ra5:	ld	de,(CLINE)
+	ld	hl,(ENDLN)
+	call	CPDEHL		; start line > end line?
+	jr	c,ra4		; jump if yes
+ra6:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Read line from input file, open file first if necessary.
+
+FRDLIN:	push	hl
+	push	de
+	push	bc
+	ld	de,(ENDLN)	; get end line into DE
+	ld	hl,(NREAD)	; get number of lines read so far into HL
+	ld	a,h
+	or	l
+	jr	nz,frl1		; jump if not zero (file already open)
+	call	OPNINP		; else open input file
+	jr	c,frl2		; on error return
+frl1:	inc	hl		; increment number of lines read
+	call	CPDEHL		; above end line?
+	jr	nc,frl2		; return if yes (note CY not set)
+	call	FGETLN		; read line from input file
+	jr	c,frl2		; on error return
+	push	de
+	ld	de,(CLINE)
+	call	CPDEHL		; start line reached?
+	pop	de
+	jr	c,frl1		; loop if not
+	ld	(NREAD),hl	; store number of lines read
+	ld	(CLINE),hl	; set start line
+	or	a		; clear error flag
+frl2:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Process arguments for W command
+
+WARGS:	push	hl
+	push	de
+	push	bc
+	ld	hl,0
+	ld	(LNCNT),hl	; clear number of lines written into file
+	call	GETFN		; get file name
+	jr	c,wa4		; on error return
+	call	GETARG		; process arguments
+	jr	c,wa4		; on error return
+	ld	hl,0
+	ld	a,c
+	cp	1		; argument type = single numeric?
+	jr	nz,wa3		; jump if not (set value = 0)
+	ld	hl,(NUMVAL)	; else get numeric value
+	ld	a,h
+	or	l		; zero?
+	jr	z,wa1		; jump if yes
+	ld	hl,MSGILN	; else error - 'ILLEGAL LINE#'
+	call	PUTSTR		; output string
+	scf			; set error flag
+	jr	wa4		; and return
+
+wa1:	ld	a,(NUMD)	; check displacement flag
+	or	a
+	jr	z,wa2		; jump if absolute or relative
+	ld	a,l		; else negate value
+	cpl
+	ld	l,a
+	ld	a,h
+	cpl
+	ld	h,a
+	inc	hl
+wa2:	call	GETARG		; process arguments
+	jr	c,wa4		; on error return
+wa3:	ld	(WRARG),hl	; store line number [not used?]
+	or	a
+wa4:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+MSGILN:	db	'Illegal line number',LF,CR,0
+
+; Write line to output file. Create file first if necessary.
+
+FWRLIN:	push	hl
+	push	de
+	push	bc
+	ld	hl,(LNCNT)	; any lines written?
+	ld	a,h
+	or	l
+	jr	nz,fwl1		; jump if yes, file already created
+	call	CREOUT		; else create output file
+	jr	c,fwl2		; on error return
+fwl1:	ld	hl,(LNCNT)	; increment count of written lines
+	inc	hl
+	ld	(LNCNT),hl
+	call	FWRSTR		; write string to file
+	;jr	c,fwl2		; on error return
+	;or	a		; else clear CY
+fwl2:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Close output file
+
+CLSOUT:	call	PADEOF		; pad record with EOF marker
+	jr	nc,cls1
+	push	hl
+	ld	hl,MSGDKF	; 'DISK OR DIRECTORY FULL'
+	ld	a,(CLEFLG)
+	or	a
+	call	nz,PUTSTR
+	pop	hl
+	ld	a,1
+	ld	(CLEFLG),a
+	scf
+cls1:	push	af		; save error flag from PADEOF
+	call	FCLOSE		; close file
+	jr	nc,cls2		; jump on success
+	ld	hl,MSGDKF
+	ld	a,(CLEFLG)
+	or	a
+	call	nz,PUTSTR	; else display error message
+	pop	af
+	scf			; and set CY on result from PADEOF
+	push	af
+cls2:	pop	af
+	ret
+
+MSGDKF:	db	'Disk or directory full',LF,CR,0
+
+; Create output file. TODO: check for existing file?
+
+CREOUT:	push	hl
+	push	de
+	push	bc
+	xor	a
+	ld	(CLEFLG),a
+	call	FCREAT
+	jr	nc,cre1
+	ld	hl,MSGDKF	; 'DISK OR DIRECTORY FULL'
+	call	PUTSTR		; display error message
+	ld	a,1
+	ld	(CLEFLG),a
+	scf			; set error flag
+cre1:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Get file name
+
+GETFN:	push	hl
+	push	de
+	ld	a,(ARGTYP)
+	cp	3		; arg type = string?
+	jr	nz,pfn0		; jump if not
+	ld	hl,STRBUF	; src
+	call	MKFCB
+	jr	c,pfn1
+	ld	a,1
+	ld	(VALIDF),a
+	jr	pfn2		; return if no error
+pfn0:	ld	a,(VALIDF)	; we have a valid FCB?
+	or	a
+	jr	nz,pfn2		; return if yes, use it
+pfn1:	ld	hl,MSGIFN	; 'MISSING OR ILLEGAL FILE NAME'
+	call	PUTSTR		; output error message
+	scf			; and return with CY flag set
+pfn2:	pop	de
+	pop	hl
+	ret
+
+; Open input file
+
+OPNINP:	push	hl
+	push	de
+	push	bc
+	call	FOPEN
+	jr	nc,opn1
+	ld	hl,MSGFNF	; 'FILE NOT FOUND'
+	call	PUTSTR		; display error message
+	scf			; set error flag
+	jr	opn2
+opn1:	ld	a,1
+	ld	(OPNFLG),a	; set file open flag for close function
+	or	a
+opn2:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+MSGFNF:	db	'File not found',LF,CR,0
+
+; Close input file
+
+CLSINP:	ld	a,(OPNFLG)
+	or	a
+	ret	z
+	xor	a
+	ld	(OPNFLG),a
+	call	FCLOSE
+	ret
+
+; Read line from input file
+
+FGETLN:	push	hl
+	ld	c,1		; read string length
+	ld	hl,(RDPTR)	; get dst ptr into HL
+fget1:	call	FGETC		; get byte from input file
+	jr	c,fget2		; on error (EOF) return
+	and	7Fh		; strip hi-bits, leave ASCII
+	ld	(hl),a		; store char
+	inc	hl
+	cp	LF		; end of line?
+	jr	z,fget2		; if yes, return with CY clear
+	inc	c		; increment length
+	ld	a,(RDMAX)
+	cp	c		; check if max length reached
+	jr	nc,fget1	; loop if not, else return with CY set
+fget2:	pop	hl
+	ret
+
+; Write string to output file
+
+FWRSTR:	ld	hl,(WRPTR)	; get ptr to string into HL
+	ld	a,(WRLEN)	; get string length
+	ld	b,a		;  into B
+fws1:	ld	c,(hl)		; get char
+	push	hl
+	call	FPUTC1		; write it to output file
+	pop	hl
+	ret	c		; on error return
+	inc	hl
+	djnz	fws1		; decrement string char count and loop
+	ret			; return with CY clear (OK)
+
+; Write byte in C to output file
+
+FPUTC1:	ld	a,c
+	cp	SSPC		; do not output soft spaces
+	ret	z
+	call	FPUTC
+	ret	nc
+	ld	hl,MSGDKF	; 'DISK OR DIRECTORY FULL'
+	call	PUTSTR
+	scf
+	ret
+
+; Display number of lines (value in HL)
+
+PRLINE:	push	hl
+	ld	a,CR
+	call	PUTC		; cursor to start of line
+	ld	a,'0'		; filler
+	call	HLDEC		; output value as decimal
+	ld	hl,MSGLNS	; ' LINES '
+	call	PUTSTR		; output string
+	pop	hl
+	ret
+
+MSGLNS:	db	' lines ',0
+MSGRDF:	db	'read from "',0,'"',LF,CR,0
+MSGWRT:	db	'written to "',0,'"',LF,CR,0
+
+;-----------------------------------------------------------------------
+
+	dseg
+
+; Param block for FGETLN
+
+RDMAX:	ds	1		; max length
+RDPTR:	ds	2		; dest ptr
+
+CLINE:	ds	2		; start line for file I/O operations
+ENDLN:	ds	2		; end line for file I/O operations
+NREAD:	ds	2		; number of lines read from file
+
+; Param block for FWRSTR
+
+WRLEN:	ds	1		; string length
+WRPTR:	ds	2		; ptr to string
+
+WRARG:	dw	0		; W command argument [not used?]
+LNCNT:	ds	2		; number of lines read/written
+CREC:	dw	0		; line record #
+
+OPNFLG:	ds	1		; file open flag
+CLEFLG:	ds	1		; suppress further close/write error msgs
+VALIDF:	ds	1		; 1 = valid FCB (form last R or W command)
+
+	end

@@ -1,0 +1,2315 @@
+;**********************************************************************;
+;                                                                      ;
+;   This file is part of TED, a clone of the screen-oriented text      ;
+;   editor that was once available for the RT-11 OS.                   ;
+;   Copyright (C) 2011-2020, Hector Peraza.                            ;
+;                                                                      ;
+;   This program is free software; you can redistribute it and/or      ;
+;   modify it under the terms of the GNU General Public License as     ;
+;   published by the Free Software Foundation; either version 2 of     ;
+;   the License, or (at your option) any later version.                ;
+;                                                                      ;
+;   This program is distributed in the hope that it will be useful,    ;
+;   but WITHOUT ANY WARRANTY; without even the implied warranty of     ;
+;   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      ;
+;   GNU General Public License for more details.                       ;
+;                                                                      ;
+;   You should have received a copy of the GNU General Public License  ;
+;   along with this program; if not, write to the Free Software        ;
+;   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.          ;
+;                                                                      ;
+;**********************************************************************;
+
+	.Z80
+
+	title	TED - Text Editor
+	subttl	Root section
+
+	include	TED.INC
+
+;=======================================================================
+
+;   R O O T   S E C T I O N
+
+	public	FSTREC,CURREC,CURLN,CURPOS,LASTLN,CMDPTR
+	public	N1D,N3,ARGLEN,ARGSTR,CKDSTR,SEARCH,WFOV
+	public	GTDSTR,GETPAR,XLTESC,CLNCR,PUTCN,PSTRN
+	public	DELBUF,STORE,FNDBUF,LDREC,GETARG,EEXTRA
+	public	STRBUF,EDLEN,GETTXP,GTTXP0,INSBUF,NUMD
+	public	SETTXP,EDREC,NXTREC,EXPAND,EDITBF,CRLF
+	public	TMPBUF,MLOOP,ADDHLA,SUBHLA,CPDEHL,PUTSTR
+	public	FMODF,ARGTYP,NUMVAL,FATAL,ERRWFO
+
+	extrn	CMDF,CMDD,CMDR,CMDW,CMDSU,CMDM,CMDMD
+	extrn	CMDPR,SCRNED,TRMNAM,CLREOL,GETTOP,EXIT
+	extrn	WCREAT,FREAD,FWRITE,WCLOSE,WDELET,GETCML
+	extrn	GETC,UNGETC,PUTC,TTQCLR,TTINIT,UCASE
+	extrn	HLDEC,SCRX,UFLAG,UPDST
+
+	; needed for debugging
+
+	public	FSTFRE,NUMFRE,NUMREC,MEMBOT,ENDMAP,BFPOOL
+	public	MEMTOP,NUMBUF,WFBLKS,NBLKS
+
+;-----------------------------------------------------------------------
+
+	cseg
+
+; Main loop - editor starts here after initialization
+
+MLOOP:	ld	sp,STACK	; restore stack pointer
+	xor	a
+	ld	(UFLAG),a
+	ld	a,(WFOVFL)	; check work file overflow flag
+	or	a
+	jr	z,m1		; jump if not set
+	xor	a
+	ld	(WFOVFL),a	; else clear it
+	ld	(CTCFLG),a	;  clear ^C command flag
+	call	TTQCLR		;   and reset TTY input queue
+m1:	ld	hl,PROMPT	; prompt string
+	call	GETCMD		; read command
+	jp	c,SCRNED	; ^C at start of command = go to scrn editor
+	ld	hl,CMDBUF	; HL = start of command line buffer
+	ld	de,STRBUF	; DE = start of command word buffer
+	ld	a,' '
+	ld	(de),a		; init STRBUF to empty command (two spaces)
+	inc	de
+	ld	(de),a
+	dec	de
+getw:	ld	a,(hl)		; get char from command line buffer
+	call	UCASE		; convert to uppercase
+	cp	'A'		; letter?
+	jr	c,endw		; jump if not (end of command word)
+	cp	'Z'+1
+	jr	nc,endw
+	ld	(de),a		; and copy it to STRBUF buffer
+	inc	de
+	inc	hl		; increment pointers
+	jr	getw		; and loop
+
+endw:	ld	(CMDPTR),hl	; save command line pointer
+	ld	hl,CMDTBL	; HL = command table
+	ld	de,STRBUF
+fndcmd:	ld	a,(hl)
+	or	a		; end of table?
+	jp	z,BADCMD	; jump if yes - error
+	ld	a,(de)
+	cp	(hl)		; else compare bytes
+	inc	hl
+	inc	de
+	jr	nz,nxtcmd
+	ld	a,(de)
+	cp	(hl)
+	jr	z,execmd	; jump if match
+nxtcmd:	inc	hl		; else skip to next entry
+	dec	de
+	inc	hl
+	inc	hl
+	jr	fndcmd		; and loop
+
+execmd:	inc	hl
+	ld	e,(hl)		; get routine address
+	inc	hl
+	ld	d,(hl)
+	ld	hl,MLOOP
+	push	hl		; push return address
+	ex	de,hl
+	jp	(hl)		; execute command handler
+
+BADCMD:	ld	hl,ERRCMD	; 'WRONG COMMAND'
+	call	PUTSTR		; print string
+	jp	MLOOP		; loop back to editor start
+
+; Command table
+
+CMDTBL:	db	'CL'		; clear buffer
+	dw	CMDCL
+
+	db	'FR'		; show free memory
+	dw	CMDFR
+
+	db	'P '		; set text index (position)
+	dw	CMDP
+
+	db	'PR'		; print lines on terminal
+	dw	CMDPR
+
+	db	'S '		; enter screen mode
+	dw	CMDS
+
+	db	'  '		; ^C also enters screen mode
+	dw	CMDS
+
+	db	'EX'		; exit editor
+	dw	CMDEX
+
+	db	'R '		; read file
+	dw	CMDR
+
+	db	'W '		; write file
+	dw	CMDW
+
+	db	'F '		; show current file name
+	dw	CMDF
+
+	db	'M '		; copy lines
+	dw	CMDM
+
+	db	'MD'		; move lines
+	dw	CMDMD
+
+	db	'D '		; delete lines
+	dw	CMDD
+
+	db	'SU'		; substitute
+	dw	CMDSU
+
+	db	0
+
+PROMPT:	db	'TED>',0	; prompt
+
+ERRCMD:	db	'Wrong command',LF,CR,0
+
+; CL command - clear buffer
+
+CMDCL:	call	GETARG		; process arguments
+	ret	c		; if error
+	call	EEXTRA		; display error if extra parameters
+	ret	c		; if error
+	call	CHKMOD		; check file modified flag
+	ret	c		; if set
+	ld	hl,0
+	ld	(FSTREC),hl	; clear record number of 1st line of text
+	ld	(CURREC),hl	; clear record number of current line
+	ld	(CURLN),hl	; clear current line
+	ld	(LSTREC),hl	; clear number of last record of text
+	ld	(LASTLN),hl	; clear last line number
+	ld	(FSTFRE),hl	; clear start record number in free list
+	ld	(NBLKS),hl	; reset work file size
+	ld	(USECNT),hl	; clear LRU count
+	xor	a
+	ld	(NUMBUF),a	; clear count of allocated buffers in memory
+	ld	(SCRX),a	; reset screen left offset
+	ld	(CURPOS),a	; clear current character index
+	ld	hl,(NUMREC)
+	ld	(NUMFRE),hl	; reset free records = total records
+	ld	hl,(MEMBOT)
+	ld	(ENDMAP),hl	; reset ENDMAP to start of free memory
+	ld	hl,(MEMTOP)
+	ld	(BFPOOL),hl	; reset BFPOOL to end of free memory
+	ret
+
+; FR command - show free space
+
+CMDFR:	ld	hl,(NUMFRE)	; free records
+	ld	a,'0'		; filler
+	call	HLDEC		; display value as decimal
+	ld	hl,MSGFRE
+	call	PUTSTR		; ' RECORDS FREE OUT OF '
+	ld	hl,(NUMREC)	; total records
+	ld	a,'0'
+	call	HLDEC		; display value as decimal
+	call	CRLF
+	call	GETARG		; process arguments
+	ret	c		; on error return
+	jp	EEXTRA		; display error if extra parameters
+
+MSGFRE:	db	' records free out of ',0
+
+; P command - show or set current text position
+
+CMDP:	call	GETARG		; process arguments
+	jr	c,cp1		; on error, display current pos and return
+	ld	a,c
+	or	a		; check arg type
+	jr	z,cp1		; if no args specified, display current pos
+	call	SETPOS		; else set position from args
+cp1:	ld	hl,LINCHR	; 'LINE '
+	call	PUTSTR
+	push	hl
+	ld	hl,(CURLN)	; line #
+	ld	a,'0'		; filler
+	call	HLDEC		; output value as decimal
+	pop	hl
+	call	PUTSTR		; 'CHAR '
+	ld	a,(CURPOS)	; char #
+	ld	l,a
+	ld	h,0
+	ld	a,'0'		; filler
+	call	HLDEC		; output value as decimal
+	call	CRLF
+	jp	EEXTRA		; display error if extra parameters
+
+SETPOS:	ld	de,(CURLN)	; else get current line into DE
+	call	GTTXP0		; get record, line, char pos + next arg
+	ret	c		; on error, return
+	ld	a,c
+	dec	a		; check arg type
+	jr	nz,sp2		; branch if no second arg specified
+	ld	bc,(NUMVAL)	; get column
+	ld	a,b
+	or	a		; ensure is in range
+	ld	b,MAXLEN-1	; else trim accordingly
+	jr	nz,sp1		; !TODO: if negative - from end?
+	ld	a,c
+	cp	MAXLEN
+	jr	nc,sp1
+	ld	b,c
+sp1:	push	bc
+	call	GETARG
+	pop	bc
+sp2:	call	SETTXP		; curr rec <- HL, curr ln <- DE, chr pos <- B
+	or	a
+	ret
+
+LINCHR:	db	'Line ',0,', Char ',0
+
+; S command, null command - enter screen editor
+
+CMDS:	call	GETARG		; process arguments
+	ret	c		; on error return
+	call	SETPOS
+	ret	c
+	call	EEXTRA		; display error if extra parameters
+	ret	c		; on error return
+	pop	hl		; pop return address
+	jp	SCRNED		; enter screen editor
+
+; EX command - exit editor
+
+CMDEX:	call	GETARG		; process arguments
+	ret	c		; on error return
+	call	EEXTRA		; display error if extra parameters
+	ret	c		; on error return
+	call	CHKMOD		; check file modified flag
+	ret	c		; return if set
+	ld	hl,EXITMS
+	call	PUTSTR
+QUIT:	call	WCLOSE		; close work file
+	call	WDELET		;  and delete it
+	jp	EXIT		; exit to system
+
+EXITMS:	db	'[Exit]',LF,CR,0
+
+; Check file modified flag and display warning if set
+
+CHKMOD:	ld	hl,FMODF
+	ld	a,(hl)		; get flag state
+	ld	(hl),0		; clear it to avoid a second warning
+	or	a
+	ret	z		; return with CY clear if not set
+	ld	hl,SAVWRN	; else display warning
+	call	PUTSTR
+	scf			; and return with CY set
+	ret
+
+SAVWRN:	db	'Didn''t you forget to Write the file?',LF,CR,0
+
+; Set text pointers:
+;   current record number <- HL
+;   current line <- DE
+;   current char index <- B
+
+SETTXP:	ld	(CURREC),hl	; store current record number
+	ld	(CURLN),de	; store current line
+	ld	a,b
+	ld	(CURPOS),a	; store current char index
+	ret
+
+; Same as GETTXP, but ensures HL is not zero (if there is some text).
+; Return CY on error.
+
+GTTXP0:	call	GETTXP
+	ret	c		; on error return
+	ld	a,h		; check record number
+	or	l
+	ret	nz		; return if not zero
+	ld	hl,(FSTREC)	; else get number of 1st record of text into HL
+	ld	a,h
+	or	l
+	ret	z		; return if zero
+	inc	de		; set line number to 1
+	ret
+
+; Get text pointers according to argument
+; On input:
+;   C = arg type, DE = line number
+; Returns:
+;   HL = record number
+;   DE = line number
+;   B  = char pos
+; CY set on error.
+
+GETTXP:	ld	hl,(CURLN)	; check current line number
+	ld	a,h
+	or	l
+	jr	nz,gtx1		; jump if not zero
+	ld	hl,(FSTREC)
+	ld	(CURREC),hl	; current record # <- first text record
+	ld	a,h
+	or	l
+	jr	z,gtx1		; jump if zero
+	ld	hl,1		; else set current line to 1
+	ld	(CURLN),hl
+gtx1:	ld	b,0		; char pos = 0
+	ld	a,c
+	cp	1		; argument type = single numeric?
+	jr	nz,gtx3		; jump if not
+	ld	de,(NUMVAL)	; else set line number in DE = numeric value
+	ld	a,(NUMD)	; check displacement flag
+	or	a
+	jp	p,gtx2		; jump if absolute or relative
+	ld	hl,(LASTLN)	; else is from end (negative),
+	call	IADD16		;  so add last line number, result in DE
+	jr	nc,gtx2		; jump if no overflow
+	ld	de,(LASTLN)	; else truncate value to last line
+gtx2:	call	FNDBUF		; find line in text buffer
+	jp	gtx9		; check for more arguments and return
+
+gtx3:	cp	2		; argument type = /str/(N1,N2)+N3?
+	jp	nz,gtx10	; jump if not
+	ld	c,0
+	ld	de,(N1)		; get N1 into DE
+	ld	a,(N1D)		; check displacement for N1
+	or	a
+	jr	nz,gtx4		; jump if not absolute
+	ld	a,(CURPOS)	; get current char index
+	ld	c,a		;  into C
+	ld	de,(CURLN)	; get current line into DE
+	jr	gtx5
+gtx4:	jp	p,gtx5		; jump if N1 displacement relative
+	ld	hl,(LASTLN)	; else is from end, add last line number
+	call	IADD16		;  result in DE
+	jr	c,gtx11		; error if overflow - 'LINE NOT FOUND'
+gtx5:	ld	a,d
+	or	e
+	jr	nz,gtx6
+	inc	de
+gtx6:	ld	hl,(LASTLN)
+	call	CPDEHL		; compare with last line number
+	jr	c,gtx11		; error if higher - 'LINE NOT FOUND'
+	ld	(N1),de		; set N1 value
+	ld	a,c
+	ld	(N1D),a		; use displacement for N1 as temp value
+	ld	de,(N2)		; get N2 value into DE
+	ld	a,(N2D)		; check displacement for N2
+	or	a
+	jr	nz,gtx7		; jump if not absolute
+	ld	de,(LASTLN)	; else get last line number into DE
+	jr	gtx8
+gtx7:	jp	p,gtx8		; jump if N2 displacement relative
+	ld	hl,(LASTLN)	; else is from end, add last line number
+	call	IADD16		;  result in DE
+	jr	c,gtx11		; error if overflow - 'LINE NOT FOUND'
+gtx8:	ld	hl,(N1)		; compare DE with N1
+	ex	de,hl
+	call	CPDEHL
+	jr	c,gtx11		; error if (old) DE < N1
+	ld	(N2),hl		; set N2 value
+	call	SEARCH		; search for ARGSTR string in N1..N2
+	jr	c,gtx11		; jump if no match found
+	push	hl
+	ld	hl,(N3)		; check N3 value
+	ld	a,h
+	or	l
+	pop	hl
+	jr	z,gtx9		; jump if zero
+	ld	hl,(N3)
+	call	IADD16		; else add it to saved line number
+	jr	c,gtx11
+	call	FNDBUF		; find line in text buffer
+	ld	b,0		; char pos <- 0
+gtx9:	call	GETARG		; process more arguments
+	ret			; return (on error with CY set)
+
+gtx10:	call	FNDBUF		; find line in text buffer
+	or	a		; return with CY clear (OK)
+	ret
+
+gtx11:	ld	hl,ERRLNF	; 'LINE NOT FOUND'
+	call	PUTSTR		; print string
+	scf			; return with CY set (error)
+	ret
+
+ERRLNF:	db	'Line not found',LF,CR,0
+
+; Search for ARGSTR string in lines N1..N2.
+; Note: N1D is not used here as displacement, but as char index
+; (initially set by the caller).
+; Returns with CY set if no match found.
+; Else returns DE = line #, HL = record #, B = char pos
+
+SEARCH:	ld	de,(N1)		; get N1 into DE
+	call	FNDBUF		; find line in text buffer
+	ld	(NXTREC),hl	; NXTREC <- next line record#
+txs1:	push	hl
+	ld	hl,(N2)
+	call	CPDEHL		; compare N1 (DE) with N2 value
+	pop	hl
+	ret	c		; return if N1 > N2 (desired end reached)
+	ld	hl,(NXTREC)	; else get next line record number into HL
+	ld	a,h
+	or	l
+	scf
+	ret	z		; return with CY set if zero (no more lines)
+	push	hl		; save record number
+	push	de		; save N1 value
+	ld	de,EDITBF	; get address of edit line buffer into DE
+	call	EXPAND		; and expand (load) that line
+	ld	a,(N1D)
+	ld	l,a
+	ld	h,0		; add char index
+	add	hl,de
+	ex	de,hl		; DE = start of text to search
+	ld	a,(EDLEN)	; get expanded line length
+	sub	2		; remove the trailing CR/LF
+	ld	b,a		; B = text length
+	ld	a,(N1D)
+	cp	b		; compare char index with text length in B
+	jr	nc,txs2		; skip match test if higher or same
+	ld	a,(ARGLEN)	; get string arg length
+	ld	c,a		;  into C
+	ld	hl,(ARGSTR)	; get string arg address into HL
+	call	MATCH		; strings @DE and @HL match?
+	jr	nc,txs3		; exit loop if they match
+txs2:	pop	de		; restore N1 value
+	pop	hl		; restore record number
+	xor	a
+	ld	(N1D),a		; else clear char index
+	inc	de		; increment DE (contains N1)
+	jr	txs1		; and loop
+
+txs3:	pop	de		; restore N1 value
+	pop	hl		; restore record number
+	ld	(N1),de		; set new N1 value (for next call)
+				;  return line number in DE
+	ld	a,(N1D)
+	add	a,b		; add char index to B
+	ld	b,a
+	xor	a		; (also clears CY)
+	ld	(N1D),a		; clear char index (for next call)
+	ret
+
+; Find line in text buffer. Starts the search from the closest pointer
+; available to the target line (1st line of text, last line of text, or
+; current line). Called with DE = line number, returns HL = record number.
+
+FNDBUF:	push	de
+	push	bc
+	ld	hl,0
+	ld	a,d
+	or	e		; check line number
+	jp	z,fb6		; if zero, return record number = 0
+	ld	hl,(LASTLN)
+	call	CPDEHL		; compare with last line number
+	jr	nc,fb1		; jump if DE <= LASTLN
+	pop	bc
+	pop	de		; discard old DE value,
+	ld	de,(LASTLN)	;  fix it to last line number
+	ld	hl,(LSTREC)	; return HL = last record of text
+	ret
+
+fb1:	ld	hl,(CURLN)
+	call	CPDEHL		; compare with current line number
+	jr	c,fb3		; jump if DE > CURLN
+	push	de
+	ex	de,hl
+	add	hl,hl
+	ex	de,hl
+	ld	hl,(CURLN)
+	call	CPDEHL
+	pop	de
+	jr	c,fb2		; jump if DE > CURLN/2
+	ld	bc,1		; else begin from the start, set line# to 1
+	ld	hl,(FSTREC)	; get number of first record of text into HL
+	jr	fb4
+
+fb2:	ld	bc,(CURLN)	; get current line into BC
+	ld	hl,(CURREC)	; get current record number into HL
+	jr	fb4
+
+fb3:	push	de
+	ld	de,(CURLN)
+	ld	hl,(LASTLN)	; add last line number
+	add	hl,de
+	pop	de
+	push	de
+	ex	de,hl
+	add	hl,hl
+	ex	de,hl
+	call	CPDEHL
+	pop	de
+	jr	nc,fb2		; jump if DE <= (CURLN+LASTLN)/2
+	ld	bc,(LASTLN)	; else get last line number into BC
+	ld	hl,(LSTREC)	; get last line record number into HL
+fb4:	ld	a,e
+	sub	c
+	ld	c,a
+	ld	a,d
+	sbc	a,b
+	ld	b,a		; BC = DE - BC (distance to target line)
+	jr	c,fb7		; jump if negative
+	or	c
+	jr	z,fb6		; return if zero (same line)
+fb5:	call	LDREC		; fetch record address into DE
+	inc	de
+	inc	de		; index into next field
+	ld	a,(de)
+	ld	l,a
+	inc	de
+	ld	a,(de)
+	ld	h,a		; traverse records
+	dec	bc		; decrement count
+	ld	a,b
+	or	c
+	jr	nz,fb5		; loop
+fb6:	pop	bc
+	pop	de
+	ret
+
+fb7:	call	LDREC		; fetch record address into DE
+	inc	de
+	inc	de
+	inc	de
+	inc	de		; index into prev field
+	ld	a,(de)
+	ld	l,a
+	inc	de
+	ld	a,(de)
+	ld	h,a		; traverse records
+	inc	bc		; increment negative count
+	ld	a,b
+	or	c
+	jr	nz,fb7		; loop
+	pop	bc
+	pop	de
+	ret
+
+; Insert a line in text buffer. Called with:
+;  HL = line record number to insert line after (zero to insert it at the 
+;       start of text buffer) 
+;  DE = address of buffer with line to store into record(s) (zero to insert     
+;       an empty line) 
+;  BC = line number corresponding to record in HL
+; Returns CY set on error.
+
+INSBUF:	push	hl
+	push	de
+	push	bc
+	ld	(OLDREC),hl	; remember old record number
+	call	ALLREC		; alloc new record
+	ld	(NEWREC),hl	; remember its number
+	ld	a,h
+	or	l
+	scf
+	jp	z,ins6		; return CY if zero (work file overflow)
+	ld	hl,(OLDREC)	; check old record number
+	ld	a,h
+	or	l
+	jr	nz,ins1		; jump if not zero (insert line after this)
+	ld	bc,(FSTREC)	; else get num of first record of text into BC
+	ld	hl,(NEWREC)
+	ld	(FSTREC),hl	; store number of new first record
+	jr	ins2
+
+ins1:	call	LDRECD		; get record address into DE
+	inc	de		; skip continuation record field
+	inc	de
+	ld	a,(de)		; get next record number into BC
+	ld	c,a
+	inc	de
+	ld	a,(de)
+	ld	b,a
+	ld	hl,(NEWREC)	; get new record #
+	ld	a,h		; store new next record number here (link it)
+	ld	(de),a
+	dec	de
+	ld	a,l
+	ld	(de),a
+ins2:	ld	l,c		; get old first/next record number into HL
+	ld	h,b
+	ld	a,h
+	or	l
+	jr	nz,ins3		; jump if not zero
+	ld	hl,(NEWREC)
+	ld	(LSTREC),hl	; else set new last record number
+	jr	ins4
+
+ins3:	call	LDRECD		; get (next) record address into DE
+	inc	de
+	inc	de
+	inc	de
+	inc	de
+	ld	hl,(NEWREC)
+	ld	a,l		; store prev record number
+	ld	(de),a
+	inc	de
+	ld	a,h
+	ld	(de),a
+ins4:	pop	de		; get old line # into DE
+	push	de
+	ld	hl,(CURLN)	; get current line # into HL
+	ex	de,hl
+	call	CPDEHL		; compare line numbers
+	jr	nc,ins5		; jump if old line # >= CURLN
+	ex	de,hl
+	inc	hl
+	ld	(CURLN),hl	; else increment current line number
+ins5:	ld	hl,(LASTLN)	; increment number of last line (line count)
+	inc	hl
+	ld	(LASTLN),hl
+	ld	hl,(NEWREC)	; get new record number again into HL
+	call	LDRECD		; get record address into DE
+	xor	a
+	ld	(de),a
+	inc	de		; clear continuation record number field
+	ld	(de),a
+	inc	de
+	ld	a,c
+	ld	(de),a		; store next record number
+	inc	de
+	ld	a,b
+	ld	(de),a
+	inc	de
+	ld	hl,(OLDREC)
+	ld	a,l
+	ld	(de),a		; store prev record number - now is fully linked
+	inc	de
+	ld	a,h
+	ld	(de),a
+	pop	bc
+	pop	de
+	push	de		; restore DE (line buf addr) from stack frame
+	push	bc
+	ld	hl,(NEWREC)
+	call	STORE		; store line into (this) record(s)
+	;jr	c,ins6		; on error return with CY set
+	;or	a		; CY clear = no error
+ins6:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Delete line from text buffer. Called with HL = record #, BC = line #
+
+DELBUF:	push	hl
+	push	de
+	push	bc
+	push	hl		; save current record number
+	call	LDREC		; fetch record address into DE
+	inc	de		; skip continuation record#
+	inc	de
+	ld	a,(de)
+	ld	l,a		; get next record number
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	inc	de
+	ld	(NXTREC),hl	; NXTREC <- next line record number
+	ld	a,(de)
+	ld	l,a		; get prev record number
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	ld	(PRVREC),hl	; PRVREC <- prev line record number
+	pop	de		; pop current record number
+	call	FREREC		; enter the record(s) into the free list
+	ld	hl,(PRVREC)	; get prev record# into HL
+	ld	a,h
+	or	l
+	jr	nz,del1		; jump if not zero (not the first line of text)
+	ld	hl,(NXTREC)
+	ld	(FSTREC),hl	; else set new 1st rec# of text to next field
+	jr	del2
+
+del1:	call	LDRECD		; get address of prev record into DE
+	ld	hl,(NXTREC)	; now get next record# into HL
+	inc	de
+	inc	de
+	ld	a,l
+	ld	(de),a		; store next record number (unlink old record)
+	inc	de
+	ld	a,h
+	ld	(de),a
+del2:	ld	a,h		; check next record number
+	or	l
+	jr	nz,del3		; jump if not zero (not last line of text)
+	ld	hl,(PRVREC)
+	ld	(LSTREC),hl	; else store new last record number
+	jr	del4
+
+del3:	call	LDRECD		; get record address into DE
+	ld	hl,(PRVREC)	; get prev record# into HL
+	inc	de
+	inc	de
+	inc	de
+	inc	de
+	ld	a,l
+	ld	(de),a		; store prev record number (unlink old record)
+	inc	de
+	ld	a,h
+	ld	(de),a
+del4:	ld	e,c		; get line number into DE
+	ld	d,b
+	ld	hl,(CURLN)
+	call	CPDEHL		; compare current line number with DE
+	jr	c,del6		; jump if DE higher
+	jr	nz,del5		; jump if DE lower
+	xor	a
+	ld	(CURPOS),a	; else clear character pos
+	ld	hl,(NXTREC)
+	ld	(CURREC),hl	; set current record number to next record
+	ld	a,h
+	or	l
+	jr	nz,del6		; jump if not zero
+	ld	hl,(PRVREC)
+	ld	(CURREC),hl	; else set current record number to prev record
+del5:	ld	hl,(CURLN)
+	dec	hl		; decrement current line number (line count)
+	ld	(CURLN),hl
+del6:	ld	hl,(LASTLN)	; decrement number of last line
+	dec	hl
+	ld	(LASTLN),hl
+	ld	a,1
+	ld	(FMODF),a
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Expand line stored in record(s) to a buffer.
+; Called with DE = buffer address, HL = record number
+
+EXPAND:	push	hl
+	push	de
+	push	bc
+	push	de		; push dest ptr
+	ld	(EDREC),hl	; EDREC <- record#
+	call	LDREC		; fetch record address into DE
+	ld	a,(de)
+	ld	l,a		; HL <- continuation record number
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	inc	de
+	push	hl		; save continuation record number
+	ld	a,(de)
+	ld	l,a
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	inc	de
+	ld	(NXTREC),hl	; NXTREC <- next line record#
+	ld	a,(de)
+	ld	l,a
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	inc	de
+	ld	(PRVREC),hl	; PRVREC <- prev line record#
+	pop	hl		; pop continuation record number
+	ld	b,10		; get head-record text field size into B
+	ld	c,0		; C = total line length
+exp1:	ex	(sp),hl		; push cont rec#, pop dest ptr
+exp2:	ld	a,(de)		; get byte from text record
+	inc	de
+	or	a
+	jp	p,exp4		; jump if hi-bit not set
+	and	7Fh		; else is a compressed space, lo 7 bits = cnt
+exp3:	ld	(hl),' '	; store space(s)
+	inc	hl
+	inc	c
+	dec	a
+	jr	nz,exp3		; loop
+	jr	exp5
+exp4:	cp	TAB		; TAB?
+	jr	nz,exp43	; branch if not
+	ld	a,c
+	or	7
+	inc	a
+	sub	c
+	dec	a
+	jr	z,exp42
+exp41:	ld	(hl),SSPC	; else store a sequence of soft spaces
+	inc	hl
+	inc	c
+	dec	a
+	jr	nz,exp41
+exp42:	ld	(hl),TAB	; ended by a tab
+	inc	hl
+	inc	c
+	jr	exp5
+exp43:	ld	(hl),a		; store character
+	inc	hl
+	inc	c
+	cp	CR		; CR? (end of line)
+	jr	z,exp7		; if yes, add a LF and return
+exp5:	djnz	exp2		; loop until whole record has been processed
+	ex	(sp),hl		; push dest ptr, pop cont rec#
+	ld	a,h
+	or	l		; any continuation record?
+	jr	z,exp6		; jump if not
+	call	LDREC		; else get it
+	ld	b,14		; B <- continuation record text field size
+	ld	a,(de)
+	ld	l,a		; HL <- continuation record number
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	inc	de
+	jr	exp1		; loop to process this record
+exp6:	ex	(sp),hl		; push cont rec#, pop dest ptr
+	ld	(hl),CR		; CR
+	inc	c
+	inc	hl
+exp7:	ld	(hl),LF		; LF
+	inc	hl
+	inc	c
+	ld	a,c
+	ld	(EDLEN),a	; store length in EDLEN
+	pop	de		; discard dest ptr
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Store line into record(s). Called with:
+;   HL = record number to store the line into
+;   DE = address of line to store (zero to store an empty line)
+; Returns CY set on error.
+
+STORE:	push	hl
+	push	de
+	push	bc
+	ld	c,e
+	ld	b,d		; get text line address into BC
+	ld	(EDREC),hl	; store record # of current line into EDREC
+	ld	(OLDREC),hl
+	call	LDRECD		; get record address into DE
+	push	de		; save this record address
+	inc	de		; skip continuation record number field
+	inc	de
+	ld	a,(de)
+	ld	l,a		; load next record number into HL
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	inc	de
+	ld	(NXTREC),hl	; store next record number in NXTREC
+	ld	a,(de)
+	ld	l,a		; load prev record number into HL
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	inc	de
+	ld	(PRVREC),hl	; store prev record number in PRVREC
+	ld	l,c		; get text line address into HL
+	ld	h,b
+	ld	b,10		; 10 = head record text field size
+	xor	a
+	ld	(EDLEN),a	; clear current line length
+	ld	a,h
+	or	l		; storing empty line?
+	jr	z,sto3		; jump if yes
+sto1:	ld	a,(EDLEN)
+	cp	MAXLEN		; max line length
+	jr	nc,sto3		; jump if EDLEN >= max length
+	ld	a,(hl)		; get char
+	inc	hl
+	cp	SSPC		; soft space?
+	jr	z,sto1		; ignore
+	and	7Fh		; strip hi-bit, leave ASCII code
+	cp	7Fh		; DEL?
+	jr	z,sto1		; loop if yes - ignore
+	cp	0Ch		; ^L?
+	jr	z,sto1		; ignore as well
+	cp	' '		; printable char?
+	jr	nc,sto5		; jump if yes
+	or	a		; null?
+	jr	z,sto1		; ignore
+	cp	CR		; CR?
+	jr	z,sto1		; ignore
+	cp	TAB		; TAB?
+	jr	nz,sto2		; jump if not
+	ld	c,a
+	ld	a,(EDLEN)
+	or	7
+	inc	a		; adjust length for tab expansion
+	ld	(EDLEN),a
+	ld	a,c
+	jr	sto8
+sto2:	cp	LF		; LF?
+	jr	z,sto3		; set end of line if yes
+	cp	0Ch		; ^L?
+	jr	z,sto3
+	cp	0Bh		; ^K?
+	jr	nz,sto4		; any other control char becomes '?'
+sto3:	ld	a,CR		; CR
+	jr	sto7
+sto4:	ld	a,'?'		; '?'
+	jr	sto7
+sto5:	jr	nz,sto7		; jump if not space
+	ld	c,0		; reg C will count spaces
+sto6:	inc	c
+	ld	a,(hl)
+	inc	hl
+	cp	' '		; space?
+	jr	z,sto6		; keep compressing if yes, keep length in C
+	dec	hl
+	ld	a,(EDLEN)
+	add	a,c
+	ld	(EDLEN),a
+	ld	a,c
+	or	80h		; set hi-bit (compressed space)
+	jr	sto8
+sto7:	ld	c,a
+	ld	a,(EDLEN)
+	inc	a
+	ld	(EDLEN),a
+	ld	a,c
+sto8:	inc	b
+	dec	b		; end of this record?
+	jr	nz,sto11	; jump if not
+	cp	CR		; last char is a CR?
+	jr	z,sto12		; return if yes, no need to store it
+	ld	c,a		; remember char
+	ex	(sp),hl		; push line ptr, pop saved record address
+	ld	e,(hl)		; get cont record # from saved record address
+	inc	hl
+	ld	d,(hl)
+	ld	a,d
+	or	e
+	ex	de,hl
+	jr	nz,sto9		; jump if not zero, use that
+	call	ALLREC		; else alloc new record
+	push	hl		; remember it
+	ld	hl,(OLDREC)
+	call	LDRECD		; get record address into DE
+	pop	hl		; pop new record number
+	ld	a,l
+	ld	(de),a		; store continuation record number
+	inc	de
+	ld	a,h
+	ld	(de),a
+sto9:	ld	(OLDREC),hl
+	ld	a,h		; zero continuation record number?
+	or	l
+	jr	nz,sto10	; jump if not
+	pop	de
+	scf			; else set error flag
+	jr	sto13		; and return
+
+sto10:	call	LDRECD		; get record address into DE
+	ld	l,e		; and into HL
+	ld	h,d
+	ex	(sp),hl		; save new record address, restore line ptr
+	inc	de		; skip continuation record field
+	inc	de
+	ld	b,14		; 14 = continuation record text field size
+	ld	a,c		; recall last char
+sto11:	ld	(de),a		; store char
+	inc	de
+	dec	b		; decrement length
+	cp	CR		; end of line?
+	jp	nz,sto1		; loop back if not
+sto12:	pop	hl		; pop new record address
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)		; get continuation record number into DE
+	ld	a,d
+	or	e		; already zero?
+	jr	z,sto13		; return if yes
+	ld	(hl),0		; else clear it and free the record
+	dec	hl
+	ld	(hl),0
+	call	FREREC		; enter the record(s) into the free list
+	or	a		; clear CY (no error)
+sto13:	ld	a,1
+	ld	(FMODF),a	; set file modified flag
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Alloc new record, returns HL = record number, DE = its address
+; Returns HL = 0 if work file overflows.
+
+ALLREC:	push	bc
+	ld	hl,(FSTFRE)	; get first free record number into HL
+	ld	a,h
+	or	l
+	jr	z,alc1		; jump if zero (no free records in memory)
+	call	LDRECD		; else get record address into DE
+	push	hl		; save record number
+	ld	a,(de)
+	ld	l,a
+	inc	de
+	ld	a,(de)
+	ld	h,a
+	dec	de
+	ld	(FSTFRE),hl	; new free record list head is now next record
+	pop	hl		; pop record number
+	jp	alc5
+
+alc1:	ld	de,(WFBLKS)	; WFBLKS is max work file size in blocks
+	ld	hl,(NBLKS)
+	call	CPDEHL		; NBLKS >= WFBLKS?
+	ld	hl,0
+	jp	nc,alc6		; return with HL = 0 if work file overflow
+	ld	de,(BFPOOL)	; get ptr to buffer pool into DE
+	ld	hl,(ENDMAP)	; get ptr to block map into HL
+	call	CPDEHL		; compare pointers
+	jr	c,alc2		; jump if BFPOOL > ENDMAP (still some space)
+	ex	de,hl		; else point to lowest buffer in memory
+	call	SWPOUT		;  and swap it out to make space for blk map
+	ld	de,BUFSIZ
+	add	hl,de
+	ld	(BFPOOL),hl	; buffer freed
+	ld	hl,NUMBUF	; decrement count of buffers in memory
+	dec	(hl)
+alc2:	ld	hl,(ENDMAP)
+	push	hl		; remember block map address
+	inc	hl		; inc block map ptr (byte allocated)
+	ld	(ENDMAP),hl
+	call	NEWBUF		; alloc new buffer
+	pop	hl		; pop block map address
+	ld	(hl),c		; set buffer number
+	ld	hl,(USECNT)
+	ld	a,l
+	ld	(de),a		; set 1st word to LRU count
+	inc	de
+	ld	a,h
+	or	80h		; set 'dirty' bit
+	ld	(de),a
+	inc	de
+	ld	hl,(NBLKS)	; get next free block number into HL
+	ld	a,l
+	ld	(de),a		; set 2nd word to disk block number
+	inc	de
+	ld	a,h
+	ld	(de),a
+	inc	de
+	inc	hl
+	ld	(NBLKS),hl	; increment count of allocated file blocks
+	dec	hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl		; *32 = starting record number of this block
+	ld	(FSTFRE),hl	; set new free record list head
+	ld	a,h
+	or	l
+	jr	nz,alc3		; jump if not zero
+	push	hl
+	inc	hl
+	ld	(FSTFRE),hl	; else list starts at 1
+	ld	hl,(NUMFRE)	; decrement number of free records
+	dec	hl
+	ld	(NUMFRE),hl
+	pop	hl
+alc3:	ld	c,30		; C = record count
+	ex	de,hl		; HL = start of records area, DE = record #
+alc4:	inc	de
+	ld	(hl),e
+	inc	hl
+	ld	(hl),d		; setup link field (link all free records)
+	push	de
+	ld	de,15
+	add	hl,de		; point to next record
+	pop	de
+	dec	c
+	jr	nz,alc4		; loop for records 0..29
+	ld	(hl),0
+	inc	hl
+	ld	(hl),0		; 30th record is end of free list
+	push	de
+	ld	de,15
+	add	hl,de		; point to record 31
+	pop	de
+	inc	de		; DE is now number of 31th record
+	ex	de,hl		;  (newly allocated one on this block)
+alc5:	xor	a
+	ld	(de),a		; clear continuation record# of allocated rec
+	inc	de
+	ld	(de),a
+	dec	de
+	push	hl
+	ld	hl,(NUMFRE)	; decrement number of free records
+	dec	hl
+	ld	(NUMFRE),hl
+	pop	hl
+alc6:	pop	bc
+	ret
+
+; Enters the record in DE and any continuation ones into the free record list
+
+FREREC:	push	hl
+	push	de
+	push	bc
+	ld	hl,(FSTFRE)	; get start free record number into HL
+	ld	(FSTFRE),de	; set new free record list head
+	push	hl		; save old start free record number
+frc1:	ld	hl,(NUMFRE)
+	inc	hl		; increment number of free records
+	ld	(NUMFRE),hl
+	ex	de,hl
+	call	LDRECD		; get record address into DE
+	ex	de,hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)		; DE = link field (next record number)
+	ld	a,d
+	or	e		; any continuation record?
+	jr	nz,frc1		; traverse it if yes
+	ex	de,hl		; record address +1 in DE
+	pop	hl		; pop old start free record number
+	ex	de,hl		;  into DE, record address +1 in HL
+	ld	(hl),d
+	dec	hl
+	ld	(hl),e		; link record into the old free list
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Given record number in HL, return its address in DE.
+; Marks the containing buffer as 'dirty'.
+
+LDRECD:	push	bc
+	ld	b,80h		; hi-bit set = 'dirty' flag
+	jr	lr1
+
+; Given record number in HL, return its address in DE
+; If the block is swapped out, it gets swapped back in.
+; No new buffer allocation happens.
+
+LDREC:	push	bc
+	ld	b,0		; hi-bit clear (will keep existing 'dirty'
+lr1:	push	hl		;  bit, though)
+	ld	a,h
+	or	l		; zero record?
+	jr	z,lr2		; error if yes
+	xor	a
+	add	hl,hl		; HL shl 3 then swap bytes = HL shr 5 = HL / 32
+	rla
+	add	hl,hl
+	rla
+	add	hl,hl
+	rla
+	ld	l,h
+	ld	h,a		; HL / 32 (obtain block number)
+	ld	de,(NBLKS)
+	call	CPDEHL		; value >= allocated disk blocks?
+	jr	c,lr3		; jump if not
+lr2:	ld	hl,8		; else exit with fatal error 8:
+	jp	FATAL		;  work file overflow
+
+lr3:	ex	de,hl		; get block number into DE
+	ld	hl,(MEMBOT)
+	add	hl,de		; add start of free mem (index into blk map)
+	ld	a,(hl)		; get byte from block map
+	or	a
+	jr	nz,lr4		; jump if not zero (block in memory)
+	push	hl		; save block map address
+	push	de		; save block number
+	call	NEWBUF		; else alloc new buffer
+	ex	de,hl		; get buffer address into HL
+	pop	de		; pop block number
+	call	WFREAD		; swap block in
+	inc	hl
+	inc	hl
+	ld	(hl),e		; set 2nd word of buffer to block number
+	inc	hl
+	ld	(hl),d
+	dec	hl
+	dec	hl
+	dec	hl
+	ex	(sp),hl		; push buffer address, pop block map address
+	ld	(hl),c		; set byte in block map (block swapped in)
+	pop	hl		; pop buffer address
+	jr	lr5
+
+lr4:	ld	h,a		; *256
+	add	a,a		; *2
+	ld	l,a
+	ld	a,h
+	adc	a,0
+	ld	h,a		; *258
+	add	hl,hl		; *516. (BUFSIZ)
+	ex	de,hl
+	ld	hl,(MEMTOP)	; get hi-mem address into HL
+	or	a
+	sbc	hl,de		; obtain start address of memory buffer
+lr5:	push	hl
+	ld	hl,(USECNT)
+	inc	hl		; increment LRU count
+	res	7,h		; clear hi-bit ('dirty' flag) or LRU count
+	ld	(USECNT),hl
+	ld	c,l
+	ld	a,b
+	or	h		; add 'dirty' flag (if set) to LRU count
+	ld	b,a
+	pop	hl
+	ld	(hl),c		; store LRU count
+	inc	hl
+	ld	a,(hl)
+	and	80h
+	or	b		; OR 'dirty' bit on 1st word
+	ld	(hl),a
+	inc	hl
+	inc	hl
+	inc	hl		; skip head bytes, HL = start of record area
+	pop	de		; original HL value (record number)
+	push	de		; push it back
+	ld	a,e
+	and	1Fh		; mask low 5 bits (leave relative record #)
+	ld	e,a
+	ld	d,0
+	ex	de,hl
+	add	hl,hl		; *2
+	add	hl,hl		; *4
+	add	hl,hl		; *8
+	add	hl,hl		; *16 (record offset)
+	add	hl,de		; index into block
+	ex	de,hl		; DE = record addr
+	pop	hl		; HL = orig record number
+	pop	bc
+	ret
+
+; Alloc new memory buffer, swaps out oldest if not enough space.
+; Returns buffer number in C, its address in DE.
+
+NEWBUF:	push	hl
+	push	bc
+	ld	a,(NUMBUF)	; get number of buffers in memory
+	ld	c,a		;  into C
+	ld	hl,(BFPOOL)	; get ptr to buffer pool into HL
+	ld	de,-BUFSIZ
+	add	hl,de		; try to allocate one more buffer
+	ld	de,(ENDMAP)	; check for collision with block map ptr
+	call	CPDEHL		; HL >= ENDMAP?
+	jr	nc,nb3		; jump if yes, we have still enough space
+	ld	b,c		; else get number of buffers into B
+	ld	hl,(BFPOOL)	; get ptr to buffer pool again into HL
+	ld	e,l		;  and into DE
+	ld	d,h
+nb1:	push	bc
+	ld	bc,BUFSIZ
+	ex	de,hl
+	add	hl,bc		; point to next buffer
+	ex	de,hl
+	pop	bc
+	dec	b		; decrement buffer number
+	jr	z,nb2		; jump if zero
+	inc	hl
+	inc	de
+	ld	a,(de)
+	cp	(hl)		; compare LRU counts
+	dec	hl
+	dec	de
+	jr	nc,nb1		; loop if (DE) >= (HL) (DE is newer/dirty)
+	ld	a,(de)
+	cp	(hl)
+	jr	nc,nb1
+	ld	l,e
+	ld	h,d
+	ld	c,b		; buffer number in C
+	jr	nb1		; loop
+nb2:	call	SWPOUT		; swap block out
+	jr	nb4		;  and return
+
+nb3:	ld	(BFPOOL),hl	; store new start address of buffer pool
+	ld	a,(NUMBUF)
+	inc	a		; increment count of allocated buffers
+	ld	(NUMBUF),a
+	inc	c		; C = new buffer number
+nb4:	ex	de,hl		; DE = buffer address
+	ld	a,c
+	pop	bc
+	ld	c,a
+	pop	hl
+	ret
+
+; Swap block out, called with HL = start of 516-byte memory buffer.
+; Sets the corresponding byte in block map area to zero
+
+SWPOUT:	push	de
+	inc	hl
+	ld	a,(hl)		; get 'dirty' bit
+	inc	hl
+	ld	e,(hl)		; get second word into DE (block number)
+	inc	hl
+	ld	d,(hl)
+	dec	hl
+	dec	hl
+	dec	hl
+	rla			; check 'dirty' bit
+	call	c,WFWRIT	; write block only if bit set
+	push	hl
+	ld	hl,(MEMBOT)
+	add	hl,de		; index into blk map
+	ld	(hl),0		; clear byte (block swapped out)
+	pop	hl
+	pop	de
+	ret
+
+; Write block to temp work file. Clears 'dirty' bit.
+; HL = 516-byte buffer address
+
+WFWRIT:	push	hl
+	inc	hl
+	inc	hl
+	ld	e,(hl)		; 2nd word contains block number
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	call	FWRITE		; write 512-byte block
+	jr	c,wfw1
+	pop	hl
+	inc	hl
+	res	7,(hl)		; clear 'dirty' bit
+	dec	hl
+	ret
+wfw1:	ld	hl,10		; fatal error 10: work file write error
+	jp	FATAL
+
+; Read block from temp work file. Clears 'dirty' bit.
+; HL = 516-byte buffer address (disk block address is at HL+4)
+; DE = block number
+
+WFREAD:	push	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	call	FREAD		; read 512-byte block
+	jr	c,wfr1
+	pop	hl
+	inc	hl
+	res	7,(hl)		; clear 'dirty' bit
+	dec	hl
+	ret
+wfr1:	ld	hl,9		; fatal error 9: work file read error
+	jp	FATAL
+
+; Work file overflow handler
+
+WFOV:	call	CRLF
+	ld	hl,ERRWFO	; '*WORK FILE OVERFLOW!'
+	call	PUTSTR		; print string
+	ld	hl,WFOVFL
+	inc	(hl)		; set work file overflow flag
+	jp	MLOOP		; loop back to editor start
+
+ERRWFO:	db	'*Work file overflow',LF,CR,0
+
+; Fatal error handler - display message and exit
+
+FATAL:	push	hl
+	ld	hl,ERRBAD	; '*FATAL ERROR '
+	call	PUTSTR		; output string
+	pop	hl
+	ld	a,'0'		; filler
+	call	HLDEC		; display error code
+	call	CRLF
+	jp	QUIT		; exit
+
+ERRBAD:	db	'*Fatal error ',0
+
+; Process command argument(s)
+; Returns argument type in C and in ARGTYP:
+;   0 = no argument
+;   1 = single numeric
+;   2 = /str/(N1,N2)+N3
+;   3 = string
+;   ...
+; Returns numeric argument in NUMVAL
+; Returns CY on error
+
+GETARG:	push	hl
+	push	de
+	ld	c,0		; argument type defaults to no args
+	ld	de,0		; numeric value defaults to zero
+	ld	hl,(CMDPTR)	; get pointer to command into HL
+skip1:	ld	a,(hl)		; get char from command
+	inc	hl
+	cp	' '		; space?
+	jr	z,skip1		; skip it if yes
+	dec	hl		; back up to last char
+	cp	','		; comma?
+	jr	z,skip2		; jump if yes
+	cp	CR		; CR - end of command?
+	jr	z,gta7		; return OK if yes
+	call	NEXPR		; process numeric expression
+	jr	c,gta8		; on error return
+	jr	nz,gta1		; jump if not a number
+	ld	c,1		; else set argument type to 1 (numeric)
+	jr	skip2		; skip any trailing spaces and return
+
+gta1:	call	CKDSTR		; look for delimited string
+	jr	c,gta8		; jump if error
+	jr	z,gta2		; jump if alphanumeric
+	ld	a,b
+	ld	(ARGLEN),a	; store string arg length
+	ld	(ARGSTR),de	; store string arg address
+	call	GETPAR		; process argument of type (N1,N2)+N3
+	jr	c,gta8		; on error return with CY set
+	jr	skip2
+
+gta2:	push	de
+	ld	de,STRBUF	; get arg string buffer address into DE
+gta3:	ld	a,(hl)
+	ld	(de),a		; store byte
+	cp	'['		; '[' ?
+	jr	nz,gta5		; jump if not
+gta4:	inc	hl		; else advance pointers
+	inc	de
+	ld	a,(hl)
+	ld	(de),a		; copy bytes
+	cp	CR		; until CR
+	jr	z,gta6
+	cp	']'		; or until closing ']' found
+	jr	nz,gta4		; loop
+gta5:	cp	' '		; space?
+	jr	z,gta6		; jump if yes (ends the word)
+	cp	','		; ',' ?
+	jr	z,gta6		; jump if yes (also word/string delimiter)
+	cp	CR		; CR?
+	jr	z,gta6		; jump if yes (also ends)
+	inc	hl		; else advance pointers
+	inc	de
+	jr	gta3		; and loop
+gta6:	ld	a,LF
+	ld	(de),a		; append LF
+	pop	de
+	ld	c,3		; set argument type to 3
+skip2:	ld	a,(hl)
+	inc	hl
+	cp	' '		; space?
+	jr	z,skip2		; skip it if yes
+	dec	hl		; back up to last char
+	cp	','		; comma?
+	jr	nz,gta7		; return if not
+	inc	hl		; else advance pointer past comma before ret
+gta7:	ld	(CMDPTR),hl	; save command line pointer
+	or	a		; clear CY (no error)
+gta8:	ld	a,c
+	ld	(ARGTYP),a	; store arg type in ARGTYP
+	ld	(NUMVAL),de	; store numeric value in NUMVAL
+	pop	de
+	pop	hl
+	ret
+
+; Check for extra parameters and output error message if there are any.
+; Returns with CY set on error.
+
+EEXTRA:	push	hl
+	ld	a,(ARGTYP)	; check argument type
+	or	a
+	jr	nz,eex2		; error if not zero - EXTRA PARAMETER
+	ld	hl,(CMDPTR)	; else get pointer to command into HL
+eex1:	ld	a,(hl)
+	inc	hl
+	cp	' '		; space?
+	jr	z,eex1		; skip it if yes
+	dec	hl
+	cp	CR		; CR?
+	jr	z,eex3		; return with CY clear if yes
+eex2:	ld	hl,ERREXP	; else error - 'EXTRA PARAMETER'
+	call	PUTSTR		; output string
+	scf			; CY set = error
+eex3:	pop	hl
+	ret
+
+ERREXP:	db	'Extra parameter',LF,CR,0
+
+; Skip spaces and check for delimited string @HL.
+;  - if no valid delimited string (e.g. alphanumeric, end of string,
+;    '[', '*', etc.) return Z.
+;  - if valid delimited string found, return NZ.
+;  - else return error (CY set), e.g. no closing delimiter found.
+
+CKDSTR:	ld	a,(hl)
+	inc	hl
+	cp	' '		; space?
+	jr	z,CKDSTR	; skip it if yes
+	dec	hl
+	cp	CR		; CR - end of command?
+	ret	z		; return Z if yes
+	cp	'*'		; same for '*'
+	ret	z
+	cp	'.'		; and '.'
+	ret	z
+	cp	'0'
+	jr	c,dlm1
+	cp	'9'+1
+	jr	c,dlm2
+	cp	'@'		; >= '@'?
+	jr	nc,dlm2
+dlm1:	ld	c,a		; get delimiter into C
+	inc	hl
+	call	GTDSTR		; get delimited string
+	ret	c		; return if error (no delimiter found)
+	or	0FFh		; else return NZ
+	ret
+dlm2:	xor	a		; return Z flag set
+	ret
+
+; Get string delimited by C.
+; Returns string length in B, start address in DE.
+
+GTDSTR:	ld	e,l		; remember this index
+	ld	d,h
+	ld	b,0		; B = length
+gtd1:	ld	a,(hl)
+	cp	CR		; CR?
+	jr	nz,gtd2		; jump if not
+	ld	a,c
+	ld	(MISCHR),a	; else store missing char
+	ld	hl,ERRMIS	;  'MISSING "X"'
+	call	PUTSTR		;  display error
+	scf
+	ret			;   and return with CY set
+gtd2:	inc	hl
+	inc	b
+	cp	c		; delimiter found?
+	jr	nz,gtd1		; keep looking if not
+	dec	b		; string length in B
+	or	a		; CY clear means OK
+	ret
+
+ERRMIS:	db	'Missing "'
+MISCHR:	db	'X"',LF,CR,0
+
+; Get value or value pair in parenthesis + optional offset:
+;  (N) or (N1,N2) or (,N2) or (N1,N2)+N3 etc.
+; Sets argument type on C to 2.
+; Returns CY set on error.
+
+GETPAR:	push	de
+	xor	a
+	ld	(N1D),a		; default N1 displacement = absolute
+	ld	(N2D),a		; default N2 displacement = absolute
+	ld	a,(hl)
+	cp	'('
+	jr	nz,gtp4
+	inc	hl
+	call	NEXPR		; process numeric expression
+	jr	c,gtp6		; if error, return with CY set
+	jr	nz,gtp1		; if not a number
+	ld	(N1),de		; N1 <- value
+	ld	a,(NUMD)
+	ld	(N1D),a		; N1D <- displacement flag
+gtp1:	ld	a,(hl)
+	cp	','
+	jr	nz,gtp2
+	inc	hl
+	call	NEXPR		; process numeric expression
+	jr	c,gtp6		; if error, return with CY set
+	jr	nz,gtp2		; if not a number
+	ld	(N2),de		; N2 <- value
+	ld	a,(NUMD)
+	ld	(N2D),a		; N2D <- displacement flag
+gtp2:	ld	a,(hl)
+	cp	')'
+	jr	z,gtp3
+	ld	a,')'
+	ld	(MISCHR),a	; store missing char
+	ld	hl,ERRMIS	; error - 'MISSING "X"'
+	call	PUTSTR		; output string
+	scf
+	pop	de
+	ret
+
+gtp3:	inc	hl
+gtp4:	call	NEXPR		; process numeric expression
+	jr	c,gtp6		; if error, return with CY set
+	jr	nz,gtp5		; if not a number
+	ld	a,(NUMD)	; check displacement flag
+	or	a
+	jp	p,gtp5		; jump if absolute or relative
+	ld	hl,ERRILD	; if from end, error - 'ILLEGAL DISPLACEMENT'
+	call	PUTSTR		; output string
+	scf
+	pop	de
+	ret			; and return
+
+gtp5:	ld	(N3),de		; N3 <- value
+	ld	c,2		; set argument type
+	or	a		; clear CY (means OK)
+gtp6:	pop	de
+	ret
+
+ERRILD:	db	'Illegal displacement',LF,CR,0
+
+; Process simple numeric expression, string @HL.
+; Returns result in DE.
+; Returns CY set on error, NZ if not a number.
+
+NEXPR:	push	bc
+	ld	c,0		; assume positive number
+	ld	de,0		; initialize result
+	xor	a
+	ld	(NUMD),a	; init displacement flag, assume absolute
+	ld	a,(hl)		; check char
+	cp	'$'		; is '$'?
+	jr	nz,nexp1	; jump if not
+	inc	hl		; else advance pointer
+	ld	a,-1
+	ld	(NUMD),a	;  and set displacement flag to -1 (from end)
+	jr	nexp6
+nexp1:	ld	a,(hl)
+	cp	'+'		; '+' sign?
+	jr	z,nexp2
+	cp	'-'		; '-' sign?
+	jr	nz,nexp3	; jump if not
+	ld	c,-1		; else set negative flag in C
+nexp2:	ld	a,1
+	ld	(NUMD),a	;  and displacement flag to 1 (relative)
+	jp	nexp7
+
+nexp3:	ld	a,(hl)
+	cp	'0'		; check for ASCII digit
+	jr	c,nexp12	; return if not
+	cp	'9'+1
+	jr	nc,nexp12
+	ld	a,1
+	ld	(NUMD),a	; set displacement flag to 1 (relative)
+nexp4:	push	de		; save current value
+	call	DECBIN		; convert string @HL to binary value in DE
+	jr	c,nexp9
+	ld	a,d		; check result
+	or	a
+	jp	m,nexp9		; error if negative
+	ld	a,c
+	or	a		; check sign flag in C
+	jp	p,nexp5		; jump if positive
+	ld	a,e
+	cpl
+	ld	e,a
+	ld	a,d
+	cpl
+	ld	d,a
+	inc	de		; else negate result
+nexp5:	ex	(sp),hl		; push HL, pop prev result into HL
+	call	IADD16		; add DE to previous result, result in DE
+	pop	hl
+	jr	c,nexp10	; error if overflow
+nexp6:	ld	c,0		; clear sign flag
+	ld	a,(hl)
+	cp	'+'		; see if expression continues
+	jr	z,nexp7
+	cp	'-'
+	jr	nz,nexp11	; if not, return
+	ld	a,c
+	cpl
+	ld	c,a
+nexp7:	inc	hl
+	ld	a,(hl)
+	cp	'0'		; check for ASCII digit
+	jr	c,nexp8		; error if not
+	cp	'9'+1
+	jr	c,nexp4		; else loop to process number
+
+nexp8:	push	hl
+	ld	hl,ERRNEX	; 'NUMBER EXPECTED AFTER "+" OR "-"'
+	call	PUTSTR		; output string
+	pop	hl
+	pop	bc
+	scf			; CY set means error
+	ret
+
+nexp9:	pop	de
+nexp10:	push	hl
+	ld	hl,ERRNOV	; 'NUMBER OVERFLOW'
+	call	PUTSTR		; output string
+	pop	hl
+	pop	bc
+	scf			; CY set means error
+	ret
+
+nexp11:	xor	a		; return with CY clear and Z set
+	pop	bc
+	ret
+
+nexp12:	or	0FFh		; CY clear, NZ means not a number
+	pop	bc
+	ret
+
+ERRNEX:	db	'Number expected after "+" or "-"',LF,CR,0
+ERRNOV:	db	'Number overflow',LF,CR,0
+
+; Match strings, called with:
+;   C  = length 1
+;   HL = address of string 1 (search string)
+;   B  = length 2
+;   DE = address of string 2 (text to search)
+; Returns:
+;   On match, B = offset from the start of string 2 where text was found
+;   CY set means no match found.
+
+MATCH:	push	hl
+	push	de
+	push	bc
+ms1:	ld	a,c		; check length 1
+	or	a
+	jr	z,ms6		; if zero, return with CY clear (match)
+	inc	b
+	cp	b		; length 2 < length 1?
+	dec	b
+	jr	nc,ms5		; if yes, return with CY set (no match)
+	ld	a,(de)
+	cp	(hl)		; compare bytes
+	jr	nz,ms4		; jump if no match
+	push	bc
+	push	hl		; remember pointers
+	push	de
+ms2:	ld	a,(de)
+	cp	(hl)		; compare bytes
+	inc	hl		;   and advance pointers
+	inc	de
+	jr	nz,ms3		; jump if no match
+	dec	c		; else decrement length 1
+	jr	nz,ms2		; loop while not done
+ms3:	pop	de		; restore pointers
+	pop	hl
+	pop	bc
+	jr	z,ms6		; if zero, return with CY clear (match)
+ms4:	inc	de		; else start search again from next str 2 char
+	dec	b		; decrement length of string 2
+	jr	ms1		; loop
+
+ms5:	pop	bc
+	pop	de
+	pop	hl
+	scf			; return with CY set
+	ret
+
+ms6:	ld	e,b
+	pop	bc
+	ld	a,b
+	sub	e
+	ld	b,a		; return with B = old B - B (match offset)
+	pop	de
+	pop	hl
+	or	a		; clear CY
+	ret
+
+; Read command line into CMDBUF, store length in CMDLEN
+; Called with HL = prompt string address
+
+GETCMD:	push	hl
+	push	de
+	push	bc
+	ld	a,(CTCFLG)	; check ^C command flag
+	or	a
+	jr	z,gc1		; jump if not set
+	xor	a
+	ld	(CTCFLG),a	; else clear it
+	scf
+	jp	gc17		; pop registers and return with CY set
+
+gc1:	push	hl
+	call	PUTSTR		; output prompt
+	ld	de,CMDBUF
+	ld	b,0		; B = length
+gc2:	call	GETC		; get input char into A
+gc3:	ld	hl,CMDCT	; get edit ctrl char table into HL
+	cp	(hl)		; ^U?
+	inc	hl
+	jr	nz,gc4		; jump if not
+	ld	a,(hl)		; this is to force match below
+gc4:	cp	(hl)		; ^^?
+	inc	hl
+	jr	nz,gc5		; jump if not
+	call	CLNCR		; else clear line, move cursor to start
+	pop	hl
+	jr	gc1		;  and prompt for command again
+
+gc5:	cp	(hl)		; cursor up?
+	inc	hl
+	jr	nz,gc7
+gc6:	ld	a,(CMDLEN)	; all chars recalled?
+	inc	b
+	cp	b
+	dec	b
+	jr	c,gc2		; if yes, wait for more input
+	ld	a,(de)		; get old char
+	call	ADDCMD		; display it
+	jr	gc6		; loop
+
+gc7:	cp	(hl)		; ^G (Go)?
+	inc	hl
+	jr	nz,gc9		; jump if not
+gc8:	ld	a,(CMDLEN)	; all chars recalled?
+	inc	b
+	cp	b
+	dec	b
+	jr	c,gc15		; if yes, enter the command
+	ld	a,(de)		; get old char
+	call	ADDCMD		; display it
+	jr	gc8		; loop
+
+gc9:	cp	(hl)		; DEL?
+	inc	hl
+	jr	nz,gc10		; jump if not
+	ld	a,(hl)		; this is to force match below
+gc10:	cp	(hl)		; backspace?
+	inc	hl
+	jr	nz,gc11		; jump if not
+	ld	a,b
+	or	a		; command line empty?
+	jr	z,gc2		; jump if yes
+	dec	de
+	dec	b		; else erase last char entered
+	ld	a,8		; backspace
+	call	PUTC		; output char
+	ld	a,' '		; space
+	call	PUTC		; output char
+	ld	a,8		; backspace
+	call	PUTC		; output char
+	jr	gc2		; loop for more input
+
+gc11:	cp	(hl)		; cursor right?
+	inc	hl
+	jr	nz,gc12		; jump if not
+	ld	a,(CMDLEN)	; at the end of old command?
+	inc	b
+	cp	b
+	dec	b
+	jr	c,gc2		; jump if yes
+	ld	a,(de)		; else recall one char
+gc12:	cp	(hl)		; ^C?
+	inc	hl
+	jr	nz,gc13		; jump if not
+	ld	a,b
+	or	a		; at the start of command?
+	scf
+	jr	z,gc16		; return with CY set if yes
+	ld	a,1
+	ld	(CTCFLG),a	; else set ^C command flag in CTCFLG
+	jr	gc15		; return with CY clear
+				; CTCFLG will cause immed. return on next call
+
+gc13:	cp	(hl)		; ^Z?
+	inc	hl
+	jr	nz,gc14		; jump if not
+	ld	a,'E'
+	call	ADDCM1		; else fake an 'EX' command
+	ld	a,'X'
+	call	ADDCM1
+	jr	gc15		; and return
+
+gc14:	cp	(hl)		; CR?
+	inc	hl
+	jr	nz,gc18		; jump if not
+gc15:	ld	a,CR		; CR
+	call	ADDCM1
+	ld	a,LF		; LF
+	call	ADDCM1
+	or	a		; clear CY
+gc16:	pop	hl		; discard prompt address
+gc17:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+gc18:	cp	(hl)		; TAB?
+	inc	hl
+	jr	nz,gc20		; jump if not
+	ld	a,b
+	or	7
+	inc	a
+	sub	b
+	ld	c,a		; length in C
+gc19:	ld	a,' '		; space
+	push	bc
+	call	ADDCMD		; erase with spaces
+	pop	bc
+	dec	c		; until nex tab stop
+	jr	nz,gc19		; loop
+	jp	gc2		; loop for more input
+
+gc20:	cp	(hl)		; ESC?
+	inc	hl
+	jr	nz,gc21		; jump if not
+	call	XLTESC		; else translate escape sequence to ctrl char
+	jp	gc3		; and process it
+
+gc21:	call	ADDCMD		; add character to command and display it
+	ld	a,(CMDLEN)	; if we are above old command length
+	cp	b
+	jp	nc,gc2
+	ld	a,b
+	ld	(CMDLEN),a	; then update it
+	jp	gc2		; and loop for more input
+
+; Command line editing chars
+
+CMDCT:	db	15h		; ^U clear line and prompt again
+	db	1Eh		; ^^ same as ^U
+	db	05h		; ^E recall old command, wait for more input
+	db	07h		; ^G recall and enter old command
+	db	7Fh		; DEL = ^H
+	db	08h		; ^H backspace
+	db	04h		; ^D next char from old command
+	db	03h		; ^C
+	db	1Ah		; ^Z exit
+	db	CR		; CR
+	db	TAB		; TAB
+	db	ESC		; ESC
+	db	0
+
+; Add character in A to command line buffer (ptr in DE) and display it
+; Current length is in B.
+
+ADDCMD:	cp	' '		; control char?
+	ret	c		; return if yes
+	ld	c,a
+	ld	a,b		; check length
+	cp	78		; max length reached?
+	ld	a,c
+	ret	z		; return if yes
+ADDCM1:	ld	c,a
+	ld	(de),a		; store char in command buffer
+	cp	CR		; CR?
+	jr	nz,acm1		; jump if not
+	ld	a,b
+	ld	(CMDLEN),a	; else set new command length
+	ld	a,c
+acm1:	inc	de		; advance pointer
+	inc	b		; incr length
+	jp	PUTC		; output char and return
+
+; Output null-terminated string @HL
+
+PUTSTR:	ld	a,(hl)
+	inc	hl
+	or	a
+	ret	z
+	call	PUTC
+	jr	PUTSTR
+
+; Clear current line, move cursor to begin of line
+
+CLNCR:	ld	a,CR
+	call	PUTC		; move cursor to begin of line
+	jp	CLREOL		; clear to end of line
+
+; Output crlf to terminal
+
+CRLF:	push	af
+	ld	a,LF		; LF
+	call	PUTC		; output char
+	ld	a,CR		; CR
+	call	PUTC		; output char
+	pop	af
+	ret
+
+; Output char in A to terminal C times
+
+PUTCN:	push	bc
+	inc	c
+pcn1:	dec	c
+	jr	z,pcn2
+	call	PUTC
+	jr	pcn1
+pcn2:	pop	bc
+	ret
+
+; Output string @HL to terminal, length in C
+
+PSTRN:	push	hl
+	push	bc
+	ld	a,c
+	or	a
+	jp	m,psn2		; return if length <= 0
+	inc	c
+psn1:	dec	c
+	jr	z,psn2
+	ld	a,(hl)
+	inc	hl
+	call	PUTC
+	jr	psn1
+psn2:	pop	bc
+	pop	hl
+	ret
+
+; Translate char from escape sequence in A to ctrl command
+
+XLTESC:	call	GETC		; get input char into A
+	cp	'['		; in case terminal is VT100/220/ANSI, etc.
+	jr	z,XLTESC
+	ld	hl,XLTTBL	; start of translation table into HL
+	ld	c,a
+xlt1:	ld	a,(hl)
+	or	a		; end of table?
+	ret	z		; return null if yes
+	cp	c		; match?
+	inc	hl
+	jr	z,xlt2		; exit loop if yes
+	inc	hl		; skip char
+	jr	xlt1		; loop
+xlt2:	ld	a,(hl)		; return ctrl char in A
+	ret
+
+XLTTBL:	db	ESC,ESC		; ESC ESC = single ESC
+	db	'A',05h		; ESC A = ^E (arrow up)
+	db	'B',18h		; ESC B = ^X (arrow down)
+	db	'C',04h		; ESC C = ^D (arrow right)
+	db	'D',13h		; ESC D = ^S (arrow left)
+	db	'H',0Ch		; ESC H = ^L
+	db	'P',0Bh		; ESC P = ^K
+	db	'R',1Eh		; ESC R = ^^
+	db	'Q',0Eh		; ESC Q = ^N
+	db	0,0		; end of table
+
+; Convert numeric string @HL to binary value in DE
+
+DECBIN:	push	bc
+	ld	de,0		; clear result
+dc1:	ld	a,(hl)
+	sub	'0'		; ASCII digit?
+	ccf
+	jr	nc,dc2		; return if not
+	cp	10
+	jr	nc,dc2
+	ex	de,hl
+	call	adddig		; shift in new digit
+	ex	de,hl
+	inc	hl
+	jr	nc,dc1		; loop unless overflow
+dc2:	pop	bc
+	ret
+
+adddig:	ld	c,l
+	ld	b,h
+	add	hl,hl		; *2
+	ret	c
+	add	hl,hl		; *4
+	ret	c
+	add	hl,bc		; *5
+	ret	c
+	add	hl,hl		; *10
+	ret	c
+	ld	c,a
+	ld	b,0
+	add	hl,bc		; +new digit
+	ret
+
+; Compare HL with DE, set flags.
+
+CPDEHL:	ld	a,h
+	cp	d
+	ret	nz
+	ld	a,l
+	cp	e
+	ret
+
+; HL += A
+
+ADDHLA:	add	a,l
+	ld	l,a
+	ret	nc
+	inc	h
+	ret
+
+; HL -= A
+
+SUBHLA:	push	bc
+	ld	c,a
+	ld	b,0
+	or	a
+	sbc	hl,bc
+	pop	bc
+	ret
+
+; Signed DE += HL, returns CY on overflow
+
+IADD16:	ld	a,d
+	xor	h
+	add	hl,de
+	ld	e,a
+	rra
+	xor	e		; XOR sign of carry
+	xor	h		; sign of result
+	rla			; get overflow bit into carry
+	ex	de,hl
+	ret
+
+;=======================================================================
+
+;   I N I T I A L I Z A T I O N   S E C T I O N
+
+START::	ld	sp,STACK
+	call	TTINIT
+	ld	hl,LOGMSG
+	call	PUTSTR		; output first part of log message
+	push	hl
+	call	TRMNAM
+	call	PUTSTR		; output terminal name
+	pop	hl
+	call	PUTSTR		; output the rest of message
+	ld	hl,($MEMRY)	; this is where the free area begins
+	ld	(MEMBOT),hl	; store start of free memory
+	ld	(ENDMAP),hl	; init ptr to block map area
+	ex	de,hl
+	call	GETTOP
+	ld	(MEMTOP),hl	; store end of free memory
+	ld	(BFPOOL),hl	; init ptr to buffer pool area
+	or	a
+	sbc	hl,de		; compute heap size
+	jp	c,NOMEM		; error if < 0
+	ld	de,2048		; must have at least 2K free
+	call	CPDEHL
+	jp	c,NOMEM
+	ld	a,h		; get hi-byte (size / 256)
+	or	a		; clear CY
+	rra			; now size / 512 -> number of blks that fit
+	jp	z,NOMEM
+	ld	l,a
+	ld	h,0
+	push	hl		; remember value (blocks in mem)
+	call	WCREAT		; create temp work file
+	jr	nc,s3
+	ld	hl,3		; fatal error 3: can't create work file
+	jp	FATAL
+
+s3:	; TODO:
+	;  - compute disk space in 512-byte blocks, result in HL
+	;  - take half of it?
+	;  - if HL > 2048, then set HL = 2048
+	;  - use result for WFBLKS
+
+	ld	hl,2048
+	ld	(WFBLKS),hl	; store work file size
+	ld	a,h
+	or	l
+	jr	nz,s5		; must be > 0
+	ld	hl,ERRWFL	;  else error - 'NO DISK SPACE'
+	call	PUTSTR		;   output string
+	jp	QUIT		;    and exit
+
+s5:	dec	hl		; HL = blks-1 = max block number
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl		; *32 = number of records
+	ld	(NUMREC),hl	; store total records
+	ld	(NUMFRE),hl	; init free records = total records
+	ld	hl,DSKMSG	; 'BUFFER SIZE: '
+	call	PUTSTR
+	ex	(sp),hl		; get blocks in mem, save string address
+	ld	h,l
+	ld	l,0
+	add	hl,hl		; convert to bytes (*512)
+	ld	a,'0'		; filler
+	call	HLDEC		; output value
+	pop	hl
+	call	PUTSTR		; ' BYTES'
+	call	GETCML		; get CLI command line
+	ld	a,b		; check length
+	or	a		; command empty?
+	jp	z,MLOOP		; start editor if yes
+	ld	a,(hl)
+	cp	CR
+	jp	z,MLOOP
+	ld	c,'R'
+	call	UNGETC		; else fake an 'R' command
+s6:	ld	c,(hl)		; and append CLI command line tail
+	call	UNGETC		;  (note that it should have at least
+	inc	hl		;   one leading blank)
+	djnz	s6
+	ld	c,3		; end with ^C to start screen editor
+	call	UNGETC
+	jp	MLOOP		; jump to main loop
+
+NOMEM:	ld	hl,ERRMEM	; 'NO MEM SPACE'
+	call	PUTSTR		; ouput string
+	jp	QUIT		;  and exit
+
+;-----------------------------------------------------------------------
+
+	dseg
+
+	ds	128
+STACK	equ	$
+
+	public	$MEMRY
+$MEMRY:	ds	2
+
+FSTREC:	dw	0		; record number of the first line of text
+CURREC:	dw	0		; record number of the current line
+CURLN:	dw	0		; current line
+CURPOS:	db	0		; current character index
+LSTREC:	dw	0		; last record of text
+LASTLN:	dw	0		; last line number
+FSTFRE:	dw	0		; start record number in free list
+NUMFRE:	dw	0		; free records
+NUMREC:	dw	0		; total records
+
+MEMBOT:	dw	0		; start of free memory (block map)
+ENDMAP:	dw	0		; end of block map area in lo-memory
+BFPOOL:	dw	0		; start of buffer pool area in hi-memory
+MEMTOP:	dw	0		; end of free memory (hi-mem address)
+
+NUMBUF:	db	0		; number of buffers currently in memory
+WFBLKS:	dw	0		; work file size in 512-byte blocks
+NBLKS:	dw	0		; last allocated block number (curr file sz)
+USECNT:	dw	0		; LRU count
+
+EDLEN:	db	0		; current line (in edit buffer) length
+EDREC:	dw	0		; record number of current line
+PRVREC:	dw	0		; prev record number
+NXTREC:	dw	0		; next record number
+
+OLDREC:	dw	0		; temp storage in INSBUF and STORE
+NEWREC:	dw	0		; temp storage in INSBUF
+
+CMDLEN:	db	0		; length of last command entered
+CMDPTR:	dw	0		; command line pointer
+CTCFLG:	db	0		; ^C command flag (command ended with ^C)
+ARGTYP:	dw	0		; arg type
+
+FMODF:	db	0		; file modified flag, initialized to 0
+WFOVFL:	db	0		; work file overflow flag, initialized to 0
+
+STRBUF:	ds	MAXLEN+2	; command word, string arg, file I/O buffer
+
+NUMVAL:	dw	0		; last numeric value from GETARG
+NUMD:	db	0		; displacement flag from last argument:
+				;  0=absolute, 1=relative, -1=from end
+
+N1:	dw	0		; N1
+N1D:	db	0		;  it's displacement
+N2:	dw	0		; N2
+N2D:	db	0		;  it's displacement
+N3:	dw	0		; N3
+
+ARGLEN:	db	0		; string arg length
+ARGSTR:	dw	0		; string arg address
+
+; The following space gets overwritten after initialization, as is also used
+; for some data buffers
+
+CMDBUF	equ	$		; 82 bytes used for command line buffer
+EDITBF	equ	CMDBUF+82	; MAXLEN+2 bytes used as edit line fuffer
+TMPBUF	equ	EDITBF+MAXLEN+2	; MAXLEN bytes used for temporary operations
+ENDDAT	equ	TMPBUF+MAXLEN	; end of buffer area
+
+LOGMSG:	db	'IA&E Text Editor - ',0,' Terminal',LF,LF,CR,0
+DSKMSG:	db	'Free core: ',0,' bytes',LF,CR,0
+
+ERRMEM:	db	'No mem space',LF,CR,0
+ERRWFL:	db	'No disk space',LF,CR,0
+
+	if	ENDDAT GT $
+	ds	ENDDAT-$	; pad to end of data area
+	endif
+
+	db	0		; force byte output, needed for $MEMRY
+
+	end	START

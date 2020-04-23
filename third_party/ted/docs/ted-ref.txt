@@ -1,0 +1,54 @@
+                            TED - Quick Reference
+
+Command mode
+------------
+
+Commands are ended with Return or Ctrl-C. When the last one is used, the
+screen mode is entered after command execution.
+
+EX or Ctrl-Z  			- exit editor (note: without saving)
+CL				- clear buffer, delete all text
+R FILE				- insert FILE
+R (P) FILE (N1,N2)		- insert FILE from line N1 to N2 after P
+W [P1 P2] [FILE] [N]		- save text to FILE
+WU [P1 P2] [FILE] [N]		- save text to FILE, update current version
+F				- show default file name
+FR				- show available memory
+PR P1 [P2]			- print lines on terminal
+D P1 [P2]			- delete lines
+M P1 P2 P3			- copy lines
+MD P1 P2 P3			- move lines
+SU   /OLD/NEW/[(N1 [N2])]	- search (and replace)
+SU M /OLD/NEW/[(N1 [N2])]	- same, but ask for confirmation
+SU N /OLD/NEW/[(N1 [N2])]	- same, but N times
+S [P]				- enter screen editor
+P [P [C]]			- show/set text index
+/TEXT/				- search for TEXT and enter screen editor
+
+Screen edit mode
+----------------
+
+Arrow keys		- move cursor
+HOME (Ctrl-L)		- cursor start/end of line
+Ctrl-T			- cursor top/bottom
+Ctrl-F			- move to prev tab stop
+Ctrl-Q			- move to next tab stop
+TAB (Ctrl-I)		- insert tab
+RETURN (Ctrl-M)		- split line
+Ctrl-R			- redraw screen
+Ctrl-Y or Ctrl-^	- delete line
+Ctrl-K			- insert line above
+LF (Ctrl-J)		- insert line below
+DEL or Ctrl-H		- delete char left
+Ctrl-G or Ctrl-]	- delete char right
+Ctrl-P			- duplicate line
+Ctrl-V			- toggle insert mode
+Ctrl-B or Ctrl-N	- enter browse mode
+Ctrl-C or Ctrl-Z	- exit back to command mode
+
+Browse mode
+-----------
+
+Arrow up/down		- page up/down
+Arrow left/right	- shift screen 10 columns left/right
+CR, Ctrl-C or Ctrl-Z	- exit back to screen edit mode
