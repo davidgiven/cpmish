@@ -456,7 +456,7 @@ getSCB	equ	49
 
 	export	height
 ;height:
-	defb	24		;Default (patchable) Screen height (in lines).
+	defb	SCRHT           ;Default (patchable) Screen height (in lines).
 				;(Don't bother patching if running CP/M Plus
 				; because Z8E will get the screen height from
 				; the SCB.)
