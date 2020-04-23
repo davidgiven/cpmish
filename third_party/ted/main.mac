@@ -55,6 +55,10 @@
 
 	cseg
 
+; First instruction executed after program load.
+
+	jp START
+
 ; Main loop - editor starts here after initialization
 
 MLOOP:	ld	sp,STACK	; restore stack pointer
