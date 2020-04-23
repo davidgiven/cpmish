@@ -23,12 +23,10 @@
 	.Z80
 
 	title	TED - Text Editor
-	subttl	Screen Editor
+;	subttl	Screen Editor
 
+	include config.inc
 	include	ted.inc
-
-HSIZE	equ	80		; terminal window width
-VSIZE	equ	24		; terminal window height
 
 ;=======================================================================
 

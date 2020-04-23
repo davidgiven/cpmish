@@ -25,9 +25,8 @@
 	title	TED - Text Editor
 ;	subttl	Terminal I/O routines
 
+	include config.inc
 	include	ted.inc
-
-VT100	equ	TRUE
 
 ;=======================================================================
 
@@ -49,7 +48,7 @@ VT100	equ	TRUE
 
 ;	org	10h-3
 
-	if	VT100
+	ifdef VT100
 
 vtname:	db	'VT100',0,0,0,0,0,0,0,0,0
 vtsize:	db	80,24			; width, height
@@ -74,7 +73,8 @@ vinsln:	db	0,0,0,0,0,0,0,0		; VT220/240 only?
 vdelln:	db	0,0,0,0,0,0,0,0
 vscrlrg:db	1,'r',0,0,0,0,0,0
 
-	else
+	endif
+	ifdef VT52
 
 vtname:	db	'VT52',0,0,0,0,0,0,0,0,0,0
 vtsize:	db	80,24			; width, height
@@ -98,6 +98,31 @@ vrevidx:db	2,ESC,'I',0,0,0,0,0
 vinsln:	db	0,0,0,0,0,0,0,0
 vdelln:	db	0,0,0,0,0,0,0,0
 vscrlrg:db	0,0,0,0,0,0,0,0
+
+	endif
+	ifdef ADM3A
+
+vtname:	db	'ADM3A',0
+vclscr:	db	1, 01ah
+vcleos:	db	1, 017h
+vcleol:	db	1, 018h
+vcurup:	db	1, 00bh
+vcurdn:	db	1, 00ah
+vcurrgt:db	1, 00ch
+vcurlft:db	1, 008h
+vhome:	db	1, 01eh
+vcurprf:db	2, ESC, '='
+vcursep:db	0
+vcurpst:db	0
+vcurbcd:db	FALSE
+vcuryof:db	32
+vcurxof:db	32
+vxfirst:db	FALSE
+vfwdidx:db	1,LF
+vrevidx:db	0
+vinsln:	db	2, ESC, 'E'
+vdelln:	db	2, ESC, 'R'
+vscrlrg:db	0
 
 	endif
 
