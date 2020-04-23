@@ -1,0 +1,60 @@
+Virtual Memory structures used by TED
+-------------------------------------
+
+The code and the descriptions below use the following naming conventions:
+
+  1 block  = 1 disk sector = 512 bytes
+  1 record = 16 bytes, there are 32 records in a block
+
+Text lines are stored internally in a double-linked list of records with the
+following format:
+
+  Head record:
+    +------+------+------+----------------------------------+
+    | cont | next | prev | text, 10 chars max               |
+    +------+------+------+----------------------------------+
+
+  Continuation record:
+    +------+------+------+----------------------------------+
+    | cont | text, 14 chars max                             |
+    +------+------+------+----------------------------------+
+
+  Free list record:
+    +------+------------------------------------------------+
+    | next | unused                                         |
+    +------+------------------------------------------------+
+
+The continuation field is set to zero for the last record in a sequence.
+
+Similarly, the prev and next fields set to zero indicate end of the list.
+
+The text field ends with a CR, which is stored only if there are less chars
+than the maximum (i.e. a single overflowing CR is never stored in a new
+record).
+
+Spaces are compressed into a byte with the high bit set and the lower 7 bits
+indicating the actual number of spaces.
+
+Since record numbers are kept in a word, the maximum work file size (and
+therefore the maximum editable file size) is limited to 65536/32 = 2048
+blocks, or about 2048*512 = 1048576 bytes (1 Mbyte). In practice, the
+maximum file size is somewhat less than that due to the overhead of pointers
+(one word per record) and length fields (one additional word in the line
+header records). In compensation, multiple contiguous spaces get compressed
+into a single byte.
+
+The maximum allowed line length is 162 bytes.
+
+Buffers for blocks in memory are allocated from top of memory down and
+are 516 bytes long (2 words + 32 records of 16 bytes). The first two words
+contain:
+
+  1. (offset 0): LRU count (low 15 bits), high bit set = 'dirty'
+  2. (offset 2): block number, used to index into the block map area
+
+Block map grows from low memory up, and has a max size of 2048 bytes.
+A value of zero indicates that the block has been swapped out, while a
+non-zero value points to the buffer containing the block in memory. Note
+that since 64K can only hold up to 128 buffers (65536/512 = 128), one byte
+is enough to represent buffer numbers in memory.
+

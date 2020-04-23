@@ -1,0 +1,155 @@
+Changelog
+---------
+
+(Old Changelog going back to 2011 was lost)
+
+03/02/16
+
+- System-dependent routines now in a separate file. The RSX180 version can
+  already read files.
+
+
+05/02/16
+
+- Got the virtual memory working under RSX180 (TED writes data to work file
+  leaving gaps or "holes" that may get filled later; since RSX180 does not
+  support "holes" yet, a workaround had to be implemented in the code.)
+
+  A bug appeared:
+    'run $ted/inc=10000' and read a large file, e.g.: 'r [test]snake.lst',
+    then 'pr 1 $' shows only 905 lines instead of 1833.
+
+
+06/02/16
+
+- Fixed the bug above. It was in the main code and affected the CP/M version
+  as well (NEWBUF routine modified register B, so the 'dirty' flag set by
+  LDRECD was lost and the corresponding modified buffer was not saved back
+  to disk).
+
+- TED now processes the RSX180 command line. File read and write practically
+  finished, so the editor is now usable.
+
+
+21/02/16
+
+- Use existing filename from R command for W command without arguments (this
+  affected the CP/M version as well).
+
+
+23/11/16
+
+- RSX180 file I/O routines converted to filesystem v4.
+
+
+11/01/18
+
+- Implementing soft-tab handling:
+  * STORE and EXPAND routines modified, tabs are now stored in the virtual
+    memory records.
+  * DISPLE routine modified, so display appears correctly.
+  * FPUTC1 routine modified, so file output does not contain soft-spaces.
+  * ruler now displays 2-digit numbers if > 10 (does not wrap back to 0).
+  * INSert mode now shown on status line.
+
+
+12/01/18
+
+- CR now splits line at cursor column.
+
+- Removed the rather useless commands ^A ^B ^O ^P of the screen mode.
+
+- Refresh screen keeps original cursor position.
+
+- Default mode is now insert (tired of toggling it every time).
+
+- Insert character routine now checks for smart tabs.
+
+
+13/01/18
+
+- Insert/replace (soft) tab now works.
+
+- Delete char right working.
+
+
+14/01/18
+
+- Automatically scroll screen left/right when moving cursor beyond right/left
+  edge.
+
+- Split/join now handle tabs correctly.
+
+- Delete char left working.
+
+- CURX now represents character index in screen mode and not screen cursor
+  position, this optimizes somewhat character access (no need to add SCRX
+  every time.)
+
+- SETCUR now scrolls screen left/right so cursor always stays in window.
+
+- JOIN now truncates resulting line if too long.
+
+- Better line overflow checks, but not perfect yet.
+
+
+17/01/18
+
+- Source converted to Z80 mnemonics, the old 8080 version will be kept but
+  no longer updated.
+
+
+21/01/18
+
+- Revised/fixed SHRLN and SRLLN routines.
+
+- Optimized SHRLN8 and SHRLN8 routines of the smart-tab support.
+
+- Optimized tab insertion/deletion.
+
+- Soft-tab handling almost complete.
+
+- P command now accepts a second argument (cursor column).
+
+- RSX180 version now uses SYSLIB routines (not fully done yet).
+
+
+22/01/18
+
+- Fixed end of line case when inserting chars.
+
+- Status line now always shows the cursor line (after a small delay).
+
+
+24/01/18
+
+- Track file modifications and issue a warning if the user tries to exit or
+  clear the buffer without saving.
+
+
+17/03/18
+
+- RSX180 version now uses the new IO.RVB/WVB for work file I/O.
+
+
+20/03/18
+
+- Entering ^Z at the command prompt now exits the program, ^G replaces the
+  old ^Z function (reenter last command).
+
+
+24/03/18
+
+- RSX180 version now uses IO.RVB/WVB for regular file I/O.
+
+
+23/05/18
+
+- Use scroll region if supported by the terminal (VT100, etc.).
+
+
+04/11/18
+
+- Fixed a stupid bug in the delete-line function of the screen mode (LASTLN
+  is a 16-bit value, but was used as 8-bit value in a comparison operation!).
+
