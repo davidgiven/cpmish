@@ -442,7 +442,7 @@ getSCB	equ	49
 ;*	  tables.
 ;*
 ;******************************************************************************
-      if	M80 or SLR
+      if	M80 or SLR or ZMAC
 	aseg
       endif
 
@@ -450,9 +450,7 @@ getSCB	equ	49
 	abs
       endif
 
-    if not zmac
 	org	100h
-    endif
 
 	jp	nint
 
