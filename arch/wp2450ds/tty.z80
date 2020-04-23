@@ -17,7 +17,8 @@
     public TTYPUTSI
     public TTYNL
     public TTYHOME
-    public SETCURS
+    public CURON
+    public CUROFF
 
     cseg
 
@@ -48,7 +49,7 @@ tty_rawwrite:
     ld b, h
     ld c, l
 
-    ; Multiply by 7:
+    ; Multiply by 7 (the size of a character in the font table):
                              ; 1
     add hl, hl
     add hl, bc               ; 1
@@ -59,6 +60,18 @@ tty_rawwrite:
     add hl, bc               ; hl = font addr
 
     ex de, hl                ; hl = video addr, de = font addr
+    
+    ; Write one blank line.
+
+    out0l PORT_VIDEO_ADDR_LO
+    out0h PORT_VIDEO_ADDR_HI
+    nop
+    xor a
+    out0a PORT_VIDEO_DATA_W
+    call add_91
+
+    ; Write the character data.
+
     ld b, 7
 .2
     out0l PORT_VIDEO_ADDR_LO
@@ -66,22 +79,28 @@ tty_rawwrite:
     nop
     ld a, (de)
     inc de
-    out (PORT_VIDEO_DATA_W), a
+    out0a PORT_VIDEO_DATA_W
 
-    ld a, 91
-    add l
-    ld l, a
-    jnc .3
-    inc h
-.3
+    call add_91
     djnz .2
+
+    ; Now write another blank line.
 
     out0l PORT_VIDEO_ADDR_LO
     out0h PORT_VIDEO_ADDR_HI
     nop
     xor a
-    out (PORT_VIDEO_DATA_W), a
+    out0a PORT_VIDEO_DATA_W
 
+    ret
+
+; Adds 91 to HL.
+add_91:
+    ld a, 91
+    add l
+    ld l, a
+    ret nc
+    inc h
     ret
 
 ; On entry, D=y, E=x
@@ -91,21 +110,22 @@ calc_address:
     ld b, h
     ld c, d
 
-    ; Multiply by 728 (8 x 91):
+    ; Multiply by 819 (9 x 91):
                             ; 1
+    add hl, hl
+    add hl, bc              ; 1
+    add hl, hl              ; 0
     add hl, hl              ; 0
     add hl, hl
     add hl, bc              ; 1
     add hl, hl
     add hl, bc              ; 1
     add hl, hl              ; 0
+    add hl, hl              ; 0
     add hl, hl
     add hl, bc              ; 1
     add hl, hl
     add hl, bc              ; 1
-    add hl, hl              ; 0
-    add hl, hl              ; 0
-    add hl, hl              ; 0
 
     ld a, l
     add e
@@ -114,15 +134,6 @@ calc_address:
     inc h
     ret
 
-SETCURS:
-    ld de, (tty_cursorx)
-    call calc_address
-    ld de, 91 * 6           ; move to the bottom scanline
-    add hl, de
-    out0l PORT_VIDEO_CURSOR_LO
-    out0h PORT_VIDEO_CURSOR_HI
-    ret
-    
 tty_clear_to_eos:
     call tty_clear_to_eol
     ld a, (tty_cursory)
@@ -133,7 +144,7 @@ tty_clear_to_eos:
     ld e, 0
     call calc_address       ; hl is the address of the beginning of the next line
 
-    ld de, SCREEN_WIDTH * SCREEN_HEIGHT * 8
+    ld de, SCREEN_WIDTH * SCREEN_HEIGHT * CHAR_HEIGHT
     ex de, hl               ; DE = video memory address, HL = size of video memory
     or a                    ; clear C
     sbc hl, de              ; calculate amount of video memory to clear
@@ -166,19 +177,22 @@ tty_delete_line:
     ld b, a
     ld a, SCREEN_HEIGHT - 1
     sub b                   ; calculate number of text lines to move
-    add a
-    add a
-    add a
+    ld b, a
+                            ; 1
+    add a                   ; 0
+    add a                   ; 0
+    add a                   
+    add b                   ; 1
     ld d, a                 ; b = number of scanlines to move
 
     ld bc, -SCREEN_WIDTH
     add hl, bc              ; compensate for preincrement in loop
 .1
-    ld bc, SCREEN_WIDTH * 9
+    ld bc, SCREEN_WIDTH*(CHAR_HEIGHT+1)
     add hl, bc
     call read_scanline
 
-    ld bc, -(SCREEN_WIDTH * 8)
+    ld bc, -(SCREEN_WIDTH*CHAR_HEIGHT)
     add hl, bc
     call write_scanline
 
@@ -188,8 +202,8 @@ tty_delete_line:
     ; Delete the last line of the screen.
 
 on_last_line:
-    ld de, SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 8
-    ld hl, SCREEN_WIDTH * 1 * 8
+    ld de, SCREEN_WIDTH*(SCREEN_HEIGHT-1)*CHAR_HEIGHT
+    ld hl, SCREEN_WIDTH*CHAR_HEIGHT
     jr clear_bytes
 
 tty_insert_line:
@@ -197,24 +211,27 @@ tty_insert_line:
     cp SCREEN_HEIGHT - 1
     jr z, on_last_line      ; skip scroll if there's nothing to do
 
-    ld hl, SCREEN_WIDTH * SCREEN_HEIGHT * 8 - SCREEN_WIDTH
+    ld hl, SCREEN_WIDTH*SCREEN_HEIGHT*CHAR_HEIGHT - SCREEN_WIDTH
 
     ld b, a
-    ld a, SCREEN_HEIGHT -1
+    ld a, SCREEN_HEIGHT - 1
     sub b                   ; calculate number of text lines to move
-    add a
-    add a
-    add a
+    ld b, a
+                            ; 1
+    add a                   ; 0
+    add a                   ; 0
+    add a                   
+    add b                   ; 1
     ld d, a                 ; b = number of scanlines to move
 
 .1
     call read_scanline
 
-    ld bc, -(SCREEN_WIDTH * 8)
+    ld bc, -(SCREEN_WIDTH * CHAR_HEIGHT)
     add hl, bc
     call write_scanline
 
-    ld bc, SCREEN_WIDTH * 7
+    ld bc, SCREEN_WIDTH * (CHAR_HEIGHT-1)
     add hl, bc
 
     dec d
@@ -226,7 +243,7 @@ tty_insert_line:
     ld d, a
     ld e, 0
     call calc_address
-    ld hl, SCREEN_WIDTH * 1 * 8
+    ld hl, SCREEN_WIDTH * 1 * CHAR_HEIGHT
     jp clear_bytes
 
 ; Loads the scanline at video memory address HL into the buffer.
@@ -257,6 +274,43 @@ write_scanline:
     inc hl
     djnz .1
     pop hl
+    ret
+
+toggle_cursor:
+    ld de, (tty_cursorx)
+    call calc_address
+
+    ld b, 9
+.1
+    out0l PORT_VIDEO_ADDR_LO
+    out0h PORT_VIDEO_ADDR_HI
+    nop
+    in0a PORT_VIDEO_DATA_R
+    xra 0xff
+    out0l PORT_VIDEO_ADDR_LO
+    out0h PORT_VIDEO_ADDR_HI
+    nop
+    out0a PORT_VIDEO_DATA_W
+
+    call add_91
+    djnz .1
+    ret
+
+CURON:
+cursor_state equ $ + 1
+    ld a, 0
+    or a
+    call z, toggle_cursor
+    ld a, 1
+    ld (cursor_state), a
+    ret
+
+CUROFF:
+    ld a, (cursor_state)
+    or a
+    call nz, toggle_cursor
+    xor a
+    ld (cursor_state), a
     ret
 
 video_buffer:

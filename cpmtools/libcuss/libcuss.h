@@ -32,7 +32,7 @@ extern void con_clear_to_eol(void);
     #define LIBCUSS_ADM3
 #elif defined LIBCUSS_BROTHER_WP2450DS
 	#define SCREENWIDTH 91
-	#define SCREENHEIGHT 30
+	#define SCREENHEIGHT 26
     #define LIBCUSS_ADM3
 #else
     #error "No libcuss configuration specified."

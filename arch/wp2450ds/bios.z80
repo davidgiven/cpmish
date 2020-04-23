@@ -17,6 +17,8 @@
     extrn TTYPUTSI
     extrn TTYNL
     extrn TTYHOME
+    extrn CURON
+    extrn CUROFF
     extrn SETCURS
     extrn FDR512
     extrn FDW128
@@ -113,6 +115,8 @@ WBOOTE:
     jr call_ccp
 
 CONSTE:
+    call CURON
+
     ld hl, disk_off_count
     inc (hl)                ; increment drive motor count and...
     call z, FDMOFF          ; ...turn the motor off on rollover
@@ -124,6 +128,7 @@ CONSTE:
     ret
 
 CONINE:
+    call CURON
     call FDMOFF
     jp KBGET
 
@@ -135,6 +140,9 @@ ADDAHL:
     ret
 
 CONOUTE:
+    push bc
+    call CUROFF
+    pop bc
     ld a, c
     jp TTYPUTC
 
