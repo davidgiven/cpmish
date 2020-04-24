@@ -30,8 +30,6 @@ x_loop:
     ; Delay loop to wait for the keyboard.
     ; 4 is not enough, 128 is too much.
     ; The formula here is 13*B-2 cycles.
-    public XXX
-XXX: equ $+1
     ld b, 10                ; 7 cycles
 .1
     djnz .1                 ; 13*(B-1) + 8
@@ -91,7 +89,7 @@ bit_not_changed:
 no_keys_pressed:
     inc d
     inc hl
-    ld a, 8
+    ld a, 9
     cp d
     jr nz, x_loop
 
@@ -146,7 +144,7 @@ kbd_poll:
     cp 0x30
     jr z, ctrl_change
 
-    ld a, 0
+    xor a
     bit 7, b
     ret nz                  ; ignore keyups
 
@@ -154,7 +152,7 @@ kbd_poll:
     ld b, 0
     ld a, (keyboard_modifiers)
     ld hl, keyboard_normal_map
-    bit 0, a
+    bit MODIFIER_BIT_SHIFT, a
     jr z, .2
     ld hl, keyboard_shifted_map
 .2:
@@ -188,7 +186,7 @@ kbd_test:
     ret
 
 pending_key: db 0
-keyboard_bitmap: ds 8
+keyboard_bitmap: ds 9
 keyboard_modifiers: db 0
 
 .include "keytab.inc"

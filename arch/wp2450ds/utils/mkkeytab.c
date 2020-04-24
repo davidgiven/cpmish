@@ -5,8 +5,8 @@
 
 #include <stdio.h>
 
-static unsigned char normaltab[64] = {};
-static unsigned char shiftedtab[64] = {};
+static unsigned char normaltab[8*9] = {};
+static unsigned char shiftedtab[8*9] = {};
 
 static void key(int keycode, unsigned char normal, unsigned char shifted)
 {
@@ -41,8 +41,10 @@ int main(int argc, const char* argv[])
     key(0x0f, 'i', 'I');
     key(0x04, 'o', 'O');
     key(0x07, 'p', 'P');
+	key(0x44, '[', '{');
+	key(0x47, ']', '}');
 
-    key(0x30, 0,   0); // caps lock/control
+    key(0x30, 0,   0); // left control
     key(0x31, 'a', 'A');
     key(0x32, 's', 'S');
     key(0x21, 'd', 'D');
@@ -52,6 +54,7 @@ int main(int argc, const char* argv[])
     key(0x0d, 'j', 'J');
     key(0x2c, 'k', 'K');
     key(0x2d, 'l', 'L');
+	key(0x45, ';', ':');
     key(0x2b, 39,  '@');
     key(0x3f, 13,  13); // return
 
@@ -68,12 +71,18 @@ int main(int argc, const char* argv[])
     key(0x2a, '/', '?');
 
     key(0x18, 11,  11); // cursor up
-    key(0x00, 8,   8); // cursor left
+    key(0x41, 8,   8); // cursor left
 	key(0x08, 12,  12); // cursor right
-    key(0x00, 10,  10); // cursor down
+    key(0x42, 10,  10); // cursor down
 
 	key(0x3d, 8,   8); // delete
 	key(0x3b, ' ', ' '); // space
+	key(0x10, 0,   0); // page down
+	key(0x43, 0,   0); // code
+	key(0x3a, 0,   0); // right control
+	key(0x39, 0,   0); // correct
+	key(0x3e, 0,   0); // tw/wp
+	key(0x46, 0,   0); // file
 
     printf("keyboard_normal_map:\n");
     for (int i=0; i<sizeof(normaltab); i++)

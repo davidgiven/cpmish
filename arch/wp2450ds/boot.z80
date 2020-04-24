@@ -28,7 +28,7 @@ entry:
 
     xor a
     out0a CBAR          ; now the entire address space is RAM
-    ld sp, 0x100        ; startup stack
+    ld sp, stack        ; startup stack
 
     ; Clear the screen
 
@@ -68,7 +68,12 @@ entry:
     ld d, 0             ; current track
     ld e, 16            ; current sector
     ld hl, BBASE        ; destination address
-    ld b, BIOS_SIZE/512 ; number of 512-byte sectors to load
+    ld b, (BIOS_SIZE+511)/512 ; number of 512-byte sectors to load
+
+    ; BBASE might not be aligned to a 512-byte boundary. If this happens,
+    ; then we'll overrun the end of memory and corrupt the bottom. As we're
+    ; not using it, that's not important.
+
 .1
     push bc
     push de
@@ -92,6 +97,9 @@ entry:
     djnz .1             ; loop
 
     jp BBASE
+
+    ds 128
+stack:
 
 ; vim: ts=4 sw=4 et ft=asm
 
