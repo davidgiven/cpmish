@@ -54,9 +54,15 @@ BROTHER_MEDIA_BYTE = 0x58 ; non-standard
     org 0x1c00
     incbin "boot_img.cim"
 
-    ; CP/M boot image
-    org 0x2400
-    incbin "cpmfile_img.cim"
+    ; BIOS (loaded once on startup, and spans tracks 0 and 1)
+    org 0x2000
+    incbin "bios_img.img"
 
+    ; CP/M boot image
+    org 0x3200
+    incbin "systemtrack_img.img"
+
+    ; End of boot image
+    org 0x4800
 ; vim: ts=4 sw=4 et ft=asm
 

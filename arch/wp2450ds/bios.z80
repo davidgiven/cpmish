@@ -9,6 +9,7 @@
     maclib cpm
     maclib cpmish
     maclib wp2450ds
+    maclib addresses
 
     extrn TTYINIT
     extrn TTYPUTC
@@ -32,7 +33,7 @@
 
 ; BIOS jump table.
 
-label BBASE
+; BBASE is here
     jp BOOTE
     jp WBOOTE
     jp CONSTE
@@ -59,7 +60,8 @@ label BBASE
 ; it goes all funny and disk accesses fail weirdly. Eight-bit values are
 ; returned in A and sixteen-bit values in HL.
 
-; Cold boot on system startup.
+; Cold boot on system startup. At this point the BIOS is loaded, but the CCP
+; and BDOS aren't.
 BOOTE:
     ld sp, 0x0100           ; ephemeral user stack
 
@@ -73,29 +75,17 @@ BOOTE:
     ld (CDISK), a
 
     ; fall through
-call_ccp:
-    ld a, 0xc3
-    ld hl, BBASE + 3        ; init BIOS entrypoint
-    ld (0x0000), a
-    ld (0x0001), hl
-
-    ld hl, FBASE + 6        ; init BDOS entrypoint
-    ld (0x0005), a
-    ld (0x0006), hl
-
-    ld a, (CDISK)
-    ld c, a                 ; c = current disk
-    jp CBASE                ; pass control to CCP
-
 ; Warm boot on application exit.
 WBOOTE:
     ld sp, 0x0100           ; ephemeral user stack
 
-    ; Reload the CCP, BDOS and CCP.
+    ; Reload the and CCP and BDOS.
 
+LOADABLE_SECTORS = (BDOS_SIZE + CCP_SIZE) / 128
+    ld b, LOADABLE_SECTORS
     ld a, 1
     sta (BTRACK)            ; current CP/M track
-    ld a, 0
+    ld a, 72 - LOADABLE_SECTORS
     sta (BSECTOR)           ; current CP/M sector
     ld hl, CBASE
     ld (BDMA), hl           ; destination address
@@ -110,9 +100,23 @@ WBOOTE:
     ld a, (BSECTOR)
     inc a
     ld (BSECTOR), a
-    cp (BBASE - CBASE) / 128
+    cp 72
     jr nz, .1
-    jr call_ccp
+
+    ; Perform configuration and start the CCP.
+
+    ld a, 0xc3
+    ld hl, BBASE + 3        ; init BIOS entrypoint
+    ld (0x0000), a
+    ld (0x0001), hl
+
+    ld hl, FBASE + 6        ; init BDOS entrypoint
+    ld (0x0005), a
+    ld (0x0006), hl
+
+    ld a, (CDISK)
+    ld c, a                 ; c = current disk
+    jp CBASE                ; pass control to CCP
 
 CONSTE:
     call CURON
