@@ -1,0 +1,105 @@
+; Brother WP2450DS cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is the executable which is loaded and run by the Brother's OS. It
+; gets loaded with BBR=CBR=0x60, CBAR=0x55, which means that DRAM from
+; physical addresses 0x65000 to 0x6ffff is mapped to logical 0x5000 to 0xffff.
+
+    maclib wp2450ds
+    maclib cpmish
+    maclib cpm
+    maclib addresses
+
+    extrn FDCAL2
+    extrn FDTX
+    extrn FDR512
+    extrn FDRSTAT
+    extrn FDDEBLK
+
+start:
+    dw 0xc181           ; Brother magic numbers
+    dw 0x0101
+    dw 0x0000
+    db "BR"
+
+entry:
+    di                  ; The Brother OS is not at home
+
+    xor a
+    out0a CBAR          ; now the entire address space is RAM
+    ld sp, stack        ; startup stack
+
+    ; Clear the screen
+
+    ld b, a
+    out0b PORT_VIDEO_ADDR_LO
+    out0b PORT_VIDEO_ADDR_HI
+    ld hl, SCREEN_WIDTH * SCREEN_HEIGHT * 8
+.2
+    out0b PORT_VIDEO_DATA_W
+    dec hl
+    ld a, h
+    or l
+    jr nz, .2
+
+    ; Configure the serial port.
+
+    ld a, 01110100b     ; RE, TE, CKA1D, MOD2(8n1)
+    out0a CNTLA1
+    ld a, 00000010b     ; SS1(/4 clock divider)
+    out0a CNTLB1
+
+    ; Set up the disk system.
+
+    call FDCAL2
+
+    ld a, 0x03          ; SPECIFY
+    call FDTX
+
+    ld a, 0xdf          ; SRT, HUT
+    call FDTX
+
+    ld a, 0x0c          ; HLT, !ND
+    call FDTX
+
+    call FDRSTAT
+
+    ld d, 0             ; current track
+    ld e, 16            ; current sector
+    ld hl, BBASE        ; destination address
+    ld b, (BIOS_SIZE+511)/512 ; number of 512-byte sectors to load
+
+    ; BBASE might not be aligned to a 512-byte boundary. If this happens,
+    ; then we'll overrun the end of memory and corrupt the bottom. As we're
+    ; not using it, that's not important.
+
+.1
+    push bc
+    push de
+    push hl
+    call FDR512
+    jr z, entry
+    pop de
+    ld bc, 512
+    ldir                ; copy buffer data to memory
+    ex de, hl           ; updated destination address to HL
+    pop de
+    pop bc
+
+    inc e               ; advance to next sector
+    ld a, 18
+    cp e
+    jr nz, .3
+    inc d               ; advance to next track, if necessary
+    ld e, 0
+.3
+    djnz .1             ; loop
+
+    jp BBASE
+
+    ds 128
+stack:
+
+; vim: ts=4 sw=4 et ft=asm
+

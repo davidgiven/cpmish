@@ -2,7 +2,7 @@ OBJDIR = .obj
 LUA_5_1 = lua5.1
 
 all: $(OBJDIR)/build.ninja
-	@ninja -v -f $(OBJDIR)/build.ninja
+	@ninja -f $(OBJDIR)/build.ninja
 
 clean:
 	rm -rf $(OBJDIR)

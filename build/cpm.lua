@@ -96,3 +96,27 @@ definerule("diskimage",
         }
 	end
 )
+
+definerule("binslice",
+	{
+		src = { type="targets" },
+		start = { type="number" },
+		length = { type="number" },
+	},
+	function (e)
+		local f = filenamesof(e.src)
+		if #f ~= 1 then
+			error("binslice can only operate on a single file")
+		end
+
+		return normalrule {
+			name = e.name,
+			outleaves = { e.name..".img" },
+			ins = e.src,
+			commands = {
+				"dd if=%{ins} of=%{outs} status=none bs=1 skip="..e.start.." count="..e.length
+			}
+		}
+	end
+)
+

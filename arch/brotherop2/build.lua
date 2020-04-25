@@ -42,7 +42,6 @@ for _, n in pairs({"bios", "floppy", "tty"}) do
 			"include/*.lib",
 			"./include/*.lib",
 			"arch/common/utils/tty.lib",
-			"arch/common/utils/deblocker.lib"
 		},
 	}
 end

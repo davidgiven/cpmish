@@ -1,0 +1,786 @@
+;**********************************************************************;
+;                                                                      ;
+;   This file is part of TED, a clone of the screen-oriented text      ;
+;   editor that was once available for the RT-11 OS.                   ;
+;   Copyright (C) 2011-2020, Hector Peraza.                            ;
+;                                                                      ;
+;   This program is free software; you can redistribute it and/or      ;
+;   modify it under the terms of the GNU General Public License as     ;
+;   published by the Free Software Foundation; either version 2 of     ;
+;   the License, or (at your option) any later version.                ;
+;                                                                      ;
+;   This program is distributed in the hope that it will be useful,    ;
+;   but WITHOUT ANY WARRANTY; without even the implied warranty of     ;
+;   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the      ;
+;   GNU General Public License for more details.                       ;
+;                                                                      ;
+;   You should have received a copy of the GNU General Public License  ;
+;   along with this program; if not, write to the Free Software        ;
+;   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.          ;
+;                                                                      ;
+;**********************************************************************;
+
+	.Z80
+
+	title	TED - Text Editor
+	subttl	I/O routines - RSX180 version
+
+	include	AST.INC
+	include	DCB.INC
+	include	FCB.INC
+	include	TCB.INC
+	include	QIO.INC
+	include	SYSFN.INC
+	include	ERRORS.INC
+	include	TED.INC
+
+TTLUN	equ	5		; LUN for terminal I/O
+EFLUN	equ	1		; LUN for edit file
+WFLUN	equ	2		; LUN for work file
+
+EFN	equ	3		; event flag number for QIO
+ASTEFN	equ	4		; event flag for AST
+
+;=======================================================================
+
+;   S Y S T E M - D E P E N D E N T   R O U T I N E S
+
+	public	GETC,UNGETC,PUTC,TTQCLR,TTINIT
+
+	public	FCREAT,WCREAT,FOPEN,FCLOSE,WCLOSE,FREAD,FWRITE
+	public	FDELET,WDELET,MKFCB,PRFNAM,FGETC,FPUTC,PADEOF
+	public	GETTOP,GETCML,EXIT
+
+	extrn	TTCLR,TTFLSH,PUTCH,PFN,ADEC,HLDEC
+
+	extrn	UFLAG,UPDST,UCASE,CPDEHL,QIOSB
+
+;TODO: do not enter screen mode if could not open the file specified
+;      in the command line.
+
+;-----------------------------------------------------------------------
+
+	cseg
+
+; Terminal routines
+
+; Init terminal
+
+TTINIT:	call	TTCLR		; init output buffer
+	call	TTQCLR		; reset input queue
+	ld	hl,TCKSEC
+	ld	c,I.TCKS
+	SC	.GIN		; get ticks/sec for timing functions
+	ld	de,'TI'
+	ld	c,0
+	ld	b,TTLUN
+	SC	.ALUN		; assign TTLUN to TI:
+	ld	l,IO.ATT	; attach
+	ld	h,TF.AST	;  with AST
+	ld	(QIOATT+Q.FUNC),hl
+	ld	hl,QIOATT
+	SC	.QIO		; .QIOW
+	ret	c		; return error if queuing failed
+	ld	hl,QIOSMC	; fetch return code
+	SC	.QIO
+	ret	c
+	ld	a,LF		; as required by RSX180
+	call	PUTC
+	ret
+
+; Output char in A to terminal, buffered.
+
+PUTC:	push	af
+	push	bc
+	and	7Fh
+	ld	c,a
+	call	PUTCH
+	pop	bc
+	pop	af
+	ret
+
+; Get input char into A. If the input queue is empty, wait for character.
+
+GETC:	push	hl
+	push	de
+	push	bc
+	call	TTFLSH
+gc0:	ld	e,ASTEFN
+	SC	.CLEF		; clear event flag
+
+	ld	a,(TTQLEN)	; check TTY queue length
+	or	a
+	jr	nz,gc1
+
+	ld	hl,ASTFLG
+	bit	0,(hl)		; time mark?
+	jr	z,gc3
+
+	res	0,(hl)
+	call	UPDST
+	call	TTFLSH
+
+gc3:	ld	a,(UFLAG)
+	or	a
+	jr	z,gc4
+
+	ld	bc,0
+	ld	e,0
+	SC	.CMKT		; cancel any outstanding mark time requests
+
+	ld	a,(TCKSEC)
+	rrca
+	rrca
+	and	3Fh		; 0.25 secs
+	ld	l,a
+	ld	h,0
+	ld	d,1		; units = ticks
+	ld	e,0		; no EFN
+	ld	bc,TMAST	; AST routine address
+	SC	.MRKT
+
+gc4:	ld	e,ASTEFN
+	SC	.WTSE
+	jr	gc0
+
+gc1:	;di
+	ld	hl,(TTQOUT)	; get TTY queue out pointer into HL
+	ld	a,(hl)		; get byte from queue
+	inc	hl
+	and	7Fh		; strip parity bit, leave ASCII
+	ld	c,a
+	ld	de,TTFIFO+64
+	call	CPDEHL		; pointer at end of buffer?
+	jr	nz,gc2		; jump if not
+	ld	hl,TTFIFO	; else wrap back to start
+gc2:	ld	(TTQOUT),hl	; store pointer
+	ld	hl,TTQLEN
+	dec	(hl)		; decrement TTY input queue length
+	;ei
+	ld	a,c
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Store char in C to console queue (this is also called from AST).
+
+UNGETC:	push	hl
+	push	de
+	;di
+	ld	a,(TTQLEN)
+	cp	64		; check console input queue length
+	jr	z,tti2		; return if queue full
+	ld	hl,(TTQIN)	; else get queue in pointer into HL
+	ld	(hl),c		; store incoming char
+	inc	hl		;  and advance pointer
+	ld	de,TTFIFO+64
+	call	CPDEHL		; pointer at end of buffer?
+	jr	nz,tti1		; jump if not
+	ld	hl,TTFIFO	; else wrap back to start
+tti1:	ld	(TTQIN),hl	; store pointer back
+	ld	hl,TTQLEN	; increment queue length
+	inc	(hl)
+tti2:	;ei
+	pop	de
+	pop	hl
+	ret
+
+; Reset console input queue
+
+TTQCLR:	;di
+	ld	hl,(TTQOUT)
+	ld	(TTQIN),hl	; make out ptr = in ptr
+	xor	a
+	ld	(TTQLEN),a	; clear queue length (no bytes stored)
+	;ei
+	ret
+
+; AST terminal input
+
+TTAST:	ex	(sp),hl		; fetch argument
+	push	de
+	push	bc
+	ld	c,l		; get the char
+	call	UNGETC		; store it
+	ld	hl,ASTFLG
+	set	1,(hl)		; signal char arrived
+	ld	e,ASTEFN
+	SC	.SETF		; and set event flag
+	pop	bc
+	pop	de
+	pop	hl
+	SC	.ASTX
+
+; AST mark-time
+
+TMAST:	push	hl
+	push	de
+	ld	hl,ASTFLG
+	set	0,(hl)		; signal time event arrived
+	ld	e,ASTEFN
+	SC	.SETF		; and set event flag
+	pop	de
+	pop	hl
+	SC	.ASTX
+
+;-----------------------------------------------------------------------
+
+; Disk I/O routines
+
+; Create and open work file. Returns CY set on error.
+
+WCREAT:	push	hl
+	push	de
+	push	bc
+	ld	de,(WFDB+F.DEV)
+	ld	a,(WFDB+F.UNIT)	; device name in DE-C
+	ld	c,a
+	ld	b,WFLUN		; LUN in B
+	SC	.ALUN
+	jr	c,wc1
+	ld	l,IO.CRE	; function code
+	ld	h,0		; non-contiguous file
+	ld	(QIOWF+Q.FUNC),hl
+	ld	hl,WFDB		; FDB
+	ld	(QIOWF+Q.P1),hl
+	ld	hl,0		; no preallocated blocks
+	ld	(QIOWF+Q.P2),hl
+	ld	hl,QIOWF
+	SC	.QIO		; .QIOW
+	jr	c,wc1		; if queuing failed
+	ld	a,(QIOSB)	; fetch return code
+	or	a		; check result
+	scf
+	jr	nz,wc1
+	ld	hl,IO.RAT	; function code
+	ld	(QIOWF+Q.FUNC),hl
+	ld	hl,WFDB		; buffer address
+	ld	(QIOWF+Q.BUF),hl
+	ld	hl,FINFSZ	; length
+	ld	(QIOWF+Q.LEN),hl
+	ld	hl,QIOWF
+	SC	.QIO		; .QIOW
+	jr	c,wc1		; if queuing failed
+;;	ld	hl,(QIOSB+2)	;;; not used [check value?]
+	ld	a,(QIOSB)
+	or	a		; check result
+	scf
+	jr	nz,wc1
+	ld	a,FN.DEV OR FN.DIR OR FN.NAME OR FN.EXT OR FN.VER
+	ld	(WFDB+F.ATTR),a
+	xor	a
+wc1:	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Create output file. Returns CY set on error.
+
+FCREAT:	push	hl
+	push	de
+	push	bc
+	ld	a,(EFDB+F.ATTR)
+	and	NOT FN.VER
+	ld	(EFDB+F.ATTR),a
+	ld	hl,0
+	ld	(EFDB+F.VER),hl	; create new version [except for WU command]
+	ld	de,(EFDB+F.DEV)
+	ld	a,(EFDB+F.UNIT)	; device name in DE-C
+	ld	c,a
+	ld	b,EFLUN		; LUN in B
+	SC	.ALUN
+	jr	c,fc1
+	ld	l,IO.CRE	; function code
+	ld	h,0		; non-contiguous file
+	ld	(QIOEF+Q.FUNC),hl
+	ld	hl,EFDB		; FDB
+	ld	(QIOEF+Q.P1),hl
+	ld	hl,0		; no preallocated blocks
+	ld	(QIOEF+Q.P2),hl
+	ld	(QIOEF+Q.P2+2),hl
+	ld	hl,QIOEF
+	SC	.QIO		; .QIOW
+	jr	c,fc1		; if queuing failed
+	ld	a,(QIOSB)	; fetch return code
+	or	a		; check result
+	scf
+	jr	nz,fc1
+	ld	hl,IO.RAT	; function code
+	ld	(QIOEF+Q.FUNC),hl
+	ld	hl,EFDB		; buffer address
+	ld	(QIOEF+Q.BUF),hl
+	ld	hl,FINFSZ	; length
+	ld	(QIOEF+Q.LEN),hl
+	ld	hl,QIOEF
+	SC	.QIO		; .QIOW
+	jr	c,fc1		; if queuing failed
+;;	ld	hl,(QIOSB+2)	;;; not used [check value?]
+	ld	a,(QIOSB)
+	or	a		; check result
+	scf
+	jr	nz,fc1
+	ld	a,FN.DEV OR FN.DIR OR FN.NAME OR FN.EXT OR FN.VER
+	ld	(EFDB+F.ATTR),a
+	xor	a
+fc1:	ld	hl,0
+	ld	(NUMWR),hl	; clear output byte count
+	ld	(FIOBLK),hl	; init sequential block number
+	ld	hl,IOBUF
+	ld	(FIOPTR),hl	; init output pointer
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Open input file. Assumes EFDB has been set. Returns CY set on error.
+
+FOPEN:	push	hl
+	push	de
+	push	bc
+	ld	de,(EFDB+F.DEV)
+	ld	a,(EFDB+F.UNIT)	; device name in DE-C
+	ld	c,a
+	ld	b,EFLUN		; LUN in B
+	SC	.ALUN
+	jr	c,fop1
+	ld	l,IO.ACC	; function code
+	ld	h,SF.ACR OR SF.SHR
+	ld	(QIOEF+Q.FUNC),hl
+	ld	hl,EFDB		; FDB
+	ld	(QIOEF+Q.P1),hl
+	ld	hl,QIOEF
+	SC	.QIO		; .QIOW
+	jr	c,fop1		; if queuing failed
+	ld	a,(QIOSB)	; fetch return code
+	or	a		; check result
+	scf
+	jr	nz,fop1
+	ld	hl,IO.RAT	; function code
+	ld	(QIOEF+Q.FUNC),hl
+	ld	hl,EFDB		; buffer address
+	ld	(QIOEF+Q.BUF),hl
+	ld	hl,FINFSZ	; length
+	ld	(QIOEF+Q.LEN),hl
+	ld	hl,QIOEF
+	SC	.QIO		; .QIOW
+	jr	c,fop1		; if queuing failed
+;;	ld	hl,(QIOSB+2)	;;; not used [check value?]
+	ld	a,(QIOSB)
+	or	a		; check result
+	scf
+	jr	nz,fop1
+	ld	a,FN.DEV OR FN.DIR OR FN.NAME OR FN.EXT OR FN.VER
+	ld	(EFDB+F.ATTR),a
+	xor	a
+fop1:	ld	hl,0
+	ld	(NUMRD),hl	; clear number of bytes read
+	ld	(FIOBLK),hl	; init sequential block number
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+; Close work file
+
+WCLOSE:	push	hl
+	ld	hl,IO.DEA	; function code
+	ld	(QIOWF+Q.FUNC),hl
+	ld	hl,QIOWF
+	SC	.QIO		; .QIOW
+	jp	c,wcl1		; if queuing failed
+	ld	a,(QIOSB)
+	or	a		; check result
+	jp	z,wcl1
+	scf
+wcl1:	pop	hl
+	ret
+
+; Close input and/or edited file
+
+FCLOSE:	push	hl
+	ld	hl,IO.DEA	; function code
+	ld	(QIOEF+Q.FUNC),hl
+	ld	hl,QIOEF
+	SC	.QIO		; .QIOW
+	jp	c,fcl1		; if queuing failed
+	ld	a,(QIOSB)
+	or	a		; check result
+	jp	z,fcl1
+	scf
+fcl1:	pop	hl
+	ret
+
+; Pad last disk block with EOF characters and save it before closing file
+
+PADEOF:	push	hl
+	ld	hl,(NUMWR)	; padding not required for RSX180
+	ld	a,h
+	or	l
+	pop	hl
+	call	nz,WRBLK	; write any remaining chars
+	ret
+
+; Read 512-byte block from work file. HL = buffer address, DE = blk number
+
+FREAD:	push	hl
+	ld	(QIOWF+Q.BUF),hl ; buffer address
+	ld	hl,512
+	ld	(QIOWF+Q.LEN),hl ; length
+	ld	(QIOWF+Q.BLK),de ; block number
+	ld	hl,0
+	ld	(QIOWF+Q.OFS),hl ; offset
+	ld	hl,IO.RVB	; function code
+	ld	(QIOWF+Q.FUNC),hl
+	ld	hl,QIOWF
+	SC	.QIO		; .QIOW
+	jp	c,frd1		; if queuing failed
+;;	ld	hl,(QIOSB+2)	;;; not used [check value?]
+	ld	a,(QIOSB)
+	or	a		; check result
+	jr	z,frd1
+	scf
+frd1:	pop	hl
+	ret
+
+; Write 512-byte block to work file. HL = buffer address, DE = blk number
+
+FWRITE:	push	hl
+	ld	(QIOWF+Q.BUF),hl ; buffer address
+	ld	hl,512
+	ld	(QIOWF+Q.LEN),hl ; length
+	ld	(QIOWF+Q.BLK),de ; block number
+	ld	hl,0
+	ld	(QIOWF+Q.OFS),hl ; offset
+	ld	hl,IO.WVB	; function code
+	ld	(QIOWF+Q.FUNC),hl
+	ld	hl,QIOWF
+	SC	.QIO		; .QIOW
+	jr	c,fwr1		; if queuing failed
+;;	ld	hl,(QIOSB+2)
+	ld	a,(QIOSB)
+	or	a		; check result
+	jr	z,fwr1
+	scf
+fwr1:	pop	hl
+	ret
+
+; Get byte from input file
+; Return CY set on error or EOF
+
+FGETC:	push	hl
+	ld	hl,(NUMRD)	; check byte count
+	ld	a,h
+	or	l
+	jr	nz,fgc1		; jump if not zero
+	call	RDBLK		; else read next block
+	jr	c,fgc2		; on error return
+fgc1:	ld	hl,(FIOPTR)
+	ld	a,(hl)		; get char from file buffer
+	inc	hl		; inc ptr
+	ld	(FIOPTR),hl
+	ld	hl,(NUMRD)
+	dec	hl
+	ld	(NUMRD),hl	; decrement byte count
+	cp	1Ah		; EOF?
+	scf			; return with CY set if yes
+	jr	z,fgc2
+	or	a
+fgc2:	pop	hl
+	ret
+
+; Read next block from input file
+
+RDBLK:	push	hl
+	ld	hl,IOBUF
+	ld	(FIOPTR),hl	 ; set pointer to begin of file buffer
+	ld	(QIOEF+Q.BUF),hl ; buf
+	ld	hl,512
+	ld	(NUMRD),hl	 ; set byte count
+	ld	(QIOEF+Q.LEN),hl ; len
+	ld	hl,(FIOBLK)
+	ld	(QIOEF+Q.BLK),hl ; blkno
+	ld	hl,0
+	ld	(QIOEF+Q.OFS),hl ; offset
+	ld	hl,IO.RVB
+	ld	(QIOEF+Q.FUNC),hl  ; function code
+	ld	hl,QIOEF
+	SC	.QIO		; .QIOW
+	jr	c,rdr1		; if queueing failed
+	ld	hl,(QIOSB+2)
+	ld	(NUMRD),hl	; set byte count
+	ld	a,(QIOSB)
+	or	a		; check result
+	scf
+	jr	nz,rdr1
+	ld	hl,(FIOBLK)
+	inc	hl		; next sequential block number
+	ld	(FIOBLK),hl
+	xor	a
+rdr1:	pop	hl
+	ret
+
+; Write byte in C to output file
+
+FPUTC:	ld	hl,(NUMWR)	; get output byte count
+	push	de
+	ld	de,512
+	call	CPDEHL		; disk buffer full?
+	pop	de
+	jr	nz,fpc1		; jump if not
+	call	WRBLK		; else write block to file
+	ret	c		; on error return
+fpc1:	ld	hl,(NUMWR)
+	inc	hl		; inc output byte count
+	ld	(NUMWR),hl
+	ld	hl,(FIOPTR)	; store byte in output file buffer
+	ld	(hl),c
+	inc	hl		; advance ptr
+	ld	(FIOPTR),hl
+	or	a
+	ret
+
+; Write next block to output file
+
+WRBLK:	push	hl
+	push	de
+	ld	hl,IOBUF
+	ld	(FIOPTR),hl	 ; set pointer to begin of file buffer
+	ld	(QIOEF+Q.BUF),hl ; buf
+	ld	hl,(NUMWR)
+	ld	(QIOEF+Q.LEN),hl ; len
+	ld	hl,(FIOBLK)
+	ld	(QIOEF+Q.BLK),hl ; blkno
+	ld	hl,0
+	ld	(QIOEF+Q.OFS),hl ; offset
+	ld	hl,IO.WVB
+	ld	(QIOEF+Q.FUNC),hl  ; function code
+	ld	hl,QIOEF
+	SC	.QIO		; .QIOW
+	jr	c,wrr1		; if queueing failed
+	ld	de,(QIOSB+2)	; get number of bytes written
+	ld	hl,(NUMWR)
+	call	CPDEHL		; value must match
+	ld	a,E.IO		; else is error
+	scf
+	jr	nz,wrr1
+	ld	hl,0
+	ld	(NUMWR),hl	; clear byte count
+	ld	a,(QIOSB)
+	or	a		; check result
+	scf
+	jr	nz,wrr1
+	ld	hl,(FIOBLK)
+	inc	hl		; next sequential block number
+	ld	(FIOBLK),hl
+	xor	a
+wrr1:	pop	de
+	pop	hl
+	ret
+
+; Delete work file
+
+WDELET:	push	hl
+	ld	a,FN.DIR OR FN.NAME OR FN.EXT OR FN.VER
+	ld	(WFDB+F.ATTR),a
+	ld	hl,IO.DEL	; function code
+	ld	(QIOWF+Q.FUNC),hl
+	ld	hl,WFDB		; FDB
+	ld	(QIOWF+Q.P1),hl
+	ld	hl,QIOWF
+	SC	.QIO		; .QIOW
+	jr	c,wd1		; if queuing failed
+	ld	a,(QIOSB)
+	or	a		; check result
+	jr	z,wd1
+	scf
+wd1:	pop	hl
+	ret
+
+; Delete output file
+
+FDELET:
+	scf
+	ret
+
+; Parse file name and build FCB from string in HL.
+; Input:
+;   HL = address of filespec string in the form 'dev:[dir]fname.ext;ver'
+; Output
+;   FCB fields setup, the F.ATTR field containing a bit mask
+;   representing which filespec components were specified.
+;   CY set on error
+
+MKFCB:	push	bc
+	ld	ix,EFDB		; dest FDB
+	call	PFN
+	pop	bc
+	ret
+
+; Display file name using system conventions
+
+PRFNAM:	push	hl
+	push	de
+	push	bc
+	ld	hl,EFDB
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	a,(hl)
+	call	UCASE
+	call	PUTC
+	inc	hl
+	ld	a,(hl)
+	call	UCASE
+	call	PUTC
+	inc	hl
+	ld	a,(hl)
+	call	ADEC
+	inc	hl
+	ld	a,':'
+	call	PUTC
+	ld	a,(hl)
+	cp	' '
+	push	af
+	ld	a,'['
+	call	nz,PUTC
+	ld	b,9
+prf1:	ld	a,(hl)
+	cp	' '
+	call	nz,PUTC
+	inc	hl
+	djnz	prf1
+prf2:	pop	af
+	ld	a,']'
+	call	nz,PUTC
+	ld	b,9
+prf3:	ld	a,(hl)
+	cp	' '
+	call	nz,PUTC
+	inc	hl
+	djnz	prf3
+	ld	a,'.'
+	call	PUTC
+	ld	b,3
+prf4:	ld	a,(hl)
+	cp	' '
+	call	nz,PUTC
+	inc	hl
+	djnz	prf4
+	ld	a,';'
+	call	PUTC
+	ld	l,(hl)
+	ld	h,0
+	xor	a
+	call	HLDEC
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+
+;-----------------------------------------------------------------------
+
+; Misc routines
+
+; Get top of memory into HL
+
+GETTOP:	push	de
+	ld	hl,0
+	ld	de,GTKBUF
+	SC	.GTSK
+	ld	hl,(GTKBUF+GT.END)
+	pop	de
+	ret
+
+; Get CLI command line
+
+GETCML:	push	de
+	ld	hl,CMLBUF
+	ld	e,79
+	SC	.GTCMD
+	pop	de
+	ld	b,(hl)		; get length into B
+skiptn:	inc	hl
+	ld	a,(hl)
+	call	ISDELIM		; skip our task name
+	ret	z
+	djnz	skiptn
+	ret
+
+ISDELIM:
+	or	a
+	ret	z
+	cp	' '
+	ret	z
+	cp	TAB
+	ret	z
+	cp	'!'
+	ret	z
+	cp	'='
+	ret	z
+	cp	'/'
+	ret	z
+	cp	'>'
+	ret	z
+	cp	'<'
+	ret	z
+	cp	'|'
+	cp	CR
+	ret	z
+	cp	LF
+	ret
+
+; Exit to system
+
+EXIT:	call	TTFLSH
+	ld	hl,IO.DET	; detach terminal
+	ld	(QIOATT+Q.FUNC),hl
+	ld	hl,QIOATT
+	SC	.QIO		; .QIOW
+	ld	hl,EX.SUC
+	SC	.EXIT		; exit with success status
+	jp	$
+
+;-----------------------------------------------------------------------
+
+	dseg
+
+GTKBUF:	ds	GTKSZ
+
+QIOATT:	QIOW$	IO.ATT,TTLUN,EFN,QIOSB,,<TTAST>
+QIOSMC:	QIOW$	SF.SMC,TTLUN,EFN,QIOSB,,<TCBIN,2>
+QIOEF:	QIOW$	IO.ACC,EFLUN,EFN,QIOSB,,<,,,,>
+QIOWF:	QIOW$	IO.CRE,WFLUN,EFN,QIOSB,,<,,,,>
+TCBIN:	db	TC.BIN,1
+
+TTQLEN:	db	0		; TTY queue length (number of chars in queue)
+TTQOUT:	dw	TTFIFO		; TTY queue out pointer
+TTQIN:	dw	TTFIFO		; TTY queue in pointer
+
+TTFIFO:	ds	64		; 64 bytes used for input queue
+
+TCKSEC:	ds	2
+ASTFLG:	ds	1
+CMLBUF:	ds	80
+
+WFDB:	dw	0		; FDB for temporary work file on current disk
+	db	FN.DEV OR FN.NAME OR FN.EXT
+	db	'SY',0
+	db	'         '
+	db	'EDITOR   ','TMP'
+	dw	0
+szwfn	equ	$-WFDB
+	ds	FINFSZ-szwfn	; size = FINFSZ
+
+EFDB:	ds	FINFSZ		; FDB for user file
+
+IOBUF:	ds	512		; file I/O buffer
+
+ATTR:	ds	1
+
+FIOPTR:	dw	0		; file I/O pointer
+NUMRD:	dw	0		; number of bytes read
+NUMWR:	dw	0		; number of bytes written
+FIOBLK:	dw	0		; current sequential I/O block number
+
+	end

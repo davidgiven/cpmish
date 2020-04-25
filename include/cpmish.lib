@@ -6,3 +6,6 @@ cpmish_banner macro L
     db 'L' ; this is terrifying but correct
     db 13, 10
     endm
+
+; vim: ts=4 sw=4 et ft=asm
+

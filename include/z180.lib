@@ -1,0 +1,127 @@
+CNTLA0: equ 0x00
+CNTLA1: equ 0x01
+CNTLB0: equ 0x02
+CNTLB1: equ 0x03
+STAT0:  equ 0x04
+STAT1:  equ 0x05
+TDR0:   equ 0x06
+TDR1:   equ 0x07
+RDR0:   equ 0x08
+RDR1:   equ 0x09
+
+ASTC0L: equ 0x1a
+ASTC1L: equ 0x1c
+ASTC0H: equ 0x1b
+ASTC1H: equ 0x1d
+
+SAR0L:  equ 0x20
+SAR0H:  equ 0x21
+SAR0B:  equ 0x22
+DAR0L:  equ 0x23
+DAR0H:  equ 0x24
+DAR0B:  equ 0x25
+BCR0L:  equ 0x26
+BCR0H:  equ 0x27
+MAR1L:  equ 0x28
+MAR1H:  equ 0x29
+MAR1B:  equ 0x2a
+IAR1L:  equ 0x2b
+IAR1H:  equ 0x2c
+BCR1L:  equ 0x2e
+BCR1H:  equ 0x2f
+DSTAT:  equ 0x30
+DMODE:  equ 0x31
+DCNTL:  equ 0x32
+
+BBR:    equ 0x39
+CBR:    equ 0x38
+CBAR:   equ 0x3a
+
+out0a   macro port
+        dw 0x39ed
+        db port
+        endm
+
+out0b   macro port
+        dw 0x01ed
+        db port
+        endm
+
+out0c   macro port
+        dw 0x09ed
+        db port
+        endm
+
+out0d   macro port
+        dw 0x11ed
+        db port
+        endm
+
+out0e   macro port
+        dw 0x19ed
+        db port
+        endm
+
+out0h   macro port
+        dw 0x21ed
+        db port
+        endm
+
+out0l   macro port
+        dw 0x29ed
+        db port
+        endm
+
+in0a    macro port
+        dw 0x38ed
+        db port
+        endm
+
+in0b    macro port
+        dw 0x00ed
+        db port
+        endm
+
+in0c    macro port
+        dw 0x08ed
+        db port
+        endm
+
+in0d    macro port
+        dw 0x10ed
+        db port
+        endm
+
+in0e    macro port
+        dw 0x18ed
+        db port
+        endm
+
+in0h    macro port
+        dw 0x20ed
+        db port
+        endm
+
+in0l    macro port
+        dw 0x28ed
+        db port
+        endm
+
+mlthl   macro
+        dw 0x6ced
+        endm
+
+mltde   macro
+        dw 0x5ced
+        endm
+
+mltbc   macro
+        dw 0x4ced
+        endm
+
+otimr	macro
+		dw 0x93ed
+		endm
+
+; vim: ts=4 sw=4 et ft=asm
+

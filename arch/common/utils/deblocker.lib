@@ -8,15 +8,15 @@
 
 ; Describes a drive to the deblocker.
 
-DBS_NUM_SECTORS = 0     ; physical sectors
-DBS_NUM_TRACKS  = 2     ; physical tracks
-DBS_RNATIVE     = 4     ; callback, see below
-DBS_WNATIVE     = 6     ; callback, see below
-DBS_CUR_SECTOR  = 8     ; current physical sector
-DBS_CUR_TRACK   = 10    ; current physical track
-DBS_DIRTY       = 12
-DBS_BUFFER      = 13
-DBS__SIZE       = DBS_BUFFER + (1 << DBS_BLOCK_SHIFT)
+DBS_NUM_SECTORS equ 0     ; physical sectors
+DBS_NUM_TRACKS  equ 2     ; physical tracks
+DBS_RNATIVE     equ 4     ; callback, see below
+DBS_WNATIVE     equ 6     ; callback, see below
+DBS_CUR_SECTOR  equ 8     ; current physical sector
+DBS_CUR_TRACK   equ 10    ; current physical track
+DBS_DIRTY       equ 12
+DBS_BUFFER      equ 13
+DBS__SIZE       equ DBS_BUFFER + (1 << DBS_BLOCK_SHIFT)
 ; The RNATIVE and WNATIVE callbacks are used to read and write physical
 ; sectors. They access from DBS_CUR_SECTOR/DBS_CUR_TRACK and read or write
 ; DBS_BUFFER.

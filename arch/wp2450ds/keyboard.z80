@@ -1,0 +1,214 @@
+; Brother WP2450DS cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib wp2450ds
+    maclib cpmish
+    maclib cpm
+
+    extrn TTYPUT8
+    extrn TTYPUTC
+
+	export KBGET, kbd_get
+	export KBTEST, kbd_test
+
+MODIFIER_BIT_SHIFT = 0
+MODIFIER_BIT_CTRL = 1
+MODIFIER_BIT_CAPS = 2
+
+	cseg
+
+; Scans the keyboard, and returns the scancode of the first key pressed
+; since the last call. Keyup events are not returned at all (but update
+; the bitmap). If no events have happened, returns 0.
+
+kbd_scan:
+    ld hl, keyboard_bitmap  ; hl points to current bitmap byte
+    ld d, 0                 ; matrix probe counter
+x_loop:
+    out0d PORT_KB
+
+    ; Delay loop to wait for the keyboard.
+    ; 4 is not enough, 128 is too much.
+    ; The formula here is 13*B-2 cycles.
+    ld b, 10                ; 7 cycles
+.1
+    djnz .1                 ; 13*(B-1) + 8
+
+    in0a PORT_KB            ; read the matrix
+    cpl                     ; bits are set to 0 when a key is pressed
+    ld c, a
+    xor (hl)                ; test for changed keys
+    jr z, no_keys_pressed
+
+    ; We've detected a changed key, either down or up.
+
+    ld c, a                 ; C = changed bitmap
+
+    ld b, 1                 ; which bit to probe
+y_loop:
+    ld a, b
+    and c                   ; test for changed key
+    jr z, bit_not_changed
+
+    ; Bit B has changed. Look at the bitmap to figure out what it was.
+
+    ld a, (hl)
+    and b
+    ld a, 0x80              ; key up
+    jr nz, keyup            ; a change from 1 to 0 means a keyup
+    xor a                   ; key down
+keyup:
+
+    ; Right! This is a keydown, so stop scanning now.
+
+    ld e, a                 ; save the key up / key down bit
+
+    ld a, b
+    xor (hl)
+    ld (hl), a              ; invert the bit in the bitmap
+
+    ; Compute the scancode.
+
+    ld a, d
+    add a
+    add a
+    add a                   ; put the probe value in the top three bits
+    or e                    ; add the key up / key down bit
+.1                          ; put the sense value in the bottom three bits
+    rr b
+    ret z
+    inc a
+    jr .1
+
+bit_not_changed:
+    sla b                   ; move to next bit
+    jr nz, y_loop
+    
+    ; The only way we'll get here is if all the changed keys were
+    ; ups. We just continue scanning the matrix.
+
+no_keys_pressed:
+    inc d
+    inc hl
+    ld a, 9
+    cp d
+    jr nz, x_loop
+
+    ; If we got here, we didn't find any keydown events.
+
+    xor a
+    ret
+    
+; Blocks waiting for the next key.
+kbd_get:
+    call kbd_poll
+    or a
+    jr z, kbd_get
+    ret
+
+shift_change:
+    xor a
+    ld hl, keyboard_modifiers
+    res MODIFIER_BIT_SHIFT, (hl)
+    bit 7, b
+    ret nz
+    set MODIFIER_BIT_SHIFT, (hl)
+    ret
+
+ctrl_change:
+    xor a
+    ld hl, keyboard_modifiers
+    res MODIFIER_BIT_CTRL, (hl)
+    bit 7, b
+    ret nz
+    set MODIFIER_BIT_CTRL, (hl)
+    ret
+
+caps_pressed:
+    ld hl, keyboard_modifiers
+    ld a, (hl)
+    xor 1<<MODIFIER_BIT_CAPS
+    ld (hl), a
+    xor a
+    ret
+
+caps_change:
+; Returns the ASCII keycode in A, or 0 if nothing is pending.
+kbd_poll:
+    ld hl, pending_key
+    ld a, (hl)
+    or a
+    ld (hl), 0
+    ret nz                  ; return any pending key
+    call kbd_scan
+    or a
+    ret z                   ; give up if no key event
+
+    ; We now have a keyboard scancode in A, so use the keyboard map to convert
+    ; it to ASCII.
+
+    ld b, a
+    and 0x7f
+    cp 0x38
+    jr z, shift_change
+    cp 0x30
+    jr z, ctrl_change
+
+    xor a
+    bit 7, b
+    ret nz                  ; ignore keyups
+
+    ld a, b
+    cp 0x43
+    jr z, caps_pressed
+
+    ld c, b
+    ld b, 0
+    ld a, (keyboard_modifiers)
+    ld hl, keyboard_normal_map
+    bit MODIFIER_BIT_SHIFT, a
+    jr z, shift_not_pressed
+    ld hl, keyboard_shifted_map
+shift_not_pressed:
+    add hl, bc
+    ld a, (hl)              ; pull the ASCII value from the keymap
+
+    ld hl, keyboard_modifiers
+    bit MODIFIER_BIT_CTRL, (hl)
+    jr z, ctrl_not_pressed
+    and 31
+ctrl_not_pressed:
+
+    bit MODIFIER_BIT_CAPS, (hl)
+    ret z
+    cp 'A'
+    ret c
+    cp 'z'+1
+    ret nc
+    cp 'Z'+1
+    jr c, do_flip_case
+    cp 'a'
+    ret c
+do_flip_case:
+    xor 0x20                ; toggle case bit
+    ret
+
+; Returns Z if no keys are pending, NZ otherwise.
+kbd_test:
+    call kbd_poll
+    or a
+    ret z                   ; nope, nothing
+
+    ld (pending_key), a     ; unget the key just pressed
+    or 1
+    ret
+
+pending_key: db 0
+keyboard_bitmap: ds 9
+keyboard_modifiers: db 0
+
+.include "keytab.inc"
+
+; vim: ts=4 sw=4 et ft=asm
+

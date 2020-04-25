@@ -1,4 +1,4 @@
-; Amstrad NC200 cpmish BIOS © 2019 David Given
+; cpmish BIOS © 2019 David Given
 ; This file is distributable under the terms of the 2-clause BSD license.
 ; See COPYING.cpmish in the distribution root directory for more information.
 
@@ -319,7 +319,7 @@ setresetattr:
     ld hl, tty_attributes
     res 0, (hl)
     bit 0, a
-    ret z
+    ret nz
     set 0, (hl)
     ret
     
