@@ -1,0 +1,128 @@
+; WP2450DS main program.
+
+; This is a completely generic ADM3a machine.
+
+    
+        aseg
+        org 0x100
+
+        extrn START
+
+BDOS    equ 5
+
+; Initial startup.
+
+        jp START
+
+; BYE: exit to CP/M
+
+        global BYE
+BYE     equ 0
+
+; CLRSCN: clears the screen.
+
+        global CLRSCN
+CLRSCN:
+        push bc
+        ld c, 2
+        ld e, 0x1a
+        call BDOS
+        pop bc
+        ret
+
+; PUTIME: set current time to DE:HL, in centiseconds.
+      
+        global PUTIME
+PUTIME:
+        ret
+
+; GETIME: return current time in DE:HL, in centiseconds.
+
+        global GETIME
+GETIME:
+        ld de, 0
+        ld hl, 0
+        ret
+
+; PUTCSR: move to cursor to x=DE, y=HL
+
+        global PUTCSR
+PUTCSR:
+        push bc
+        push de
+        push hl
+        ld c, 2
+        ld e, 0x1b
+        call BDOS
+        ld c, 2
+        ld e, '='
+        call BDOS
+        pop hl
+        ld c, 2
+        ld a, 32
+        add l
+        ld e, a
+        call BDOS
+        pop hl
+        ld c, 2
+        ld a, 32
+        add l
+        ld e, a
+        call BDOS
+        pop bc
+        ret
+
+; GETCSR: return cursor position in x=DE, y=HL
+
+        global GETCSR
+GETCSR:
+        ld de, 0
+        ld hl, 0
+        ret
+
+; GETKEY: return key with timeout
+; HL = time to wait in centiseconds
+; Returns C if character recieved, with character in A
+; Returns !C if timeout
+
+        global GETKEY
+GETKEY:
+        push bc
+.1
+        ld c, 6                 ; poll character
+        ld e, 0xff
+        call BDOS
+        or a
+        jr z, .1                ; repeat if no character
+        scf                     ; set carry
+        pop bc
+        ret
+
+; Edit key table, which must be at 0x01F4
+
+        if $ > 0x1f4
+        error 'Insufficient space in boot block'
+        endif
+
+        org     0x01f4
+        defb    80              ;WIDTH
+        defb    11              ;CURSOR UP
+        defb    10              ;CURSOR DOWN
+        defb    'A' and 1FH     ;START OF LINE
+        defb    'E' and 1FH     ;END OF LINE
+        defb    'C' and 1FH     ;DELETE TO END OF LINE
+        defb    7FH             ;BACKSPACE & DELETE
+        defb    'U' AND 1FH     ;CANCEL LINE
+        defb    8               ;CURSOR LEFT
+        defb    12              ;CURSOR RIGHT
+        defb    'D' AND 1FH     ;DELETE CHARACTER
+        defb    'F' AND 1FH     ;INSERT CHARACTER
+
+        if $ != 0x200
+        error 'Edit block wrong length'
+        endif
+;;
+;FIN:    END
+
+; vim: ts=8 sw=8 et ft=asm
+

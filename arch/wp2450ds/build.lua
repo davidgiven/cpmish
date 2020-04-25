@@ -198,7 +198,6 @@ diskimage {
 	bootfile = { "+bootfile_img" },
 	map = {
 		["asm.com"] = "cpmtools+asm",
-		["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
 		["copy.com"] = "cpmtools+copy",
 		["dump.com"] = "cpmtools+dump",
 		["mkfs.com"] = "cpmtools+mkfs",
@@ -206,6 +205,7 @@ diskimage {
 		["stat.com"] = "cpmtools+stat",
 		["submit.com"] = "cpmtools+submit",
         ["-readme.txt"] = "+readme",
+		["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic_ADM3A",
         ["qe.com"] = "cpmtools+qe_BROTHER_WP2450DS",
 		["z8e.com"] = "third_party/z8e+z8e_WP2450DS",
 		["ted.com"] = "third_party/ted+ted_WP2450DS",
