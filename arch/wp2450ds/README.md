@@ -1,5 +1,5 @@
 Platform: the Brother WP-2450DS (or similar) word processor
-==========================================================
+===========================================================
 
 The WP-2450DS is a 1983 word processing appliance: a simple Z180 computer with
 a cool portrait CRT and a 3.5" floppy disk drive built in to a daisywheel
@@ -20,15 +20,15 @@ What you get with this port:
 
 - about 702kB of storage on a 720kB GCR disk (I have to reserve two tracks for
   a FAT filesystem and the CP/M system track to boot from)
-- most of an ADM-3a / Kaypro II terminal emulator supporting 90x30 text
+- most of an ADM-3a / Kaypro II terminal emulator supporting 91x26 text
 - a respectable 55kB TPA
 - a non-interrupt driven keyboard which drops keypresses if the machine's busy
-- no cursor
 - bugs
 
 What you don't get:
 
 - repeat key
+- escape key (the physical keyboard doesn't have one; use ^[ instead)
 - support for the printer
 - sysgen, format etc
 - no bugs
