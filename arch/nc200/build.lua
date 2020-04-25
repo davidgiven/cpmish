@@ -86,7 +86,7 @@ diskimage {
         ["asm.com"] = "cpmtools+asm",
         ["copy.com"] = "cpmtools+copy",
         ["submit.com"] = "cpmtools+submit",
-        ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic",
+        ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic_ADM3A",
         ["qe.com"] = "cpmtools+qe_NC200",
         ["flash.com"] = "arch/nc200/tools+flash",
         ["mkfs.com"] = "cpmtools+mkfs",
