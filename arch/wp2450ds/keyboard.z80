@@ -14,6 +14,7 @@
 
 MODIFIER_BIT_SHIFT = 0
 MODIFIER_BIT_CTRL = 1
+MODIFIER_BIT_CAPS = 2
 
 	cseg
 
@@ -36,6 +37,7 @@ x_loop:
 
     in0a PORT_KB            ; read the matrix
     cpl                     ; bits are set to 0 when a key is pressed
+    ld c, a
     xor (hl)                ; test for changed keys
     jr z, no_keys_pressed
 
@@ -123,6 +125,15 @@ ctrl_change:
     set MODIFIER_BIT_CTRL, (hl)
     ret
 
+caps_pressed:
+    ld hl, keyboard_modifiers
+    ld a, (hl)
+    xor 1<<MODIFIER_BIT_CAPS
+    ld (hl), a
+    xor a
+    ret
+
+caps_change:
 ; Returns the ASCII keycode in A, or 0 if nothing is pending.
 kbd_poll:
     ld hl, pending_key
@@ -148,32 +159,40 @@ kbd_poll:
     bit 7, b
     ret nz                  ; ignore keyups
 
+    ld a, b
+    cp 0x43
+    jr z, caps_pressed
+
     ld c, b
     ld b, 0
     ld a, (keyboard_modifiers)
     ld hl, keyboard_normal_map
     bit MODIFIER_BIT_SHIFT, a
-    jr z, .2
+    jr z, shift_not_pressed
     ld hl, keyboard_shifted_map
-.2:
+shift_not_pressed:
     add hl, bc
-    ld a, (hl)
+    ld a, (hl)              ; pull the ASCII value from the keymap
 
     ld hl, keyboard_modifiers
     bit MODIFIER_BIT_CTRL, (hl)
-    jr z, .1
+    jr z, ctrl_not_pressed
     and 31
-.1:
-    or a
-    jr z, unknown_scancode
-    ret
+ctrl_not_pressed:
 
-unknown_scancode:
-    ld a, c
-    call TTYPUT8
-    ld a, ' '
-    call TTYPUTC
-    jr kbd_get
+    bit MODIFIER_BIT_CAPS, (hl)
+    ret z
+    cp 'A'
+    ret c
+    cp 'z'+1
+    ret nc
+    cp 'Z'+1
+    jr c, do_flip_case
+    cp 'a'
+    ret c
+do_flip_case:
+    xor 0x20                ; toggle case bit
+    ret
 
 ; Returns Z if no keys are pending, NZ otherwise.
 kbd_test:

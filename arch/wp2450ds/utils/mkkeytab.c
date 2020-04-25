@@ -84,6 +84,8 @@ int main(int argc, const char* argv[])
 	key(0x3e, 0,   0); // tw/wp
 	key(0x46, 0,   0); // file
 
+	key(0x40, 0,   0); // sometimes fires when C is pressed?
+
     printf("keyboard_normal_map:\n");
     for (int i=0; i<sizeof(normaltab); i++)
         printf("\t.db 0x%02x\n", normaltab[i]);
