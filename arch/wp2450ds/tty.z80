@@ -251,13 +251,27 @@ read_scanline:
     push hl
     out0l PORT_VIDEO_ADDR_LO
     out0h PORT_VIDEO_ADDR_HI
-    ld b, SCREEN_WIDTH
     ld hl, video_buffer
+    out0l MAR1L
+    out0h MAR1H
+    ld a, 6
+    out0a MAR1B
+    ld hl, SCREEN_WIDTH
+    out0l BCR1L
+    out0h BCR1H
+    ld hl, PORT_VIDEO_DATA_R
+    out0l IAR1L
+    out0h IAR1H
+    ld a, 01000110b         ; One memory wait state, 0 I/O wait state, I/O->memory
+    out0a DCNTL
+    ld a, 10010000b         ; DE1 enable, DWE0 disable
+    out0a DSTAT             ; perform the transfer
+
 .1
-    in0a PORT_VIDEO_DATA_R
-    ld (hl), a
-    inc hl
-    djnz .1
+    in0a DSTAT
+    and 10000000b           ; test for DMA completion
+    jr nz, .1
+
     pop hl
     ret
 
@@ -266,13 +280,27 @@ write_scanline:
     push hl
     out0l PORT_VIDEO_ADDR_LO
     out0h PORT_VIDEO_ADDR_HI
-    ld b, SCREEN_WIDTH
     ld hl, video_buffer
+    out0l MAR1L
+    out0h MAR1H
+    ld a, 6
+    out0a MAR1B
+    ld hl, SCREEN_WIDTH
+    out0l BCR1L
+    out0h BCR1H
+    ld hl, PORT_VIDEO_DATA_W
+    out0l IAR1L
+    out0h IAR1H
+    ld a, 01000100b         ; One memory wait state, 0 I/O wait state, memory->I/O
+    out0a DCNTL
+    ld a, 10010000b         ; DE1 enable, DWE0 disable
+    out0a DSTAT             ; perform the transfer
+
 .1
-    ld a, (hl)
-    out0a PORT_VIDEO_DATA_W
-    inc hl
-    djnz .1
+    in0a DSTAT
+    and 10000000b           ; test for DMA completion
+    jr nz, .1
+
     pop hl
     ret
 
