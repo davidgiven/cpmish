@@ -66,8 +66,8 @@ normalrule {
     ins = { "+bootfile_mem" },
     outleaves = { "bootfile.img" },
     commands = {
-        "dd if=%{ins[1]} of=%{outs} status=none bs=256 count=36",
-        "dd if=%{ins[1]} of=%{outs} status=none bs=256 seek=36 skip=231 count=25"
+        "dd if=%{ins[1]} of=%{outs} bs=256 count=36 2> /dev/null",
+        "dd if=%{ins[1]} of=%{outs} bs=256 seek=36 skip=231 count=25 2> /dev/null"
     }
 }
 
