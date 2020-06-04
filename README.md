@@ -87,6 +87,10 @@ Kit](https://github.com/davidgiven/ack), which is used as the C compiler
 (yes, some of the tools are written in C). You'll have to install it from
 source yourself as it's not in Debian.
 
+Additionally, if you are building on macOS (formerly Mac OS X) you need
+to `brew install coreutils` and `export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"`
+before building to use the correct `dd` version.
+
 Once in place, just do:
 
     make
