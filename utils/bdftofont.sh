@@ -4,7 +4,7 @@ bdffont="$1"
 outputpng="$2"
 
 pbmtext -font "$bdffont" << "EOF" \
-    | pnmcut -left 13 -right -19 -top 7 -bottom -8 \
+    | pnmcut -left 13 -right -15 -top 7 -bottom -8 \
     | pnmtopng \
     > $outputpng
  !"#$%&'
