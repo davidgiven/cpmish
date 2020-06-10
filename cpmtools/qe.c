@@ -632,7 +632,9 @@ void insert_mode(bool replacing)
 		uint16_t c = cpm_bios_conin();
 		if (c == 27)
 			break;
-		else if (c == 8)
+
+		dirty = true;
+		if (c == 8)
 		{
 			if (gap_start != current_line)
 				gap_start--;
@@ -655,7 +657,7 @@ void insert_mode(bool replacing)
 		redraw_current_line();
 	}
 
-	dirty = true;
+	set_status_line("");
 }
 
 void insert_text(uint16_t count)
