@@ -121,9 +121,9 @@ The Supervisor is 8kB long and shares a 16kB bank with the video memory.
 However, it's only mapped in when it's actually doing something, so user code
 will never know it exists.
 
-Given that four banks provide the 64kB of CP/M userspace, and one bank
-contains the Supervisor, this leaves three banks spare; these are currently
-unused.
+Of the eight memory banks, four provide the 64kB of CP/M userspace, one
+contains the Supervisor and video memory, and one if used to cache the BDOS and
+CCP; the other two are currently unused.
 
 The terminal emulator is ADM-3a with some Kaypro II extensions, using a
 custom (drawn by me!) 6x7 font to allow 80x18 characters of text. This

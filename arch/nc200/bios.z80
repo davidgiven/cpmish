@@ -5,8 +5,8 @@
     maclib cpm
     maclib supervisor
     maclib nc200
+	maclib addresses
 
-    extern CBASE
     extern SCONIN
     extern SCONOUT
     extern SCONST
@@ -22,7 +22,7 @@
     extern SYSSTK
 
     cseg
-label BBASE
+	; BBASE is here
 
 ; BIOS jump table.
 
