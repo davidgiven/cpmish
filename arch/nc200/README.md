@@ -14,9 +14,10 @@ seamlessly run programs from disk if you use the right keyboard combination.
 What you get with this port:
 
 - standard PC 720kB floppy disks (with the CP/M file system, of course, but
-they're writeable from ordinary PC drives)
+  they're writeable from ordinary PC drives)
 - support for a hard drive of up to 32MB on a Compact Flash card (note: not
-SRAM)
+  SRAM)
+- CCP and BDOS cached in RAM for instant warm reboots
 - most of an ADM-3a / Kaypro II terminal emulator supporting 80x18 text
 - a gigantic 60kB TPA
 - an interrupt-driven keyboard
@@ -56,16 +57,18 @@ yet).
 
 To replace the BDOS:
 
-- create a standard 3.5kB BDOS image assembled at 0xf000.
+- create a standard 3.5kB BDOS image assembled at 0xef00.
 - do `dd if=my-custom-bdos.bin of=/dev/fd0 bs=1 seek=11264`
 
 To replace the CCP:
 
-- create a standard 2kB CCP image assembled at 0xe800.
+- create a standard 2kB CCP image assembled at 0xe700.
 - do `dd if=my-custom-ccp.bin of=/dev/fd0 bs=1 seek=9216`
 
-Then, inserting the disk into the NC200 and warm starting CP/M will load your
-new BDOS and CCP. (You don't even have to turn it off.)
+Then, inserting the disk into the NC200 and resetting the machine will start
+CP/M with load your new BDOS and CCP. Note that it is necessary to do a full
+reset to ensure that the new BDOS and CCP get loaded into the cache; a simple
+warm start isn't sufficient.
 
 
 Using a hard drive
@@ -98,6 +101,11 @@ will destroy any data on your card.
 Sadly, the NC200 is unable to boot from an ATA card, so you'll still need a
 floppy disk in the drive to start cpmish; but once booted, your files will be
 available on drive B.
+
+A tool FLIPDISK is available which will swap drives A: and B: in the BIOS. So,
+if you have a PCMCIA flash card, you can boot from floppy, run FLIPDISK, and
+then run everything from flash. This drastically speeds up everything,
+especially submit files, which use a temporary file on drive A:.
 
 If you have a CF card reader for a modern machine, the diskdefs file in the
 cpmish root should allow access to files on the card:
