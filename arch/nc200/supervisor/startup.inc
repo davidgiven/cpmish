@@ -22,7 +22,7 @@ label STARTUP
 
     ld bc, 0                    ; start sector
     ld de, 1                    ; track
-    ld hl, 0x4000               ; start address in userspace
+    ld hl, CBASE                ; start address in userspace
 .1
     ld (current_dma), hl        ; set destination address
     push bc
@@ -44,10 +44,10 @@ label STARTUP
 
 	ld a, CPM_BANK
 	out (PORT_BANK1), a         ; map cache to 0x4000.
-	ld a, USER1_BANK
-	out (PORT_BANK2), a			; map userspace 0x4000 to 0x8000.
+	ld a, USER3_BANK
+	out (PORT_BANK3), a			; map userspace 0xc000 to 0xc000.
 	ld de, 0x4000				; dest
-	ld hl, 0x8000				; src
+	ld hl, CBASE 	 			; src
 	ld bc, CPM_SIZE				; length
 	ldir
 
@@ -72,7 +72,7 @@ warmboot:
 	out (PORT_BANK3), a			; map user space 0xc000 to 0xc00.
 	ld de, CBASE             	; dest
 	ld hl, 0x4000               ; src
-	ld bc, CPM_SIZE             ; length
+	ld bc, BDOS_SIZE+CCP_SIZE   ; length
 	ldir
 
     ; Initialise the page zero CP/M-y things.

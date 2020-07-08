@@ -1,0 +1,22 @@
+	maclib addresses
+
+	cseg
+	ld hl, BBASE + 0x33
+	ld a, 1
+	xor (hl)
+	ld (hl), a
+
+	ld de, .str.normal
+	jr z, .1
+	ld de, .str.swapped
+.1
+	ld c, 9
+	call 5
+	rst 0
+
+.str.normal:
+	db "A: is FDD, B: is PCMCIA", 13, 10, '$'
+
+.str.swapped:
+	db "A: is PCMCIA, B: is FDD", 13, 10, '$'
+
