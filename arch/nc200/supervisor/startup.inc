@@ -12,20 +12,13 @@ label STARTUP
     ld hl, str.banner
     call tty_puts
     call pcmcia_init
-    ; fall through
-coldboot:
-    ; Initialise CP/M-y things in the base of userspace.
 
-    ld a, USER0_BANK
-    out (PORT_BANK1), a         ; Map user space 0x0000 to 0x4000.
-    xor a
-    ld (0x4000 + IOBYTE), a     ; reset iobyte
-    ld (0x4000 + CDISK), a      ; reset current disk
-warmboot:
-    ; Reload the CCP, BDOS and BIOS.
+	ld hl, str.loading
+	call tty_puts
+
+	; Load the CCP, BDOS and BIOS into userspace.
 
     call fd765_recalibrate_twice
-    jr z, bootfailure
 
     ld bc, 0                    ; start sector
     ld de, 1                    ; track
@@ -36,7 +29,6 @@ warmboot:
     push de
     push hl
     call fd_read128
-    jr z, bootfailure
     pop hl
 
     ld de, 128
@@ -44,16 +36,49 @@ warmboot:
     pop de
     pop bc
     inc bc                      ; next sector
-    ld a, h
-    or l                        ; run off the end of the address space?
-    jr nz, .1               
+	ld a, CPM_SIZE / 128        ; read all the sectors?
+	cp c
+	jr nz, .1
+
+	; Copy from userspace to the cache.
+
+	ld a, CPM_BANK
+	out (PORT_BANK1), a         ; map cache to 0x4000.
+	ld a, USER3_BANK
+	out (PORT_BANK3), a			; map userspace 0xc000 to 0xc000.
+	ld de, 0x4000				; dest
+	ld hl, CBASE 	 			; src
+	ld bc, CPM_SIZE				; length
+	ldir
+
+	ld hl, str.ready
+	call tty_puts
+
+	; fall through
+coldboot:
+    ; Initialise CP/M-y things in the base of userspace.
+
+    ld a, USER0_BANK
+    out (PORT_BANK1), a         ; Map user space 0x0000 to 0x4000.
+    xor a
+    ld (0x4000 + IOBYTE), a     ; reset iobyte
+    ld (0x4000 + CDISK), a      ; reset current disk
+warmboot:
+    ; Reload the CCP, BDOS and BIOS from the cache.
+
+	ld a, CPM_BANK
+	out (PORT_BANK1), a			; map cache to 0x4000.
+	ld a, USER3_BANK
+	out (PORT_BANK3), a			; map user space 0xc000 to 0xc00.
+	ld de, CBASE             	; dest
+	ld hl, 0x4000               ; src
+	ld bc, BDOS_SIZE+CCP_SIZE   ; length
+	ldir
 
     ; Initialise the page zero CP/M-y things.
 
     ld a, USER0_BANK
     out (PORT_BANK1), a         ; Map user space 0x0000 to 0x4000.
-    ld a, USER3_BANK            ; Map user space 0xc000 to 0xc000.
-    out (PORT_BANK3), a
 
     ld a, 0xc3                  ; JP instruction
 
@@ -84,16 +109,13 @@ warmboot:
 
     jp BOOT
 
-bootfailure:
-    ld hl, str.insert_disk
-    call tty_puts
-    call kbd_get_next_key
-    ld sp, SYSSTK
-    jr warmboot
-    
-str.insert_disk:
-	db "[Cannot load CP/M, please insert a system disk]", 10, 0
-
 str.banner:
     cpmish_banner "Amstrad NC200"
     db 0
+
+str.loading:
+	db "Reading system track", 10, 13, 0
+
+str.ready:
+	db "Ready", 10, 13, 0
+

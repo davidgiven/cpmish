@@ -29,6 +29,7 @@ zmac {
         "arch/common/utils/deblocker.lib",
         "arch/common/utils/tty.lib",
         "arch/nc200/include/*.lib",
+        "arch/nc200+addresses_lib",
         "./*.inc",
         "+keytab_inc",
         "+font_inc",

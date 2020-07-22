@@ -6,9 +6,9 @@
 	maclib cpm
 	maclib nc200
 	maclib cpmish
+	maclib addresses
 
 	extern ATABUF
-	extern BBASE
 	extern BDEBLOCK
 	extern BDISK
 	extern BDMA
@@ -17,7 +17,6 @@
 	extern BSECTOR
 	extern BTRACK
 	extern DRVBDPB
-	extern FBASE
 	extern FDBUF
 	extern FONT
 	extern PBAUD

@@ -5,8 +5,8 @@
     maclib cpm
     maclib supervisor
     maclib nc200
+	maclib addresses
 
-    extern CBASE
     extern SCONIN
     extern SCONOUT
     extern SCONST
@@ -22,7 +22,7 @@
     extern SYSSTK
 
     cseg
-label BBASE
+	; BBASE is here
 
 ; BIOS jump table.
 
@@ -60,6 +60,9 @@ label LISTST
     jp LISTSTE
 label SECTRAN
     jp SECTRANE
+
+; User configuration: set this to 1 to swap drives A/B (useful for HDD systems).
+driveswap: db 0
 
 ; BIOS interrupt handler. This is only invoked when the USER0 bank is mapped,
 ; and we can assume the stack is valid (because interrupts won't work
@@ -137,7 +140,8 @@ READERE:
 ; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
 ; error).
 SELDSKE:
-    ld a, c
+	ld a, (driveswap)
+	xor c
     ld (BDISK), a
 
     ld hl, drive_a_dph
