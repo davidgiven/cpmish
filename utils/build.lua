@@ -82,3 +82,9 @@ definerule("unix2cpm",
     end
 )
 
+clibrary {
+	name = "libbdf",
+	srcs = { "./libbdf.c" },
+	hdrs = { "./libbdf.h" }
+}
+
