@@ -6,7 +6,7 @@ normalrule {
     name = "font_inc",
     ins = {
         "arch/brotherop2/utils+fontconvert",
-        "utils+6x7font",
+        "utils/6x7font.bdf",
     },
     outleaves = { "font.inc" },
     commands = {

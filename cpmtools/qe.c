@@ -105,9 +105,7 @@ void con_puti(int i)
 
 void goto_status_line(void)
 {
-	static uint8_t gotoseq[] = "\033=x ";
-	gotoseq[2] = HEIGHT + ' ';
-	cpm_printstring0((char*) gotoseq);
+	con_goto(0, HEIGHT);
 }
 
 void set_status_line(const char* message)
@@ -115,14 +113,16 @@ void set_status_line(const char* message)
 	uint16_t length = 0;
 
 	goto_status_line();
+	con_revon();
 	for (;;)
 	{
 		uint16_t c = *message++;
 		if (!c)
 			break;
-		cpm_bios_conout(c);
+		con_putc(c);
 		length++;
 	}
+	con_revoff();
 	while (length < status_line_length)
 	{
 		cpm_bios_conout(' ');
@@ -629,7 +629,7 @@ void insert_mode(bool replacing)
 		uint16_t oldheight;
 		uint8_t* nextp;
 		uint16_t length;
-		uint16_t c = cpm_bios_conin();
+		uint16_t c = con_getc();
 		if (c == 27)
 			break;
 
@@ -808,7 +808,7 @@ void open_below(uint16_t count)
 
 void replace_char(uint16_t count)
 {
-	uint16_t c = cpm_bios_conin();
+	uint16_t c = con_getc();
 
 	if (gap_end == buffer_end)
 		return;
@@ -1122,7 +1122,7 @@ void main(int argc, const char* argv[])
 
 		for (;;)
 		{
-			c = cpm_bios_conin();
+			c = con_getc();
 			if (isdigit(c))
 			{
 				command_count = (command_count*10) + (c-'0');

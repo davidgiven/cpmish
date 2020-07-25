@@ -3,6 +3,8 @@ local libcuss_terminals = {
     "NC200",
 	"BROTHEROP2",
 	"BROTHER_WP2450DS",
+	"SPECTRUM_PLUS_THREE",
+	"SPECTRUM_NEXT",
 }
 
 for _, terminal in ipairs(libcuss_terminals) do

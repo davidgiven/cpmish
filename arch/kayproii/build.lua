@@ -37,9 +37,9 @@ normalrule {
     },
     outleaves = { "bootfile.img" },
     commands = {
-        "dd if=%{ins[1]} of=%{outs} status=none bs=128 count=1",
-        "dd if=%{ins[3]} of=%{outs} status=none bs=128 seek=1 skip=456 count=16",
-        "dd if=%{ins[3]} of=%{outs} status=none bs=128 seek=17 skip=472 count=23",
+        "dd if=%{ins[1]} of=%{outs} bs=128 count=1 2> /dev/null",
+        "dd if=%{ins[3]} of=%{outs} bs=128 seek=1 skip=456 count=16 2> /dev/null",
+        "dd if=%{ins[3]} of=%{outs} bs=128 seek=17 skip=472 count=23 2> /dev/null",
     }
 }
 
@@ -70,6 +70,6 @@ normalrule {
     commands = {
         "cp %{ins[1]} %{outs}",
         "truncate -s 204800 %{outs}",
-        "dd if=%{ins[2]} of=%{outs} status=none bs=128 seek=56 skip=495 count=9 conv=notrunc"
+        "dd if=%{ins[2]} of=%{outs} bs=128 seek=56 skip=495 count=9 conv=notrunc 2> /dev/null"
     }
 }
