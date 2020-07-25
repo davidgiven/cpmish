@@ -1,15 +1,3 @@
-normalrule {
-    name = "6x7font",
-    ins = {
-        "./bdftofont.sh",
-        "./6x7font.bdf"
-    },
-    outleaves = { "6x7font.png" },
-    commands = {
-        "%{ins} %{outs}"
-    }
-}
-
 cprogram {
     name = "objectify",
     srcs = { "./objectify.c" }

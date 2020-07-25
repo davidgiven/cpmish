@@ -75,7 +75,6 @@ How?
 You pretty much need a Unix --- I developed it on Linux. You'll need to
 install the dependencies. These are the names of the Debian packages:
 
-  - netpbm
   - cpmtools
   - lua5.1
   - ninja-build
