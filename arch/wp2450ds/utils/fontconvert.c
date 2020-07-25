@@ -6,9 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "libbdf.h"
 
 #define CHAR_WIDTH 6
 #define CHAR_HEIGHT 7
@@ -30,48 +28,29 @@ int main(int argc, const char* argv[])
     if (argc != 2)
         fatal("fontconvert <inputfile>");
 
-    int widthpixels, heightpixels, depth;
-    unsigned char* data = stbi_load(argv[1], &widthpixels, &heightpixels, &depth, 1);
+	BDF* bdf = bdf_load(argv[1]);
+	if (bdf->height != CHAR_HEIGHT)
+		fatal("font is not 6x7");
 
-    if (depth != 1)
-        fatal("image must be greyscale");
-    if ((widthpixels % 6) != 0)
-        fatal("image must be a multiple of 6 pixels across");
-    int charswidth = widthpixels / CHAR_WIDTH;
-    if ((heightpixels % CHAR_HEIGHT) != 0)
-        fatal("image must be a multiple of %d pixels high", CHAR_HEIGHT);
-    int charsheight = heightpixels / CHAR_HEIGHT;
-    printf("\t; font is %dx%d pixels, containing %d characters\n",
-        widthpixels, heightpixels, charswidth*charsheight);
+	for (int c=32; c<128; c++)
+	{
+		Glyph* glyph = bdf->glyphs[c];
 
-    int c = 32;
-    for (int y=0; y<charsheight; y++)
-    {
-        for (int x=0; x<charswidth; x++)
-        {
-            unsigned char* p = data + 1 + x*CHAR_WIDTH + y*widthpixels*CHAR_HEIGHT;
+		/* The glyph data is a 7-element array of bytes. Each byte contains
+		 * one scanline, left justified. */
 
-			printf("\tdb ");
-            int yy = 0;
-            while (yy < CHAR_HEIGHT)
-            {
-				if (yy != 0)
-					printf(", ");
+		printf("\tdb ");
+		for (int yy=0; yy<CHAR_HEIGHT; yy++)
+		{
+			if (yy != 0)
+				printf(", ");
 
-				uint8_t mask = 0;
-                for (int xx=0; xx<CHAR_WIDTH; xx++)
-                    mask = (mask << 1) | (p[xx] == 0);
-				printf("0x%02x", mask);
-                p += widthpixels;
-                yy++;
-            }
+			printf("0x%02x", glyph->data[yy] >> 2);
+		}
 
-			printf(" ; char %d\n", c);
-            c++;
-        }
+		printf(" ; char %d\n", c);
     }
-
-    stbi_image_free(data);
 
     return 0;
 }
+
