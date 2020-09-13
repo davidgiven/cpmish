@@ -4,6 +4,7 @@
 
 MODIFIER_BIT_SHIFT = 0
 MODIFIER_BIT_CTRL = 1
+MODIFIER_BIT_CAPS = 2
 
 data.keyboard_bitmap:
         ds 10, 0x55
@@ -24,9 +25,7 @@ data.approximate_time:
 process_keyboard_event:
 		ld b, a
 		and 0x7f
-		cp 0x09                         ; real control key
-		jr z, ctrl_change
-		cp 0x10                         ; caps lock key
+		cp 0x09                         ; control key
 		jr z, ctrl_change
 		and 0x7e
 		jr z, shift_change
@@ -36,11 +35,14 @@ process_keyboard_event:
 		ret nc                          ; ignore keyups
 		srl a
 
+		cp 0x10                         ; caps lock key
+		jr z, caps_change
+
 		ld b, 0
 		ld c, a
 		ld a, (keyboard_modifiers)
 		ld hl, keyboard_normal_map
-		bit 0, a
+		bit MODIFIER_BIT_SHIFT, a
 		jr z, .2
 		ld hl, keyboard_shifted_map
 .2:
@@ -52,9 +54,24 @@ process_keyboard_event:
 		jr z, .1
 		and 31
 .1:
+
 		or a
 		ret z                           ; ignore ignored keys
-		jp queue_key                    ; ...and push the keypress
+
+		bit MODIFIER_BIT_CAPS, (hl)		; caps not set? queue the key now
+		jr nz, queue_key
+
+		cp 'A'							; decide whether alphabetic or not
+		jr c, queue_key
+		cp 'Z'+1
+		jr c, flip_case
+		cp 'a'
+		jr c, queue_key
+		cp 'z'+1
+		jr nc, queue_key
+flip_case:
+		xor 32
+		jr queue_key
 
 shift_change:
 		ld hl, keyboard_modifiers
@@ -70,6 +87,13 @@ ctrl_change:
 		bit 7, b
 		ret nz
 		set MODIFIER_BIT_CTRL, (hl)
+		ret
+
+caps_change:
+		ld hl, keyboard_modifiers
+		ld a, (hl)
+		xor 1<<MODIFIER_BIT_CAPS
+		ld (hl), a
 		ret
 
 keyboard_modifiers:
