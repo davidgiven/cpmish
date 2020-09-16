@@ -33,6 +33,12 @@ What you don't get:
 - sysgen, format etc
 - no bugs
 
+**Important note:** the NC200 runs in `im 1` mode, which means that all
+interrupts go through rst 0x38. Unfortunately this is the default system call
+used by debuggers like DDT and SID, so you'll need to patch them to use a
+different one. The supplied copy of `z8e` has been preconfigured for the NC200
+and will work out of the box.
+
 
 How to use it
 -------------
