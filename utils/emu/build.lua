@@ -14,14 +14,11 @@ ld80 {
         "-Pff00", "+biosbdos_rel"
     }
 }
-
-normalrule {
-    name = "biosbdos_cim",
-    ins = { "+biosbdos_memimg" },
-    outleaves = { "biosbdos.cim" },
-    commands = {
-        "dd if=%{ins[1]} of=%{outs} status=none bs=1 skip=63232"
-    }
+ 
+binslice {
+	name = "biosbdos_cim",
+	src = "+biosbdos_memimg",
+	start = 0xf700
 }
 
 objectifyc {
@@ -32,8 +29,11 @@ objectifyc {
 cprogram {
     name = "emu",
     srcs = { "./*.c" },
-    deps = { "+biosbdos_cim_h" },
+    deps = {
+		"+biosbdos_cim_h",
+		"third_party/libz80ex+libz80ex"
+	},
     vars = {
-        ["+ldflags"] = { "-lz80ex", "-lz80ex_dasm", "-lreadline" } 
+        ["+ldflags"] = { "-lreadline" } 
     }
 }

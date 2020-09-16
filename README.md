@@ -96,7 +96,8 @@ directory which are the bootable disk images.
 If you want more detailed build instructions, try [the script used for
 automatic
 builds](https://github.com/davidgiven/cpmish/blob/master/.github/workflows/ccpp.yml),
-which has got the exact commands needed buried inside it.
+which has got the exact commands needed buried inside it. This also has the
+instructions for OSX.
 
 For information on what to do with these, look in the READMEs in the
 individual [`arch/*`](https://github.com/davidgiven/cpmish/tree/master/arch)
@@ -178,3 +179,7 @@ Specifically:
     debugger, mostly written by Richard Surwilo and Jon Saxton. It is in the
 	public domain.
 
+  - `third_party/libz80ex` contains a copy of the libz80ex Z80 emulation
+	library, mostly written by Pigmaker57. It is distributable under the terms
+	of the General Public license version 2. See the
+	`third_party/libz80ex/COPYING` file for the full text.

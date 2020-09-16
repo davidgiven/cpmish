@@ -101,7 +101,7 @@ definerule("binslice",
 	{
 		src = { type="targets" },
 		start = { type="number" },
-		length = { type="number" },
+		length = { type="number", optional=true },
 	},
 	function (e)
 		local f = filenamesof(e.src)
@@ -109,14 +109,25 @@ definerule("binslice",
 			error("binslice can only operate on a single file")
 		end
 
-		return normalrule {
-			name = e.name,
-			outleaves = { e.name..".img" },
-			ins = e.src,
-			commands = {
-				"dd if=%{ins} of=%{outs} status=none bs=1 skip="..e.start.." count="..e.length
+		if e.length == nil then
+			return normalrule {
+				name = e.name,
+				outleaves = { e.name..".img" },
+				ins = e.src,
+				commands = {
+					"tail -c+"..(e.start+1).." %{ins} > %{outs}"
+				}
 			}
-		}
+		else
+			return normalrule {
+				name = e.name,
+				outleaves = { e.name..".img" },
+				ins = e.src,
+				commands = {
+					"tail -c+"..(e.start+1).." %{ins} | head -c"..e.length.." > %{outs}"
+				}
+			}
+		end
 	end
 )
 

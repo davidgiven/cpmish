@@ -1,0 +1,11 @@
+opcode="asm"
+ t="t-states[/t-states for branching/cyclic cmd, if it succeded (changes PC)]"
+ [rd="delay in t-states before RD goes active for memory/port operation (first byte)"[, -//- second byte]]
+ [wr="delay in t-states before WR goes active for memory/port operation (first byte)"[,-//- second byte]]
+
+in mnemonics:
+
+@ - word
+# - byte
+$ - displacement for IX/IY+d
+% - jump offset

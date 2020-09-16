@@ -1,0 +1,88 @@
+29.07.2013 - 1.1.21
+- added API functions to set memory/port/int callbacks without resetting the virtual CPU
+- z80ex_get_version() was fixed to return the correct version string
+
+19.01.2013 - 1.1.20rev1
+- fixed library version mismatch between Makefile and CMakeLists.txt 
+	(thanks to John Paul Adrian Glaubitz)
+
+02.01.2013 - 1.1.20
+- cleanup of included build documentation
+- email adress change 
+
+01.09.2012
+- TOOLS_PREFIX Makefile option, useful for cross-compiling [Stewart Kay]
+
+21.01.2010 - 1.1.19
+- removed IFF2=IFF1 on NMI. it's contrary to zilog z80 docs, but is true
+(proved by Restorer)
+
+24.08.2010 - 1.1.19pre1
+- cmake build support [mkoloberdin]
+- fixes for MSVC compilation [mkoloberdin]
+
+12.09.2009 - 1.1.18
+- HALT/NMI bugfix (by Kalvis)
+- some speed optimizations (by Mastermind)
+- RETI callback was implemented (by Torsten Paul)
+
+04.06.2009 - 1.1.17
+- ability to fetch z80ex version info at runtime, see z80ex_get_version()
+- makefile fixes and cleanups, OS X support
+- versioning scheme changed
+
+28.09.2008 - 0.16.2
+- made build for Symbian possible (and maybe for other environments
+  which does not support the use of writable static data in DLL's) (thanks to ander)
+- build option for fast and rough opcode timings emulation, see README
+
+31.07.2008 - 0.16.1
+- added -fPIC option to compile flags (thanks to ander)
+
+16.07.2008 - 0.16
+- LD A,R / LD A,I quirk implemented (If a LD A,I or LD A,R (which copy IFF2 to the P/V flag) is interrupted,
+  then the P/V flag is reset, even if interrupts were enabled beforehand)(thanks to Restorer)
+- NMI IFF2=IFF1 fix
+
+03.04.2006 - 0.15 (major bugfix release)
+- nasty deadlock in IM0 mode was eliminated
+
+29.03.2006 - 0.14
+- full MEMPTR (BIT n,(HL) flags) support!
+  it seems that all undocumented z80 features are emulated now.
+- undocumented flags were fixed for bit n,reg8
+
+17.03.2006 - 0.14pre1
+- massive code reorganisation
+- include files are now installed under include/z80ex
+- disassembler added
+
+15.03.2006 - release 0.13
+- more MEMPTR emulation
+- fixed nasty bug in DD/FD prefixes behavior
+
+02.03.2006
+- fixed IN A,(nn) (flags)
+
+23.02.2006 - release 0.12
+- fixed timings for LD IIh/IIl,nn (thanks to Restorer)
+
+22.02.2006
+- fixed timings for IIh/IIl undocumented opcodes
+
+18.02.2006
+- fixed undocumented flag effects for BIT n,(IX+d)
+- undocumented flag effects implemented for block I/O operations 
+- undocumented internal register MEMPTR emulation (incomplete, more info needed) 
+
+16.02.2006
+- fixed sized data types declaration for MSVC (thanks to SMT)
+
+15.02.2006 - release 0.11
+- added M1 signal state to memory read callback parameters
+- DAA emulation has been fixed (now uses table from SMT's UnrealSpeccy)
+
+11.02.2006
+- minor API changes
+
+10.02.2006 - release 0.1

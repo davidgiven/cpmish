@@ -2,10 +2,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <signal.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <z80ex/z80ex_dasm.h>
+#include "z80ex_dasm.h"
 #include "globals.h"
 
 Z80EX_CONTEXT* z80;
