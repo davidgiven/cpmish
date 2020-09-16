@@ -18,5 +18,21 @@ jobs:
         make -C ack PREFIX=$HOME install
     - name: make
       run: PATH=$PATH:$HOME/bin make
-        
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: brew
+      run: brew install pkg-config ninja cpmtools
+    - name: build-ack
+      run: |
+        git clone --depth=1 https://github.com/davidgiven/ack.git
+        make -C ack PREFIX=$HOME +ack-cpm
+        make -C ack PREFIX=$HOME install
+    - name: make
+      run: PATH=$PATH:$HOME/bin make
+
 
