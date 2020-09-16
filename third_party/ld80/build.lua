@@ -40,7 +40,7 @@ definerule("ld80",
             },
             commands = {
                 "%{ins[1]} -m -O bin -o %{outs[1]}.all -s %{outs[1]}.sym "..table.concat(args, " "),
-                "dd if=%{outs[1]}.all of=%{outs[1]} status=none bs=1 skip="..e.address
+				"tail -c+"..(e.address+1).." %{outs[1]}.all > %{outs[1]}"
             }
         }
     end
@@ -51,15 +51,10 @@ definerule("bintocom",
         srcs = { type="table" },
     },
     function (e)
-        return normalrule {
-            name = e.name,
-            outleaves = {
-                e.name..".com",
-            },
-            ins = e.srcs,
-            commands = {
-                "dd if=%{ins[1]} of=%{outs[1]} status=none bs=128 skip=2"
-            }
-        }
+		return binrule {
+			name = e.name,
+			src = { e.ins[1] },
+			start = 0x100
+		}
     end
 )

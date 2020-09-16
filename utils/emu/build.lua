@@ -14,14 +14,11 @@ ld80 {
         "-Pff00", "+biosbdos_rel"
     }
 }
-
-normalrule {
-    name = "biosbdos_cim",
-    ins = { "+biosbdos_memimg" },
-    outleaves = { "biosbdos.cim" },
-    commands = {
-        "dd if=%{ins[1]} of=%{outs} status=none bs=1 skip=63232"
-    }
+ 
+binslice {
+	name = "biosbdos_cim",
+	src = "+biosbdos_memimg",
+	start = 0xf700
 }
 
 objectifyc {
