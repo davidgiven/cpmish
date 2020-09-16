@@ -1,0 +1,18 @@
+- [rst] option to build the library with t-state callback permanently
+  disabled, but with full timings (contrary to Z80EX_OPSTEP_FAST_AND_ROUGH) 
+  in this mode two macroses must be stripped down to:
+	#define T_WAIT_UNTIL(t_state) \
+	{ \
+	  if (t_state > cpu->op_tstate) { \
+	    cpu->tstate += t_state - cpu->op_tstate; \
+	    cpu->op_tstate = t_state; \
+	  } \
+	}
+
+	#define TSTATES(amount) \
+	{ \
+	  cpu->tstate += amount; \
+	}   
+  Z80EX_OPSTEP_FAST_AND_ROUGH must enable this mode automatically 
+
+? BUSACK/BUSREQ emulation

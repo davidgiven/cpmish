@@ -1,0 +1,259 @@
+# ddcb & fdcb, (for ddcb REGISTER=IX, for fdcb REGISTER=IY) 256
+# empty lines with opcode around 0x40 means "same as the next non-blank opcode"
+
+0x00="LD B,RLC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x01="LD C,RLC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x02="LD D,RLC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x03="LD E,RLC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x04="LD H,RLC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x05="LD L,RLC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x06="RLC (REGISTER+$)"           t="23"   rd="16"   wr="20"
+0x07="LD A,RLC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x08="LD B,RRC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x09="LD C,RRC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x0a="LD D,RRC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x0b="LD E,RRC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x0c="LD H,RRC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x0d="LD L,RRC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x0e="RRC (REGISTER+$)"           t="23"   rd="16"   wr="20"
+0x0f="LD A,RRC (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x10="LD B,RL (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x11="LD C,RL (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x12="LD D,RL (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x13="LD E,RL (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x14="LD H,RL (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x15="LD L,RL (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x16="RL (REGISTER+$)"            t="23"   rd="16"   wr="20"
+0x17="LD A,RL (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x18="LD B,RR (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x19="LD C,RR (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x1a="LD D,RR (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x1b="LD E,RR (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x1c="LD H,RR (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x1d="LD L,RR (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x1e="RR (REGISTER+$)"            t="23"   rd="16"   wr="20"
+0x1f="LD A,RR (REGISTER+$)"       t="23"   rd="16"   wr="20"
+0x20="LD B,SLA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x21="LD C,SLA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x22="LD D,SLA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x23="LD E,SLA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x24="LD H,SLA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x25="LD L,SLA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x26="SLA (REGISTER+$)"           t="23"   rd="16"   wr="20"
+0x27="LD A,SLA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x28="LD B,SRA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x29="LD C,SRA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x2a="LD D,SRA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x2b="LD E,SRA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x2c="LD H,SRA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x2d="LD L,SRA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x2e="SRA (REGISTER+$)"           t="23"   rd="16"   wr="20"
+0x2f="LD A,SRA (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x30="LD B,SLL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x31="LD C,SLL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x32="LD D,SLL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x33="LD E,SLL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x34="LD H,SLL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x35="LD L,SLL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x36="SLL (REGISTER+$)"           t="23"   rd="16"   wr="20"
+0x37="LD A,SLL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x38="LD B,SRL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x39="LD C,SRL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x3a="LD D,SRL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x3b="LD E,SRL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x3c="LD H,SRL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x3d="LD L,SRL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x3e="SRL (REGISTER+$)"           t="23"   rd="16"   wr="20"
+0x3f="LD A,SRL (REGISTER+$)"      t="23"   rd="16"   wr="20"
+0x40
+0x41
+0x42
+0x43
+0x44
+0x45
+0x46
+0x47="BIT 0,(REGISTER+$)"         t="20"   rd="16"
+0x48
+0x49
+0x4a
+0x4b
+0x4c
+0x4d
+0x4e
+0x4f="BIT 1,(REGISTER+$)"         t="20"   rd="16"
+0x50
+0x51
+0x52
+0x53
+0x54
+0x55
+0x56
+0x57="BIT 2,(REGISTER+$)"         t="20"   rd="16"
+0x58
+0x59
+0x5a
+0x5b
+0x5c
+0x5d
+0x5e
+0x5f="BIT 3,(REGISTER+$)"         t="20"   rd="16"
+0x60
+0x61
+0x62
+0x63
+0x64
+0x65
+0x66
+0x67="BIT 4,(REGISTER+$)"         t="20"   rd="16"
+0x68
+0x69
+0x6a
+0x6b
+0x6c
+0x6d
+0x6e
+0x6f="BIT 5,(REGISTER+$)"         t="20"   rd="16"
+0x70
+0x71
+0x72
+0x73
+0x74
+0x75
+0x76
+0x77="BIT 6,(REGISTER+$)"         t="20"   rd="16"
+0x78
+0x79
+0x7a
+0x7b
+0x7c
+0x7d
+0x7e
+0x7f="BIT 7,(REGISTER+$)"         t="20"   rd="16"
+0x80="LD B,RES 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x81="LD C,RES 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x82="LD D,RES 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x83="LD E,RES 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x84="LD H,RES 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x85="LD L,RES 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x86="RES 0,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0x87="LD A,RES 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x88="LD B,RES 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x89="LD C,RES 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x8a="LD D,RES 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x8b="LD E,RES 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x8c="LD H,RES 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x8d="LD L,RES 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x8e="RES 1,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0x8f="LD A,RES 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x90="LD B,RES 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x91="LD C,RES 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x92="LD D,RES 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x93="LD E,RES 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x94="LD H,RES 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x95="LD L,RES 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x96="RES 2,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0x97="LD A,RES 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x98="LD B,RES 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x99="LD C,RES 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x9a="LD D,RES 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x9b="LD E,RES 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x9c="LD H,RES 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x9d="LD L,RES 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0x9e="RES 3,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0x9f="LD A,RES 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xa0="LD B,RES 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xa1="LD C,RES 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xa2="LD D,RES 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xa3="LD E,RES 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xa4="LD H,RES 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xa5="LD L,RES 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xa6="RES 4,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xa7="LD A,RES 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xa8="LD B,RES 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xa9="LD C,RES 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xaa="LD D,RES 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xab="LD E,RES 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xac="LD H,RES 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xad="LD L,RES 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xae="RES 5,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xaf="LD A,RES 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xb0="LD B,RES 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xb1="LD C,RES 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xb2="LD D,RES 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xb3="LD E,RES 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xb4="LD H,RES 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xb5="LD L,RES 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xb6="RES 6,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xb7="LD A,RES 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xb8="LD B,RES 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xb9="LD C,RES 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xba="LD D,RES 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xbb="LD E,RES 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xbc="LD H,RES 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xbd="LD L,RES 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xbe="RES 7,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xbf="LD A,RES 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xc0="LD B,SET 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xc1="LD C,SET 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xc2="LD D,SET 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xc3="LD E,SET 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xc4="LD H,SET 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xc5="LD L,SET 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xc6="SET 0,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xc7="LD A,SET 0,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xc8="LD B,SET 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xc9="LD C,SET 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xca="LD D,SET 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xcb="LD E,SET 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xcc="LD H,SET 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xcd="LD L,SET 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xce="SET 1,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xcf="LD A,SET 1,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xd0="LD B,SET 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xd1="LD C,SET 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xd2="LD D,SET 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xd3="LD E,SET 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xd4="LD H,SET 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xd5="LD L,SET 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xd6="SET 2,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xd7="LD A,SET 2,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xd8="LD B,SET 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xd9="LD C,SET 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xda="LD D,SET 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xdb="LD E,SET 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xdc="LD H,SET 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xdd="LD L,SET 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xde="SET 3,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xdf="LD A,SET 3,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xe0="LD B,SET 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xe1="LD C,SET 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xe2="LD D,SET 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xe3="LD E,SET 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xe4="LD H,SET 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xe5="LD L,SET 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xe6="SET 4,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xe7="LD A,SET 4,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xe8="LD B,SET 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xe9="LD C,SET 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xea="LD D,SET 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xeb="LD E,SET 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xec="LD H,SET 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xed="LD L,SET 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xee="SET 5,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xef="LD A,SET 5,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xf0="LD B,SET 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xf1="LD C,SET 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xf2="LD D,SET 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xf3="LD E,SET 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xf4="LD H,SET 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xf5="LD L,SET 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xf6="SET 6,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xf7="LD A,SET 6,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xf8="LD B,SET 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xf9="LD C,SET 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xfa="LD D,SET 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xfb="LD E,SET 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xfc="LD H,SET 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xfd="LD L,SET 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"
+0xfe="SET 7,(REGISTER+$)"         t="23"   rd="16"   wr="20"
+0xff="LD A,SET 7,(REGISTER+$)"    t="23"   rd="16"   wr="20"

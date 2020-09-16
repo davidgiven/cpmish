@@ -1,0 +1,29 @@
+Building with GNU toolset:
+--------------------------------------------------------
+
+NB: Only GNU C (GCC, mingw, cygwin) is supported by the included Makefile
+
+Issue 'gmake' in the root of Z80Ex source tree. 
+After a successful build the libraries could be found in "./lib".
+
+Alternatively you may do "gmake static" for building static libs only,
+or "gmake shared" for building shared libs only.
+
+You may change some build options by editing the Makefile or via
+gmake command line parameters (e.g. "gmake parameter=value")
+these are:
+* ENDIANNESS -- CPU endianness, one of WORDS_LITTLE_ENDIAN, WORDS_BIG_ENDIAN
+* OPSTEP_FAST_AND_ROUGH -- fast and rough opcode step emulation mode (0 - off, 1 - on)
+	when this mode is on, timings of internal I/O operations are ignored,
+	and tstate callback feature is disabled
+* INSTALL_PREFIX -- where to install the library
+* TOOLS_PREFIX -- useful for cross-compiling, e.g., when cross-compiling to mingw32
+	it should be set to something like "i586-mingw32msvc-" so "i586-mingw32msvc-gcc"
+	and "i586-mingw32msvc-ar" will be used instead of regular "gcc" and "ar". 
+
+Installing:
+--------------------------
+
+issue "gmake install" as superuser.
+(default install prefix is /usr/local, which may be changed in Makefile.)
+then do "/sbin/ldconfig" as superuser to update DSO links and cache

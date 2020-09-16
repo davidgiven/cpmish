@@ -178,3 +178,7 @@ Specifically:
     debugger, mostly written by Richard Surwilo and Jon Saxton. It is in the
 	public domain.
 
+  - `third_party/libz80ex` contains a copy of the libz80ex Z80 emulation
+	library, mostly written by Pigmaker57. It is distributable under the terms
+	of the General Public license version 2. See the
+	`third_party/libz80ex/COPYING` file for the full text.
