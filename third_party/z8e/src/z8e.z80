@@ -463,7 +463,7 @@ getSCB	equ	49
 
 	export	rstVec
 ;rstVec:
-	defb	38h		;Default (but patchable) breakpoint vector
+	defb	DFLTRSTVEC          ; fault (but patchable) breakpoint vector
 
 	export	coMask
 ;coMask:
