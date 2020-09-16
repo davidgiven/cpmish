@@ -10,6 +10,7 @@
  
 #include <stdlib.h>
 #include <string.h>
+#undef __USE_ISOC99
 #define __USE_ISOC99
 #include <stdio.h>
 #include <stdarg.h>

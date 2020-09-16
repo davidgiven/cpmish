@@ -10,7 +10,7 @@ jobs:
       with:
         fetch-depth: 1
     - name: apt
-      run: sudo apt install cpmtools lua5.1 ninja-build libz80ex-dev flex bison libreadline-dev
+      run: sudo apt install cpmtools lua5.1 ninja-build flex bison libreadline-dev
     - name: build-ack
       run: |
         git clone --depth=1 https://github.com/davidgiven/ack.git

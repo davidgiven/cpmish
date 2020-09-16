@@ -32,8 +32,11 @@ objectifyc {
 cprogram {
     name = "emu",
     srcs = { "./*.c" },
-    deps = { "+biosbdos_cim_h" },
+    deps = {
+		"+biosbdos_cim_h",
+		"third_party/libz80ex+libz80ex"
+	},
     vars = {
-        ["+ldflags"] = { "-lz80ex", "-lz80ex_dasm", "-lreadline" } 
+        ["+ldflags"] = { "-lreadline" } 
     }
 }
