@@ -201,9 +201,11 @@ void copy_one_file(FCB* src, FCB* dest)
             fatal("destination file exists");
     }
     
+    cpm_set_user(srcuser);
     if (cpm_open_file(src) == 0xff)
         fatal("cannot open source file");
     src->cr = 0;
+    cpm_set_user(destuser);
     if (cpm_make_file(dest) == 0xff)
         fatal("cannot open destination file");
 
