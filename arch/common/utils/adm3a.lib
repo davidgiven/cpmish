@@ -1,0 +1,163 @@
+; cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is a general purpose ADM3a state machine. It provides tty_putc and calls
+; out to tty.lib.
+
+commandlen:    db 0
+commandgot:    db 0
+commandbuf:    ds 3
+
+; --- Clears (and initialises) the screen -----------------------------------
+
+adm3a_init:
+    xra a
+    ld (commandlen), a
+	jp tty_init
+
+; --- Prints the character in A ---------------------------------------------
+
+; Helper routine: called from tty_putc if this is a non-printable control
+; character. The character is in A.
+controlcharacter:
+    cp 0x08
+    jp z, tty_cursor_left
+    cp 0x0c
+    jp z, tty_cursor_right
+    cp 0x0a
+    jp z, tty_cursor_down
+    cp 0x0b
+    jp z, tty_cursor_up
+    cp 0x1e
+    jp z, tty_home_cursor
+    cp 0x0d
+    jp z, tty_carriagereturn
+    cp 0x18
+    jp z, tty_clear_to_eol
+    cp 0x17
+    jp z, tty_clear_to_eos
+    cp 0x1a
+    jp z, tty_clear_screen
+    cp 0x1b
+    ret nz ; give up if not an escape character
+
+    ; Escape characters need parameters, starting with one.
+    xor a
+    ld (commandgot), a
+    inc a
+    ld (commandlen), a
+    ret
+    
+; Helper routine: deal with command bytes (passed in C).
+queue_command_byte:
+    ; Write the byte to the buffer.
+
+    ld hl, commandgot
+    ld d, 0
+    ld e, (hl)
+    inc (hl)
+
+    ld hl, commandbuf
+    add hl, de
+    ld (hl), c
+
+    ; Have we reached the end of the buffer?
+
+    ld hl, commandlen
+    ld a, (commandgot)
+    cp (hl)
+    ret nz              ; no, go back for more bytes.
+    xor a
+    ld (hl), a          ; end of command
+
+    ; Process a command.
+
+    ld a, (commandbuf+0)
+    cp 'B'
+    jr z, setresetattr
+    cp 'C'
+    jr z, setresetattr
+    cp 'E'
+    jp z, tty_insert_line
+    cp 'R'
+    jp z, tty_delete_line
+    cp '='
+    jr z, gotoxy
+    ret
+
+; Helper routine: handles set/reset tty_attributes.
+setresetattr:
+    ld a, (commandgot)  ; B, C takes parameters
+    cp 2                ; do we have enough bytes?
+    jr z, .1            ; yes, execute command
+    ld a, 2             ; not enough bytes read yet
+    ld (commandlen), a
+    ret
+.1:
+    ld a, (commandbuf+1)
+    cp '0'              ; reverse intensity
+    ret nz              ; don't support anything else
+    ld a, (commandbuf+0) ; B=on, C=off
+    ld hl, tty_attributes
+    res 0, (hl)
+    bit 0, a
+    ret nz
+    set 0, (hl)
+    ret
+    
+; Helper routine: handles ESC = (gotoxy).
+gotoxy:
+    ld a, (commandgot)  ; = takes parameters
+    cp 3                ; do we have enough bytes?
+    jr z, .1            ; yes, execute command
+    ld a, 3             ; not enough bytes read yet
+    ld (commandlen), a
+    ret
+.1:
+    ld hl, commandbuf+1 ; got enough bytes; process command
+    ld a, (hl)
+    sub 32
+    ld c, a             ; Y
+    inc hl
+    ld a, (hl)
+    sub 32
+    ld b, a             ; X
+    jp tty_goto_xy
+
+tty_putc:
+    ; Check to see if there's a pending command.
+
+    ld c, a
+    ld a, (commandlen)
+    or a
+    jr nz, queue_command_byte
+
+    ; Handle special characters.
+
+    ld a, c
+    cp 32
+    jp c, controlcharacter
+
+    ; This is a printable character, so print it.
+
+    call tty_rawwrite
+
+    ; Now we've drawn a character, advance the cursor.
+
+    ld hl, tty_cursorx
+    ld a, (hl)
+    inc a
+    ld (hl), a
+    cp SCREEN_WIDTH
+    ret nz
+
+    ; Reached the end of the line? Advance to the next one and go back to
+    ; the margin.
+
+    xor a
+    ld (hl), a
+    jp tty_cursor_down
+
+; vim: sw=4 ts=4 expandtab ft=asm
+

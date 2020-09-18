@@ -41,10 +41,10 @@ process_keyboard_event:
 		ld b, 0
 		ld c, a
 		ld a, (keyboard_modifiers)
-		ld hl, keyboard_normal_map
+		ld hl, KEYNORM
 		bit MODIFIER_BIT_SHIFT, a
 		jr z, .2
-		ld hl, keyboard_shifted_map
+		ld hl, KEYSHIFT
 .2:
 		add hl, bc
 		ld a, (hl)
@@ -169,6 +169,4 @@ kbd_get_next_key:
 		ld a, (de)
 		ei
 		ret
-
-.include "keytab.inc"
 

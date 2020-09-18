@@ -8,7 +8,9 @@
 label STARTUP
     ld sp, SYSSTK
     call init_interrupts
-    call tty_init
+    ld a, VIDEORAM_BASE>>8
+    out (PORT_DISPLAY_MEMORY_ADDR), a ; set base address of video RAM
+    call adm3a_init
     ld hl, str.banner
     call tty_puts
     call pcmcia_init
