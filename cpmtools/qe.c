@@ -125,7 +125,7 @@ void set_status_line(const char* message)
 	con_revoff();
 	while (length < status_line_length)
 	{
-		cpm_bios_conout(' ');
+		con_putc(' ');
 		length++;
 	}
 	status_line_length = length;
