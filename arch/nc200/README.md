@@ -18,7 +18,7 @@ What you get with this port:
 - support for a hard drive of up to 32MB on a Compact Flash card (note: not
   SRAM)
 - CCP and BDOS cached in RAM for instant warm reboots
-- most of an ADM-3a / Kaypro II terminal emulator supporting 80x18 text
+- most of an VT52 terminal emulator supporting 80x18 text
 - a gigantic 60kB TPA
 - an interrupt-driven keyboard
 - parallel printer support
