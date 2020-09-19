@@ -114,14 +114,14 @@ GETKEY:
         defb    11              ;CURSOR UP
         defb    10              ;CURSOR DOWN
         defb    'A' and 1FH     ;START OF LINE
-        defb    'E' and 1FH     ;END OF LINE
+        defb    'F' and 1FH     ;END OF LINE
         defb    'C' and 1FH     ;DELETE TO END OF LINE
         defb    7FH             ;BACKSPACE & DELETE
         defb    'U' AND 1FH     ;CANCEL LINE
-        defb    8               ;CURSOR LEFT
-        defb    12              ;CURSOR RIGHT
-        defb    'D' AND 1FH     ;DELETE CHARACTER
-        defb    'F' AND 1FH     ;INSERT CHARACTER
+        defb    'S' AND 1FH     ;CURSOR LEFT
+        defb    'D' AND 1FH     ;CURSOR RIGHT
+        defb    'G' AND 1FH     ;DELETE CHARACTER
+        defb    'H' AND 1FH     ;INSERT CHARACTER
 
         if $ != 0x200
         error 'Edit block wrong length'
