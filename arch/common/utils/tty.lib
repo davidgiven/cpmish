@@ -15,17 +15,16 @@ tty_attributes: db 0
 ; --- Clears (and initialises) the screen -----------------------------------
 
 tty_init:
-    xra a
+    xor a
     ld (tty_attributes), a
     ; fall through
-tty_clear_screen:
+tty_clear_home:
     call tty_home_cursor
-    jp tty_clear_to_eos
+    jr tty_clear_to_eos
     
 tty_home_cursor:
-    xor a
-    ld (tty_cursorx), a
-    ld (tty_cursory), a
+	ld hl, 0
+	ld (tty_cursorx), hl
     ret
 
 ; --- Prints a zero-terminated string in HL ---------------------------------
@@ -155,13 +154,13 @@ tty_clear_to_eos:
 .2
     pop hl
     ld (tty_cursorx), hl
-    jp tty_clear_to_eol
+    jr tty_clear_to_eol
     endif
 
 ; --- Performs a carriage return --------------------------------------------
 
 tty_newline:
-    call tty_cursor_down
+    call tty_cursor_down_and_scroll
     ; fall through
 tty_carriagereturn:
     xor a
@@ -177,11 +176,17 @@ tty_cursor_left:
     inc (hl)
     ret
 
+tty_cursor_up_and_scroll:
+	call tty_cursor_up
+	ret p
+	jr tty_insert_line
+
+; Returns m if we were on the top line.
 tty_cursor_up:
     ld hl, tty_cursory
     dec (hl)
     ret p
-    inc (hl)
+	ld (hl), 0
     ret
 
 tty_cursor_right:
@@ -193,14 +198,19 @@ tty_cursor_right:
     ld (hl), a
     ret
 
+; Returns z if we were on the top line.
 tty_cursor_down:
     ld hl, tty_cursory
-    ld a, (hl)
-    inc a
-    ld (hl), a
+	inc (hl)
+	ld a, (hl)
     cp SCREEN_HEIGHT
     ret nz
-    dec (hl)                ; oops, don't go the next line after all
+    ld (hl), SCREEN_HEIGHT-1; oops, don't go the next line after all
+	ret
+
+tty_cursor_down_and_scroll:
+	call tty_cursor_down
+	ret nz
 tty_scroll:
 	ld hl, tty_cursory
 	ld a, (hl)
@@ -223,4 +233,14 @@ tty_goto_xy:
     ret nc
     ld (tty_cursory), a
     ret
+
+tty_tab:
+	ld a, 32
+	call tty_putc
+	ld a, (tty_cursorx)
+	and 0xf8
+	jr nz, tty_tab
+	ret
+
+; vim: sw=4 ts=4 expandtab ft=asm
 

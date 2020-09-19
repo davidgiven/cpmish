@@ -26,7 +26,7 @@ controlcharacter:
     cp 0x0c
     jp z, tty_cursor_right
     cp 0x0a
-    jp z, tty_cursor_down
+    jp z, tty_cursor_down_and_scroll
     cp 0x0b
     jp z, tty_cursor_up
     cp 0x1e
@@ -38,7 +38,7 @@ controlcharacter:
     cp 0x17
     jp z, tty_clear_to_eos
     cp 0x1a
-    jp z, tty_clear_screen
+    jp z, tty_clear_home
     cp 0x1b
     ret nz ; give up if not an escape character
 

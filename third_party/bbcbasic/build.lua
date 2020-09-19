@@ -3,6 +3,7 @@ include "third_party/zmac/build.lua"
 
 local VERSIONS = {
 	"ADM3A",
+	"VT52",
 }
 
 local srcs = {"cmos", "eval", "exec", "fpp", "main", "ram", "sorry"}

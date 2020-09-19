@@ -1,4 +1,4 @@
 HSIZE	equ 80
 VSIZE	equ 18
-ADM3A	equ TRUE
+VT52	equ TRUE
 

@@ -16,7 +16,7 @@ cursor_shown:  db 0
 
 EMULATE_CLEAR_TO_EOL = 1
 EMULATE_CLEAR_TO_EOS = 0
-	maclib adm3a
+	maclib vt52
 	maclib tty
 
 ; --- Calculates the address of the cursor ----------------------------------
@@ -108,11 +108,11 @@ tty_calculate_screen_address_of_line:
 ; Returns z if we're on the last line of the screen.
 tty_calculate_screen_address_of_next_line:
     call tty_calculate_screen_address_of_line
-    ld bc, 64
+    ld bc, BYTES_PER_LINE
     add hl, bc                  ; get address of start of *next* line
     ld (L_cursor_address), hl
     ld bc, VIDEORAM_END
-    or a
+    and a
     sbc hl, bc
     add hl, bc
     ret
@@ -200,7 +200,7 @@ tty_clear_to_eos:
     ld (hl), 0
     ldir
 
-    jp tty_clear_to_eol         ; we haven't cleared the rest of this line
+    jr tty_clear_to_eol         ; we haven't cleared the rest of this line
 
 ; --- Line insertion/removal ------------------------------------------------
 
@@ -233,7 +233,7 @@ _clear_current_line:
 
 tty_delete_line:
     call tty_calculate_screen_address_of_next_line
-    jr z, _clear_current_line   ; if we're on the last line, just clear it
+    jr z, .1                    ; if we're on the last line, just clear it
 
     ; Compute the size of the area to move
     call calculate_insert_delete_size
@@ -242,13 +242,14 @@ tty_delete_line:
 
     push hl
     ld de, -BYTES_PER_LINE
-    add hl, de                  ; Start of *current* line, source
-    pop de                      ; Start of *next* line, dest
-    ex de, hl                   ; Copy from next line to current line
+    add hl, de                  ; Start of *current* line
+	ex de, hl					; -> de, dest
+    pop hl                      ; Start of *next* line, src
     ldir
 
     ; Clear the last line.
 
+.1:
     ld hl, LAST_LINE
     ld de, LAST_LINE + 1
     ld bc, BYTES_PER_LINE - 1
@@ -260,7 +261,7 @@ tty_delete_line:
 ; On exit: HL is preserved; BC contains the amount to move.
 calculate_insert_delete_size:
     ex de, hl                   ; stash start address in DE
-    ld hl, VIDEORAM_END - 1
+    ld hl, VIDEORAM_END
     and a                       ; clear carry flag
     sbc hl, de                  ; HL is amount to clear
     ld b, h
@@ -392,4 +393,7 @@ scanline_shift_amount:
 
     ex de, hl           ; put font pointer back in HL
     ret
+
+; vim: sw=4 ts=4 expandtab ft=asm
+
 

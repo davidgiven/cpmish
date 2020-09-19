@@ -28,7 +28,7 @@ extern void con_revoff(void);
 #elif defined LIBCUSS_NC200
     #define SCREENWIDTH 80
     #define SCREENHEIGHT 18
-    #define LIBCUSS_ADM3
+    #define LIBCUSS_VT52
 #elif defined LIBCUSS_BROTHEROP2
     #define SCREENWIDTH 80
     #define SCREENHEIGHT 14

@@ -1,0 +1,171 @@
+; cpmish BIOS © 2020 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is a general purpose VT52 state machine. It provides tty_putc and calls
+; out to tty.lib.
+
+commandlen:    db 0
+commandgot:    db 0
+commandbuf:    ds 4
+
+; --- Clears (and initialises) the screen -----------------------------------
+
+vt52_init:
+    xor a
+    ld (commandlen), a
+	jr tty_init
+
+; --- Prints the character in A ---------------------------------------------
+
+tty_putc:
+    ; Check to see if there's a pending command.
+
+    ld c, a
+    ld a, (commandlen)
+    or a
+    jr nz, queue_command_byte
+
+    ; Handle special characters.
+
+    ld a, c
+    cp 32
+    jr c, controlcharacter
+
+    ; This is a printable character, so print it.
+
+    call tty_rawwrite
+
+    ; Now we've drawn a character, advance the cursor.
+
+    ld hl, tty_cursorx
+    ld a, (hl)
+    inc a
+    ld (hl), a
+    cp SCREEN_WIDTH
+    ret nz
+
+    ; Reached the end of the line? Advance to the next one and go back to
+    ; the margin.
+
+    xor a
+    ld (hl), a
+    jr tty_cursor_down
+
+; Helper routine: deal with command bytes (passed in C).
+queue_command_byte:
+    ; Write the byte to the buffer.
+
+    ld hl, commandgot
+    ld d, 0
+    ld e, (hl)
+    inc (hl)
+
+    ld hl, commandbuf
+    add hl, de
+    ld (hl), c
+
+    ; Have we reached the end of the buffer?
+
+    ld hl, commandlen
+    ld a, (commandgot)
+    cp (hl)
+    ret nz              ; no, go back for more bytes.
+    xor a
+    ld (hl), a          ; end of command
+
+    ; Process a command.
+
+    ld a, (commandbuf+0)
+	cp 'A'
+	jr z, tty_cursor_up
+	cp 'B'
+	jr z, tty_cursor_down
+	cp 'C'
+	jr z, tty_cursor_right
+	cp 'D'
+	jr z, tty_cursor_left
+	cp 'E'
+	jr z, tty_clear_screen
+	cp 'H'
+	jr z, tty_home_cursor
+	cp 'I'
+	jr z, tty_cursor_up_and_scroll
+	cp 'J'
+	jr z, tty_clear_to_eos
+	cp 'K'
+	jr z, tty_clear_to_eol
+	cp 'L'
+	jr z, tty_insert_line
+	cp 'M'
+	jr z, tty_delete_line
+	cp 'p'
+	jr z, revonoff
+	cp 'q'
+	jr z, revonoff
+    cp 'Y'
+    jr z, gotoxy
+    ret
+
+; The command character is in a. 'p'=0x70 is on, 'q'=0x71 is off.
+revonoff:
+    ld hl, tty_attributes
+    res 0, (hl)
+    bit 0, a
+    ret nz
+    set 0, (hl)
+    ret
+
+; Helper routine: called from tty_putc if this is a non-printable control
+; character. The character is in A.
+controlcharacter:
+    cp 0x08
+    jr z, tty_cursor_left
+	cp 0x09
+	jr z, tty_tab
+    cp 0x0a
+    jr z, tty_cursor_down_and_scroll
+    cp 0x0d
+    jr z, tty_carriagereturn
+    cp 0x1b
+    ret nz ; give up if not an escape character
+
+    ; Escape characters need parameters, starting with one.
+    xor a
+    ld (commandgot), a
+    inc a
+    ld (commandlen), a
+    ret
+
+; Handles both the initial parsing of the command (when we just see the Y) and
+; the final parsing (when we see the parameters).
+gotoxy:
+    ld a, (commandgot)  ; Y takes parameters
+    cp 3                ; do we have enough bytes?
+    jr z, .1            ; yes, execute command
+    ld a, 3             ; not enough bytes read yet
+    ld (commandlen), a
+    ret
+.1:
+    ld hl, commandbuf+1 ; got enough bytes; process command
+    ld a, (hl)
+    sub 32
+    ld c, a             ; Y
+    inc hl
+    ld a, (hl)
+    sub 32
+    ld b, a             ; X
+    jr tty_goto_xy
+
+; Clears the screen without homing.
+tty_clear_screen:
+	ld hl, (tty_cursorx)
+	push hl
+	call tty_clear_home
+	pop hl
+	ld (tty_cursorx), hl
+	ret
+
+; vim: sw=4 ts=4 expandtab ft=asm
+
+
