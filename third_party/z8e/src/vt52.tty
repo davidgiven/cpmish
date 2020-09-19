@@ -150,13 +150,6 @@ mxy0:
 	call	ttyo		; Send character to terminal
 	dec	e		; Count down
 	jr	nz,mxy0		; Loop until all sent
-	ld	a,(mrow4)	; Row first or column first?
-	and	a
-	jr	nz,mxy1		; Skip if row first
-	ld	a,b		; x,y addressing, interchange row and column
-	ld	b,c
-	ld	c,a
-mxy1:
 	ld	a,b		; Send first coordinate
 	call	ttyo
 	ld	a,c		; Send second coordinate
