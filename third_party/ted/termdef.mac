@@ -51,7 +51,6 @@
 	ifdef VT100
 
 vtname:	db	'VT100',0,0,0,0,0,0,0,0,0
-vtsize:	db	80,24			; width, height
 vclscr:	db	6,ESC,'[H',ESC,'[J',0
 vcleos:	db	3,ESC,'[J',0,0,0,0
 vcleol:	db	3,ESC,'[K',0,0,0,0
@@ -76,28 +75,27 @@ vscrlrg:db	1,'r',0,0,0,0,0,0
 	endif
 	ifdef VT52
 
-vtname:	db	'VT52',0,0,0,0,0,0,0,0,0,0
-vtsize:	db	80,24			; width, height
-vclscr:	db	4,ESC,'H',ESC,'J',0,0,0
-vcleos:	db	2,ESC,'J',0,0,0,0,0
-vcleol:	db	2,ESC,'K',0,0,0,0,0
-vcurup:	db	2,ESC,'A',0,0,0,0,0
-vcurdn:	db	2,ESC,'B',0,0,0,0,0
-vcurrgt:db	2,ESC,'C',0,0,0,0,0
-vcurlft:db	2,ESC,'D',0,0,0,0,0
-vhome:	db	2,ESC,'H',0,0,0,0,0
-vcurprf:db	2,ESC,'Y',0,0,0,0,0
-vcursep:db	0,0,0,0,0,0,0,0
-vcurpst:db	0,0,0,0,0,0,0,0
+vtname:	db	'VT52',0
+vclscr:	db	4,ESC,'H',ESC,'J'
+vcleos:	db	2,ESC,'J'
+vcleol:	db	2,ESC,'K'
+vcurup:	db	2,ESC,'A'
+vcurdn:	db	2,ESC,'B'
+vcurrgt:db	2,ESC,'C'
+vcurlft:db	2,ESC,'D'
+vhome:	db	2,ESC,'H'
+vcurprf:db	2,ESC,'Y'
+vcursep:db	0
+vcurpst:db	0
 vcurbcd:db	FALSE
 vcuryof:db	32
 vcurxof:db	32
 vxfirst:db	FALSE
-vfwdidx:db	1,LF,0,0,0,0,0,0
-vrevidx:db	2,ESC,'I',0,0,0,0,0
-vinsln:	db	0,0,0,0,0,0,0,0
-vdelln:	db	0,0,0,0,0,0,0,0
-vscrlrg:db	0,0,0,0,0,0,0,0
+vfwdidx:db	1,LF
+vrevidx:db	2,ESC,'I'
+vinsln:	db	0
+vdelln:	db	0
+vscrlrg:db	0
 
 	endif
 	ifdef ADM3A

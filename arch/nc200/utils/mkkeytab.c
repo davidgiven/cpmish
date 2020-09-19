@@ -73,7 +73,7 @@ int main(int argc, const char* argv[])
     key(0x4f, '.', '>');
     key(0x35, '/', '?');
     key(0x01, 0,   0); // right shift
-    key(0x3b, 11,  11); // cursor up
+    key(0x3b, 1,   1); // cursor up
 
     key(0x08, 0,   0); // yellow
     key(0x09, 0,   0); // ctrl
@@ -81,9 +81,9 @@ int main(int argc, const char* argv[])
     key(0x0b, ' ', ' ');
     key(0x3a, 92, '|');
     key(0x3c, 0,   0); // menu
-    key(0x03, 8,   8); // cursor left
-    key(0x33, 12,  12); // cursor right
-    key(0x31, 10,  10); // cursor down
+    key(0x03, 1,   1); // cursor left
+    key(0x33, 1,   1); // cursor right
+    key(0x31, 1,   1); // cursor down
 
     printf("keyboard_normal_map:\n");
     for (int i=0; i<sizeof(normaltab); i++)

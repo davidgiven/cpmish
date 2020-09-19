@@ -37,6 +37,14 @@ process_keyboard_event:
 
 		cp 0x10                         ; caps lock key
 		jr z, caps_change
+        cp 0x3b
+        jr z, cursor_up
+        cp 0x33
+        jr z, cursor_right
+        cp 0x31
+        jr z, cursor_down
+        cp 0x03
+        jr z, cursor_left
 
 		ld b, 0
 		ld c, a
@@ -96,6 +104,29 @@ caps_change:
 		ld (hl), a
 		ret
 
+cursor_up:
+        ld a, 'A'
+        jr push_cursor_key
+
+cursor_right:
+        ld a, 'C'
+        jr push_cursor_key
+
+cursor_down:
+        ld a, 'B'
+        jr push_cursor_key
+
+cursor_left:
+        ld a, 'D'
+        ; fall through
+; Pushes 27, A.
+push_cursor_key:
+        push af
+        ld a, 27
+        call queue_key
+        pop af
+        jr queue_key
+        
 keyboard_modifiers:
 		db 0
     
@@ -169,4 +200,6 @@ kbd_get_next_key:
 		ld a, (de)
 		ei
 		ret
+
+; vim: sw=4 ts=4 expandtab ft=asm
 

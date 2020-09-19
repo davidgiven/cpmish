@@ -107,7 +107,7 @@ queue_command_byte:
     jr z, gotoxy
     ret
 
-; The command character is in a. 'p'=0x70 is on, 'q'=0x71 is off.
+; The command character is in A. 'p'=0x70 is on, 'q'=0x71 is off.
 revonoff:
     ld hl, tty_attributes
     res 0, (hl)
