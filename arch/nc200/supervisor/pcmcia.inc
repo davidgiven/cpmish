@@ -332,3 +332,6 @@ str.ide_error: db "IDE error: ", 0
 str.ata_card:  db "PCMCIA card found: ", 0
 str.not_ata:   db "Card is not ATA", 13, 10, 0
 str.no_card:   db "No PCMCIA card found", 13, 10, 0
+
+; vim: sw=4 ts=4 expandtab ft=asm
+

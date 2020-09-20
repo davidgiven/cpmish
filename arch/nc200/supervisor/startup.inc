@@ -121,3 +121,5 @@ str.loading:
 str.ready:
 	db "Ready", 10, 13, 0
 
+; vim: sw=4 ts=4 expandtab ft=asm
+

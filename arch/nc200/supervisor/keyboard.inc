@@ -27,6 +27,8 @@ process_keyboard_event:
 		and 0x7f
 		cp 0x09                         ; control key
 		jr z, ctrl_change
+        cp 0x08                         ; yellow key
+        jr z, ctrl_change
 		and 0x7e
 		jr z, shift_change
 
