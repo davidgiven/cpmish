@@ -292,28 +292,22 @@ tty_rawwrite:
     add hl, de          ; hl = a*6 + a = a*7
     ld de, FONT
     add hl, de
-    ; hl points at font data
+    ex de, hl
+    ; de points at font data
 
     ; We are now *finally* ready to start drawing.
 
-    ld a, (hl)              ; XXXXX???.????????
     call draw_single_scanline
-    ld a, (hl)              ; XXXXX???.????????
     call draw_single_scanline
-    ld a, (hl)              ; XXXXX???.????????
     call draw_single_scanline
-    ld a, (hl)              ; XXXXX???.????????
     call draw_single_scanline
-    ld a, (hl)              ; XXXXX???.????????
     call draw_single_scanline
-    ld a, (hl)              ; XXXXX???.????????
     call draw_single_scanline
-    ld a, (hl)              ; XXXXX???.????????
     ; fall through
 ; On entry, the font data is in A, left justified.
 ; Font pointer is in HL.
 draw_single_scanline:
-    ex de, hl           ; save font pointer in DE
+    ld a, (de)
     and 0xf8
     ld l, a
     ld h, 0
@@ -358,8 +352,7 @@ scanline_shift_amount:
     add hl, bc
     ld (L_cursor_address), hl
 
-    ex de, hl           ; put font pointer back in HL
-    inc hl              ; advance to next byte of font data
+    inc de              ; advance to next byte of font data
     ret
 
 ; vim: sw=4 ts=4 expandtab ft=asm

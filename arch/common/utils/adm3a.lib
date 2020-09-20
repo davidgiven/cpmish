@@ -157,7 +157,7 @@ tty_putc:
 
     xor a
     ld (hl), a
-    jp tty_cursor_down
+    jr tty_cursor_down_and_scroll
 
 ; vim: sw=4 ts=4 expandtab ft=asm
 

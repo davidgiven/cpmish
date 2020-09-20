@@ -50,7 +50,7 @@ tty_putc:
 
     xor a
     ld (hl), a
-    jr tty_cursor_down
+    jr tty_cursor_down_and_scroll
 
 ; Helper routine: deal with command bytes (passed in C).
 queue_command_byte:
