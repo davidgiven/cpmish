@@ -18,7 +18,7 @@ easily created on a PC drive.
 
 What you get with this port:
 
-- about 702kB of storage on a 720kB GCR disk (I have to reserve two tracks for
+- about 702kB of storage on a 720kB MFM disk (I have to reserve two tracks for
   a FAT filesystem and the CP/M system track to boot from)
 - most of an ADM-3a / Kaypro II terminal emulator supporting 91x26 text
 - a respectable 55kB TPA
