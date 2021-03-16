@@ -28,11 +28,10 @@ zmac {
         "include/*.lib",
         "arch/common/utils/deblocker.lib",
         "arch/common/utils/tty.lib",
+        "arch/common/utils/vt52.lib",
         "arch/nc200/include/*.lib",
         "arch/nc200+addresses_lib",
         "./*.inc",
-        "+keytab_inc",
-        "+font_inc",
     },
 }
 
@@ -43,5 +42,6 @@ zmac {
         "include/*.lib",
         "arch/nc200/include/*.lib",
         "+font_inc",
+        "+keytab_inc",
     },
 }

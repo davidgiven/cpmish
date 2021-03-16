@@ -8,7 +8,9 @@
 label STARTUP
     ld sp, SYSSTK
     call init_interrupts
-    call tty_init
+    ld a, VIDEORAM_BASE>>8
+    out (PORT_DISPLAY_MEMORY_ADDR), a ; set base address of video RAM
+    call vt52_init
     ld hl, str.banner
     call tty_puts
     call pcmcia_init
@@ -118,4 +120,6 @@ str.loading:
 
 str.ready:
 	db "Ready", 10, 13, 0
+
+; vim: sw=4 ts=4 expandtab ft=asm
 

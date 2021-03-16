@@ -27,6 +27,8 @@ process_keyboard_event:
 		and 0x7f
 		cp 0x09                         ; control key
 		jr z, ctrl_change
+        cp 0x08                         ; yellow key
+        jr z, ctrl_change
 		and 0x7e
 		jr z, shift_change
 
@@ -37,14 +39,22 @@ process_keyboard_event:
 
 		cp 0x10                         ; caps lock key
 		jr z, caps_change
+        cp 0x3b
+        jr z, cursor_up
+        cp 0x33
+        jr z, cursor_right
+        cp 0x31
+        jr z, cursor_down
+        cp 0x03
+        jr z, cursor_left
 
 		ld b, 0
 		ld c, a
 		ld a, (keyboard_modifiers)
-		ld hl, keyboard_normal_map
+		ld hl, KEYNORM
 		bit MODIFIER_BIT_SHIFT, a
 		jr z, .2
-		ld hl, keyboard_shifted_map
+		ld hl, KEYSHIFT
 .2:
 		add hl, bc
 		ld a, (hl)
@@ -96,6 +106,29 @@ caps_change:
 		ld (hl), a
 		ret
 
+cursor_up:
+        ld a, 'A'
+        jr push_cursor_key
+
+cursor_right:
+        ld a, 'C'
+        jr push_cursor_key
+
+cursor_down:
+        ld a, 'B'
+        jr push_cursor_key
+
+cursor_left:
+        ld a, 'D'
+        ; fall through
+; Pushes 27, A.
+push_cursor_key:
+        push af
+        ld a, 27
+        call queue_key
+        pop af
+        jr queue_key
+        
 keyboard_modifiers:
 		db 0
     
@@ -170,5 +203,5 @@ kbd_get_next_key:
 		ei
 		ret
 
-.include "keytab.inc"
+; vim: sw=4 ts=4 expandtab ft=asm
 

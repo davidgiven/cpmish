@@ -46,7 +46,7 @@ definerule("zmac",
             outleaves = { e.name..ext, e.name..".lst" },
             deps = e.deps,
             commands = {
-                "%{ins[1]} --zmac -m "..relflag.." "..archflag.." -o %{outs[1]} -o %{outs[2]} %{hdrpaths} %{ins[2]}"
+                "%{ins[1]} --zmac -j -m "..relflag.." "..archflag.." -o %{outs[1]} -o %{outs[2]} %{hdrpaths} %{ins[2]}"
             },
             vars = {
                 hdrpaths = hdrpaths,

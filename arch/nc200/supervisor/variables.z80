@@ -38,6 +38,12 @@ label PBAUD
 label FONT
 	include "font.inc"
 
+	global KEYNORM
+KEYNORM equ keyboard_normal_map
+	global KEYSHIFT
+KEYSHIFT equ keyboard_shifted_map
+	include "keytab.inc"
+
 supervisor_stack:
 	ds 64
 label SYSSTK

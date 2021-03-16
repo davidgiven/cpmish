@@ -37,33 +37,18 @@ int main(int argc, const char* argv[])
 		/* The glyph data is a 7-element array of bytes. Each byte contains
 		 * one scanline, left justified. */
 
-		uint64_t mask = 0;
-		const uint8_t* p = glyph->data;
-
+		printf("\tdb ");
 		int yy = 0;
+		const uint8_t* p = glyph->data;
 		while (yy < LINEHEIGHT)
 		{
-			/* We assume the right-most column is blank, and so only store five bits. */
-
-			mask = (mask << 5) | ((*p >> 3) & 0x1f);
+			if (yy != 0)
+				printf(", ");
+			printf("0x%02x", *p);
 			p++;
 			yy++;
 		}
-
-		/* The encoding expects 8 5-bit values in five bytes, *left* justified. */
-		while (yy < 8)
-		{
-			mask <<= 5;
-			yy++;
-		}
-
-		printf("\tdb 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x ; char %d\n",
-			(uint32_t)((mask >> 32) & 0xff),
-			(uint32_t)((mask >> 24) & 0xff),
-			(uint32_t)((mask >> 16) & 0xff),
-			(uint32_t)((mask >> 8) & 0xff),
-			(uint32_t)(mask & 0xff),
-			c);
+		printf(" ; char %d\n", c);
     }
 
     return 0;

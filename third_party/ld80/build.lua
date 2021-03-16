@@ -51,9 +51,9 @@ definerule("bintocom",
         srcs = { type="table" },
     },
     function (e)
-		return binrule {
+		return binslice {
 			name = e.name,
-			src = { e.ins[1] },
+			src = { e.srcs[1] },
 			start = 0x100
 		}
     end

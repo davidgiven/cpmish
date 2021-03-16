@@ -19,6 +19,8 @@
 	extern DRVBDPB
 	extern FDBUF
 	extern FONT
+	extern KEYNORM
+	extern KEYSHIFT
 	extern PBAUD
 	extern SYSOUT
 	extern SYSSTK

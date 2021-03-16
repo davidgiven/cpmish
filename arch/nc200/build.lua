@@ -148,7 +148,7 @@ diskimage {
         ["asm.com"] = "cpmtools+asm",
         ["copy.com"] = "cpmtools+copy",
         ["submit.com"] = "cpmtools+submit",
-        ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic_ADM3A",
+        ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic_VT52",
         ["qe.com"] = "cpmtools+qe_NC200",
         ["flash.com"] = "arch/nc200/tools+flash",
         ["flipdisk.com"] = "arch/nc200/tools+flipdisk",

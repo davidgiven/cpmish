@@ -28,7 +28,7 @@ extern void con_revoff(void);
 #elif defined LIBCUSS_NC200
     #define SCREENWIDTH 80
     #define SCREENHEIGHT 18
-    #define LIBCUSS_ADM3
+    #define LIBCUSS_VT52
 #elif defined LIBCUSS_BROTHEROP2
     #define SCREENWIDTH 80
     #define SCREENHEIGHT 14
@@ -71,14 +71,10 @@ extern void con_revoff(void);
 	#define LIBCUSS_REVON "\033p"
 	#define LIBCUSS_REVOFF "\033q"
 
-    #define LIBCUSS_KEY_LEFT "\010"
-    #define LIBCUSS_KEY_DOWN "\012"
-    #define LIBCUSS_KEY_UP "\013"
-    #define LIBCUSS_KEY_RIGHT "\014"
-	//#define LIBCUSS_KEY_LEFT "\033[D"
-	//#define LIBCUSS_KEY_DOWN "\033[B"
-	//#define LIBCUSS_KEY_UP "\033[A"
-	//#define LIBCUSS_KEY_RIGHT "\033[C"
+	#define LIBCUSS_KEY_LEFT "\304"
+	#define LIBCUSS_KEY_DOWN "\302"
+	#define LIBCUSS_KEY_UP "\301"
+	#define LIBCUSS_KEY_RIGHT "\303"
 #endif
 
 #if defined LIBCUSS_ANSI
