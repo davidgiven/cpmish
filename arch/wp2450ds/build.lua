@@ -209,6 +209,7 @@ diskimage {
         ["qe.com"] = "cpmtools+qe_BROTHER_WP2450DS",
 		["z8e.com"] = "third_party/z8e+z8e_WP2450DS",
 		["ted.com"] = "third_party/ted+ted_WP2450DS",
+		["camel80.com"] = "third_party/camelforth+camelforth",
 	},
 }
 

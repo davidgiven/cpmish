@@ -156,6 +156,7 @@ diskimage {
         ["rawdisk.com"] = "cpmtools+rawdisk",
 		["z8e.com"] = "third_party/z8e+z8e_NC200",
 		["ted.com"] = "third_party/ted+ted_NC200",
+		["camel80.com"] = "third_party/camelforth+camelforth",
         ["-readme.txt"] = "+readme",
     },
 }
