@@ -183,3 +183,8 @@ Specifically:
 	library, mostly written by Pigmaker57. It is distributable under the terms
 	of the General Public license version 2. See the
 	`third_party/libz80ex/COPYING` file for the full text.
+
+  - `third_party/camelforth` contains a copy of CamelForth for the Z80, written
+	by B. J. Rodriguez. It is distributable under the terms of the General
+	Public License version 3. See `third_party/camelforth/COPYING` for the full
+	text.
