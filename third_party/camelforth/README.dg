@@ -2,6 +2,10 @@ This has been massaged lightly by me, dtrg, to assemble with zmac. The main
 issue is that zmac doesn't allow labels like OR and AND and has slightly
 different conditional syntax. Very little work was needed.
 
+Additional note: previously, the CP/M runtime (such as it is) and the
+interpreter were combined. I've moved the common interpreter stuff into
+camel80i.inc.
+
 David Given
 dg@cowlark.com
 
