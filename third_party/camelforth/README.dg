@@ -1,0 +1,7 @@
+This has been massaged lightly by me, dtrg, to assemble with zmac. The main
+issue is that zmac doesn't allow labels like OR and AND and has slightly
+different conditional syntax. Very little work was needed.
+
+David Given
+dg@cowlark.com
+

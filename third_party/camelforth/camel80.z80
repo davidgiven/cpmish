@@ -65,7 +65,7 @@ head    MACRO   #label,#length,#name,#action
 link    DEFL $
         DB #length,'#name'
 #label:
-        IF  .NOT.(#action=DOCODE)
+        IF  #action<>DOCODE
         call #action
         ENDIF
         ENDM
@@ -76,7 +76,7 @@ immed   MACRO   #label,#length,#name,#action
 link    DEFL $
         DB #length,'#name'
 #label:
-        IF  .NOT.(#action=DOCODE)
+        IF  #action<>DOCODE
         call #action
         ENDIF
         ENDM
@@ -510,7 +510,7 @@ mplus1: pop de          ; restore saved IP
         next
 
 ;C AND    x1 x2 -- x3            logical AND
-    head AND,3,AND,docode
+    head ANDOP,3,AND,docode
         pop hl
         ld a,b
         and h
@@ -521,7 +521,7 @@ mplus1: pop de          ; restore saved IP
         next
 
 ;C OR     x1 x2 -- x3           logical OR
-    head OR,2,OR,docode
+    head OROP,2,OR,docode
         pop hl
         ld a,b
         or h
@@ -532,7 +532,7 @@ mplus1: pop de          ; restore saved IP
         next
 
 ;C XOR    x1 x2 -- x3            logical XOR
-    head XOR,3,XOR,docode
+    head XOROP,3,XOR,docode
         pop hl
         ld a,b
         xor h
@@ -664,7 +664,7 @@ tosfalse: ld bc,0
         DW EQUAL,ZEROEQUAL,EXIT
 
 ;C <      n1 n2 -- flag        test n1<n2, signed
-    head LESS,1,<,docode
+    head LESS,1,"<",docode
         pop hl
         or a
         sbc hl,bc       ; n1-n2 in HL, SZVC valid
@@ -1034,8 +1034,8 @@ sdiff:  ; mismatch!  undo last 'cpi' increment
         ld c,a
 snext:  next
 
-*INCLUDE camel80d.azm   ; CPU Dependencies
-*INCLUDE camel80h.azm   ; High Level words
+		include camel80d.inc ; CPU Dependencies
+		include camel80h.inc ; High Level words
 lastword EQU link   ; nfa of last word in dict.
 enddict EQU $       ; user's code starts here
         END

@@ -166,7 +166,7 @@ DNEG1:  DW EXIT
 ;   SWAP ABS SWAP ABS UM*
 ;   R> ?DNEGATE ;
     head MSTAR,2,M*,docolon
-        DW TWODUP,XOR,TOR
+        DW TWODUP,XOROP,TOR
         DW SWOP,ABS,SWOP,ABS,UMSTAR
         DW RFROM,QDNEGATE,EXIT
 
@@ -178,7 +178,7 @@ DNEG1:  DW EXIT
 ;   SWAP R> ?NEGATE ;
 ; Ref. dpANS-6 section 3.2.2.1.
     head SMSLASHREM,6,SM/REM,docolon
-        DW TWODUP,XOR,TOR,OVER,TOR
+        DW TWODUP,XOROP,TOR,OVER,TOR
         DW ABS,TOR,DABS,RFROM,UMSLASHMOD
         DW SWOP,RFROM,QNEGATE,SWOP,RFROM,QNEGATE
         DW EXIT
@@ -216,7 +216,7 @@ FMMOD2: DW EXIT
 
 ;C MOD    n1 n2 -- n3       signed remainder
 ;   /MOD DROP ;
-    head MOD,3,MOD,docolon
+    head MODOP,3,MOD,docolon
         dw SLASHMOD,DROP,EXIT
 
 ;C */MOD  n1 n2 n3 -- n4 n5    n1*n2/n3, rem&quot
@@ -392,13 +392,13 @@ TYP5:   DW EXIT
 
 ;C <#    --             begin numeric conversion
 ;   PAD HP ! ;          (initialize Hold Pointer)
-    head LESSNUM,2,<#,docolon
+    head LESSNUM,2,"<#",docolon
         DW PAD,HP,STORE,EXIT
 
 ;Z >digit   n -- c      convert to 0..9A..Z
 ;   [ HEX ] DUP 9 > 7 AND + 30 + ;
     head TODIGIT,6,>DIGIT,docolon
-        DW DUP,LIT,9,GREATER,LIT,7,AND,PLUS
+        DW DUP,LIT,9,GREATER,LIT,7,ANDOP,PLUS
         DW LIT,30H,PLUS,EXIT
 
 ;C #     ud1 -- ud2     convert 1 digit of output
@@ -410,7 +410,7 @@ TYP5:   DW EXIT
 ;C #S    ud1 -- ud2     convert remaining digits
 ;   BEGIN # 2DUP OR 0= UNTIL ;
     head NUMS,2,#S,docolon
-NUMS1:  DW NUM,TWODUP,OR,ZEROEQUAL,qbranch,NUMS1
+NUMS1:  DW NUM,TWODUP,OROP,ZEROEQUAL,qbranch,NUMS1
         DW EXIT
 
 ;C #>    ud1 -- c-addr u    end conv., get string
@@ -520,7 +520,7 @@ WORD1:  DW RFROM,RFROM,ROT,MINUS,TOIN,PLUSSTORE
 ;Z NFA>CFA   nfa -- cfa    name adr -> code field
 ;   COUNT 7F AND + ;       mask off 'smudge' bit
     head NFATOCFA,7,NFA>CFA,docolon
-        DW COUNT,LIT,07FH,AND,PLUS,EXIT
+        DW COUNT,LIT,07FH,ANDOP,PLUS,EXIT
 
 ;Z IMMED?    nfa -- f      fetch immediate flag
 ;   1- C@ ;                     nonzero if immed
@@ -551,7 +551,7 @@ FIND1:  DW TWODUP,OVER,CFETCH,CHARPLUS
 FIND2:  DW ZEROEQUAL,qbranch,FIND1
         DW DUP,qbranch,FIND3
         DW NIP,DUP,NFATOCFA
-        DW SWOP,IMMEDQ,ZEROEQUAL,LIT,1,OR
+        DW SWOP,IMMEDQ,ZEROEQUAL,LIT,1,OROP
 FIND3:  DW EXIT
 
 ;C LITERAL  x --        append numeric literal
@@ -569,8 +569,8 @@ LITER1: DW EXIT
 ;   DUP 140 > 107 AND -   30 -     but it works!
 ;   DUP BASE @ U< ;
     head DIGITQ,6,DIGIT?,docolon
-        DW DUP,LIT,39H,GREATER,LIT,100H,AND,PLUS
-        DW DUP,LIT,140H,GREATER,LIT,107H,AND
+        DW DUP,LIT,39H,GREATER,LIT,100H,ANDOP,PLUS
+        DW DUP,LIT,140H,GREATER,LIT,107H,ANDOP
         DW MINUS,LIT,30H,MINUS
         DW DUP,BASE,FETCH,ULESS,EXIT
 
@@ -583,7 +583,7 @@ LITER1: DW EXIT
 ;   THEN ;
     head QSIGN,5,?SIGN,docolon
         DW OVER,CFETCH,LIT,2CH,MINUS,DUP,ABS
-        DW LIT,1,EQUAL,AND,DUP,qbranch,QSIGN1
+        DW LIT,1,EQUAL,ANDOP,DUP,qbranch,QSIGN1
         DW ONEPLUS,TOR,LIT,1,SLASHSTRING,RFROM
 QSIGN1: DW EXIT
 
@@ -645,7 +645,7 @@ QNUM3:  DW EXIT
         DW TICKSOURCE,TWOSTORE,LIT,0,TOIN,STORE
 INTER1: DW BL,WORD,DUP,CFETCH,qbranch,INTER9
         DW FIND,QDUP,qbranch,INTER4
-        DW ONEPLUS,STATE,FETCH,ZEROEQUAL,OR
+        DW ONEPLUS,STATE,FETCH,ZEROEQUAL,OROP
         DW qbranch,INTER2
         DW EXECUTE,branch,INTER3
 INTER2: DW COMMAXT
@@ -780,13 +780,13 @@ TICK:   call docolon
 ;Z HIDE     --      "hide" latest definition
 ;   LATEST @ DUP C@ 80 OR SWAP C! ;
     head HIDE,4,HIDE,docolon
-        DW LATEST,FETCH,DUP,CFETCH,LIT,80H,OR
+        DW LATEST,FETCH,DUP,CFETCH,LIT,80H,OROP
         DW SWOP,CSTORE,EXIT
 
 ;Z REVEAL   --      "reveal" latest definition
 ;   LATEST @ DUP C@ 7F AND SWAP C! ;
     head REVEAL,6,REVEAL,docolon
-        DW LATEST,FETCH,DUP,CFETCH,LIT,7FH,AND
+        DW LATEST,FETCH,DUP,CFETCH,LIT,7FH,ANDOP
         DW SWOP,CSTORE,EXIT
 
 ;C IMMEDIATE   --   make last def'n immediate
