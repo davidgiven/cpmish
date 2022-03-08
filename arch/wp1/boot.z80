@@ -1,0 +1,24 @@
+    maclib z180
+
+	org $6000
+entry:
+	di
+
+    ; Configure the serial port.
+
+    ld a, 01110100b     ; RE, TE, /RTS0, MOD2(8n1)
+    out0a CNTLA0
+    ld a, 00000000b     ; SS1(/160 clock = 38.4kbaud)
+    out0a CNTLB0
+
+sloop:
+	ld c, '0'
+loop1:
+	in0a STAT0
+	and 00000010b       ; TDRE
+	jr z, loop1
+	out0c TDR0
+
+	jr sloop
+
+
