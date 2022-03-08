@@ -55,6 +55,7 @@ diskimage {
         ["submit.com"] = "cpmtools+submit",
         ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic_ADM3A",
         ["qe.com"] = "cpmtools+qe_KAYPROII",
+		["camel80.com"] = "third_party/camelforth+camelforth",
     },
 }
     
