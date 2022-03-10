@@ -1,0 +1,38 @@
+    maclib z180
+
+entry:
+    ld sp, 0x8400
+    call putsi
+    db 13, 10
+    db 'BIOS!'
+    db 13, 10
+    db 0
+
+    jr $
+	
+
+putbyte:
+    ld c, a
+puthex_3:
+    in0a STAT0
+    and 00000010b
+    jr z, puthex_3
+    out0c TDR0
+    ret
+
+puts:
+    ld a, (hl)
+    or a
+    ret z
+    inc hl
+    call putbyte
+    jr puts
+
+putsi:
+    pop hl
+    call puts
+    inc hl
+    jp (hl)
+
+; vim: ts=4 sw=4 et ft=asm
+

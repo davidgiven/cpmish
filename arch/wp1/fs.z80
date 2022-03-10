@@ -1,0 +1,9 @@
+    aseg
+	org 0x0000
+	incbin "bios_img.img"
+
+    org 0x0c00
+    incbin "boot_img.cim"
+	org 0x0d00
+	incbin "ccpbdos_img.img"
+

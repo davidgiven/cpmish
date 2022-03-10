@@ -1,24 +1,185 @@
-    maclib z180
+; This is the Brother boot sector. It's at offset $c00 in the file (sector 1,
+; track 1).  It gets loaded at $6000 with CBAR=BBR=CBR=0, which means that the
+; entire logical address space is mapped to physical address $00000.
+;
+; Known locations in the memory map are:
+;
+; $24000 : kernel workspace?
+; $25800 : temporary buffer used for loading sectors
+; $27000 : application RAM
+; $30000 : top of application RAM (boot sector stack)
+;
+; The standard boot sector sets this before loading the application code:
+;
+;    CBAR  CBR  BBR  bank           common
+;     e7    16   20  7000 @ 27000   e000 @ 24000
+;
+; After boot the boot sector applies this mapping:
+;
+;    CBAR  CBR  BBR  bank           common
+;     64    20   0c  4000 @ 10000   6000 @ 26000
+;
+; There's a mirror so that data at $06000 (which should be ROM) is actually
+; a view of $26000. The boot sector then trashes everything in $4000 and $5000
+; before jumping to the application code at $7000.
+;
+; The kernel itself has seven 'workspaces':
+;    CBAR  CBR  BBR  bank           common
+; 0   e4    16   0c  4000 @ 10000   e000 @ 24000
+; 1   f2    16   25  2000 @ 27000   f000 @ 25000
+; 2   e2    16   12  2000 @ 14000   e000 @ 24000
+; 3   e4    16   04  4000 @ 08000   e000 @ 24000
+; 4   e2    16   3a  2000 @ 3c000   e000 @ 24000
+; 5   e2    16   00  2000 @ 02000   e000 @ 24000
+; 6   e2    16   36  2000 @ 38000   e000 @ 24000
+;
+; So, given that CP/M needs memory starting at $0000, we're going to map the
+; application RAM at $27000 there. We have $30000-$27000=$9000 bytes available.
+; However, we also want another mapping which is compatible with the Brother OS
+; so we can make system calls, but which has the BIOS in the same place.
+; 
+; The two mappings we're going to use are:
+;
+;       CBAR  CBR  BBR  bank           common
+; user   e0    16   27  0000 @ 27000   e000 @ 24000
+; sys    e7    16   27  7000 @ 27000   e000 @ 24000
+;
+; We can then switch atomically between the two to switch between having the
+; Brother stuff at the bottom of memory or CP/M stuff at the bottom of memory.
+; The BIOS always remains mapped at $8400.
 
-	org $6000
+    maclib z180
+    maclib addresses
+
+    org $6000
+    db $55              ; magic number
+
 entry:
-	di
+    di
+    ld sp, $0000
 
     ; Configure the serial port.
 
     ld a, 01110100b     ; RE, TE, /RTS0, MOD2(8n1)
     out0a CNTLA0
-    ld a, 00000000b     ; SS1(/160 clock = 38.4kbaud)
+    ld a, 00000000b     ; SS1(/640 clock = 38400 baud)
     out0a CNTLB0
 
-sloop:
-	ld c, '0'
-loop1:
-	in0a STAT0
-	and 00000010b       ; TDRE
-	jr z, loop1
-	out0c TDR0
+    xor a
+    out0a ITC
+    ld c, $0f
+    out0c CNTR
+    out0a $d8
 
-	jr sloop
+    ld c, $e7
+    out0c CBAR
+    ld c, $16
+    out0c CBR
+    ld c, $27
+    out0c BBR
 
+    call putsi
+    db 13, 10
+    db 'BOOT'
+    db 13, 10
+    db 0
+
+    ; The actual sector load loop.
+
+    ld bc, 1            ; sector number
+    ld hl, $f800        ; temp buffer
+    ld e, 12            ; number of sectors
+    ld d, BBASE/256 + $70 ; page of destination address (relative to $20000)
+loadloop:
+    push bc
+    push de
+    push hl
+    ld a, 6             ; read sector
+    rst $28
+    jr c, error
+    pop hl
+    pop de
+    pop bc
+
+    push bc
+    ld a, '.'
+    call putbyte
+    pop bc
+
+    ; DMA the read sector out of the temporary buffer and into user RAM.
+
+    xor a
+    out0a SAR0L         ; SAR0 = temp buffer phys @ 0x25800
+    ld a, $58
+    out0a SAR0H
+    ld a, $02
+    out0a SAR0B
+
+    xor a
+    out0a DAR0L         ; DAR0 = target phys @ 0x2xx00
+    ld a, d
+    out0a DAR0H
+    ld a, $02
+    out0a DAR0B
+
+    xor a               ; BCR0 = 0x100, one sector
+    out0a BCR0L
+    inc a
+    out0a BCR0H
+
+    ld a, 2             ; start DMA
+    out0a DMODE
+    ld a, $40
+    out0a DSTAT
+    
+    inc bc              ; advance to next sector
+    inc d               ; ...and next address
+    dec e               ; ...reduce count
+    jr nz, loadloop
+
+    ld a, 2             ; motor off
+    rst $28
+
+    call putsi
+    db 13, 10
+    db 'GO'
+    db 13, 10
+    db 0
+
+    ; And go.
+
+    jp BBASE
+    
+error:
+    call putsi
+    db 13, 10
+    db 'ERROR!'
+    db 13, 10
+    db 0
+    jr $
+
+putbyte:
+    ld c, a
+puthex_3:
+    in0a STAT0
+    and 00000010b
+    jr z, puthex_3
+    out0c TDR0
+    ret
+
+puts:
+    ld a, (hl)
+    or a
+    ret z
+    inc hl
+    call putbyte
+    jr puts
+
+putsi:
+    pop hl
+    call puts
+    inc hl
+    jp (hl)
+    
+; vim: ts=4 sw=4 et ft=asm
 
