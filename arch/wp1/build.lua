@@ -61,6 +61,25 @@ zmac {
     },
 }
 
+zmac {
+    name = "tty_o",
+    srcs = { "./tty.z80" },
+    deps = {
+        "include/*.lib",
+        "./include/*.lib",
+		"arch/common/utils/tty.lib",
+    },
+}
+
+zmac {
+    name = "floppy_o",
+    srcs = { "./floppy.z80" },
+    deps = {
+        "include/*.lib",
+        "./include/*.lib",
+    },
+}
+
 -- This is a 64kB file containing the entire CP/M memory image.
 
 ld80 {
@@ -71,6 +90,8 @@ ld80 {
 		"-P"..string.format("%x", FBASE), "third_party/zsdos+zsdos",
 		"-P"..string.format("%x", BBASE),
 		"+bios_o",
+		"+tty_o",
+		"+floppy_o",
 	}
 }
 

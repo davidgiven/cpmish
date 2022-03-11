@@ -1,0 +1,11 @@
+    maclib z180
+
+PORT_VIDEO_LO = 0x72
+PORT_VIDEO_HI = 0x73
+PORT_VIDEO_DATA = 0x74
+
+SCREEN_WIDTH = 80
+SCREEN_HEIGHT = 15
+
+; vim: ts=4 sw=4 et ft=asm
+
