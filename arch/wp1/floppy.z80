@@ -13,6 +13,7 @@
     extrn TTYPUTC
     extrn TTYPUT8
     extrn TTYPUT16
+    extrn TTYPUTSI
 
     public SELDSKE
     public HOMEE
@@ -129,8 +130,7 @@ getblock;
     push hl
     ld b, h                 ; new current block (zero based)
     ld c, l
-    ld a, 3                 ; read sector
-    call xfer_syscall
+    call read_syscall
     pop hl
     ret c
 
@@ -151,8 +151,7 @@ calculate_physical_address:
 flush_current_block:
     push hl
     ld bc, (current_block)  ; old current block
-    ld a, 4                 ; write block
-    call xfer_syscall
+    call write_syscall
     pop hl
     ret c                   ; exit on error
 
@@ -160,17 +159,49 @@ flush_current_block:
     ld (dirty), a           ; clear dirty flag
     ret
 
-; On entry, A = syscall number, BC = zero-based block to transfer.
-xfer_syscall:
-    push ix
+; On entry, BC = zero-based block to transfer.
+read_syscall:
     call SYSIN
-    ld ix, disk_buffer + 0x5000 ; low byte of physical address
+
+    ld hl, $f800
     inc bc                  ; block number must be one based
-    ld h, 6                 ; high nibble of physical address
-    ld de, 1                ; sector count
-    rst 0x28                ; disk access
+    ld a, 6                 ; read sector
+    rst 0x28
+
+    xor a
+    out0a SAR0L         ; SAR0 = temp buffer phys @ 0x25800
+    ld a, $58
+    out0a SAR0H
+    ld a, $02
+    out0a SAR0B
+
+    ld a, disk_buffer & $ff
+    out0a DAR0L         ; DAR0 = target phys @ 0x2xx00
+    ld a, disk_buffer / 256
+    out0a DAR0H
+    ld a, $02
+    out0a DAR0B
+
+    xor a               ; BCR0 = 0x100, one sector
+    out0a BCR0L
+    inc a
+    out0a BCR0H
+
+    ld a, 2             ; start DMA
+    out0a DMODE
+    ld a, $40
+    out0a DSTAT
+    
     call SYSOUT
-    pop ix
+    ret
+
+    dseg
+
+; On entry, BC = zero-based block to transfer.
+write_syscall:
+    call TTYPUTSI
+    db 'write', 0
+    jr $
     ret
 
     dseg

@@ -106,7 +106,7 @@ entry:
 
     ld bc, 1            ; sector number
     ld hl, $f800        ; temp buffer
-    ld e, 12            ; number of sectors
+    ld e, BIOS_SIZE/256 ; number of sectors
     ld d, BBASE/256 + $70 ; page of destination address (relative to $20000)
 loadloop:
     push bc
@@ -153,8 +153,8 @@ loadloop:
     dec e               ; ...reduce count
     jr nz, loadloop
 
-    ld a, 2             ; motor off
-    rst $28
+    ;ld a, 2             ; motor off
+    ;rst $28
 
     call putsi
     db 'go!'

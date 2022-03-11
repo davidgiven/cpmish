@@ -5,6 +5,7 @@
     maclib cpm
     maclib cpmish
     maclib brotherwp1
+    maclib addresses
 
     public SYSIN
     public SYSOUT
@@ -30,7 +31,6 @@
 
 ; BIOS jump table.
 
-label BBASE
     jp BOOTE
     jp WBOOTE
     jp CONSTE
@@ -60,29 +60,10 @@ label BBASE
 ; Cold boot on system startup.
 BOOTE:
     di
-    ld a, $e0                ; map out the Brother stuff
-    out0a CBAR
+    ld sp, 0x0100           ; ephemeral user stack
+    ld c, 0xe0              ; map RAM in everywhere
+    out0c CBAR
 
-    ld sp, 0x0100            ; ephemeral user stack
-
-;    ld de, $f000
-;.1
-;    ld h, d
-;    ld l, e
-;    call phex16
-;    inc de
-;    ld a, d
-;    or a
-;    jr nz, .1
-;    jr $
-;
-;    SCREENON
-;    ld a, 'q'
-;    ld ($f000+90*0), a
-;    ld ($f000+90*1), a
-;    ld ($f000+90*2), a
-;    ld ($f000+90*3), a
-;    jr $
     call TTYINIT
     call TTYPUTSI
     db 13, 10
@@ -90,35 +71,65 @@ BOOTE:
     db 0
 
     xor a
-    ld (IOBYTE), a           ; reset iobyte and current disk
+    ld (IOBYTE), a          ; reset iobyte and current disk
     ld (CDISK), a
 
-;phex16:
-;   ld  c,h
-;   call phex8
-;   ld  c,l
-;phex8:
-;   ld  a,c
-;   rra
-;   rra
-;   rra
-;   rra
-;   call pbyte
-;   ld  a,c
-;pbyte:
-;   and $0F
-;   add a,$90
-;   daa
-;   adc a,$40
-;   daa
-;   ld b, a
-;   SCREENON
-;   ld a, b
-;   ld (de), a
-;   SCREENOFF
-;   inc de
-;   ret 
+    ; fall through
+; Warm boot on application exit.
+WBOOTE:
+    ld sp, 0x0100           ; ephemeral user stack
 
+    ; Reload the CCP (but not the BDOS or CCP).
+
+    call SYSIN
+
+    ld bc, 14           ; sector number; offset $d00
+    ld hl, $f800        ; temp buffer
+    ld e, (BDOS_SIZE+CCP_SIZE)/256 ; number of sectors
+    ld d, CBASE/256 + $70 ; page of destination address (relative to $20000)
+loadloop:
+    push bc
+    push de
+    push hl
+    ld a, 6             ; read sector
+    rst $28
+
+    pop hl
+    pop de
+    pop bc
+
+    ; DMA the read sector out of the temporary buffer and into user RAM.
+
+    xor a
+    out0a SAR0L         ; SAR0 = temp buffer phys @ 0x25800
+    ld a, $58
+    out0a SAR0H
+    ld a, $02
+    out0a SAR0B
+
+    xor a
+    out0a DAR0L         ; DAR0 = target phys @ 0x2xx00
+    ld a, d
+    out0a DAR0H
+    ld a, $02
+    out0a DAR0B
+
+    xor a               ; BCR0 = 0x100, one sector
+    out0a BCR0L
+    inc a
+    out0a BCR0H
+
+    ld a, 2             ; start DMA
+    out0a DMODE
+    ld a, $40
+    out0a DSTAT
+    
+    inc bc              ; advance to next sector
+    inc d               ; ...and next address
+    dec e               ; ...reduce count
+    jr nz, loadloop
+
+    call SYSOUT
     ; fall through
 call_ccp:
     ld a, 0xc3
@@ -140,22 +151,6 @@ stop_disk_motor:
     rst 0x28
     call SYSOUT
     ret
-
-; Warm boot on application exit.
-WBOOTE:
-    ld sp, 0x0100            ; ephemeral user stack
-
-    ; Reload the CCP (but not the BDOS or CCP).
-
-    call SYSIN
-	;ld ix, CBASE + 0x5000    ; low two bytes of physical address
-	;ld h, 0x06				 ; high byte of physical address
-	;ld bc, (0x1000 / 256) + 1 ; sector number (one based)
-	;ld de, 8                 ; number of sectors
-	;ld a, 3                  ; read sector
-	;rst 0x28
-    call SYSOUT
-    jr call_ccp
 
 CONSTE:
     ld hl, disk_off_count
@@ -230,7 +225,7 @@ SYSIN:
     exx
     pop hl                  ; return address
     ld (saved_stack), sp    ; save the CP/M stack pointer
-    ld c, 0x87              ; expose the Brother ROM
+    ld c, 0xe7              ; expose the Brother ROM
     out0c CBAR
     ld sp, 0x0000           ; switch to the Brother stack
     push hl
@@ -245,7 +240,7 @@ SYSOUT:
     di
     exx
     pop hl                  ; return address
-    ld c, 0x80              ; map RAM in everywhere
+    ld c, 0xe0              ; map RAM in everywhere
     out0c CBAR
     ld sp, (saved_stack)
     push hl
