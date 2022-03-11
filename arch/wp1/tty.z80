@@ -19,6 +19,7 @@
 
     cseg
 
+CLEAR_SCREEN_ON_INIT = 0
 EMULATE_CLEAR_TO_EOL = 1
 EMULATE_CLEAR_TO_EOS = 1
     maclib tty
@@ -30,127 +31,53 @@ TTYPUT16 equ tty_puthex16
 TTYPUTSI equ tty_putsi
 
 tty_rawwrite:
-    ld c, a
-    call goto_cursor
-    xor a
-    out (PORT_VIDEO_DATA), a
-    ld a, 0x7f
-    and c
-    out (PORT_VIDEO_DATA), a
+    call calc_cursor
+
+    SCREENON
+    ld (hl), c
+    SCREENOFF
+
     ret
 
-goto_cursor:
-    ld a, (tty_cursorx)
-    add a
-    out (PORT_VIDEO_LO), a
+calc_cursor:
     ld a, (tty_cursory)
-    out (PORT_VIDEO_HI), a
-    ret
+    add a
+    ld hl, line_address_table
+    call ADDAHL
+    ld a, (hl)
+    inc hl
+    ld h, (hl)
+    ld l, a
+    ld a, (tty_cursorx)
+    jp ADDAHL
     
-; Attribute bits:
-;   0 = underline
-;   1 = overline
-;   2 = font 2
-;   3 = right-hand line?
-;   4 = inverse
-;   5 = inverse blink top half
-;   6 = inverse blink bottom half
-;   7 = blink text
-
 CURSTOGG:
-    push af
-    push bc
-    call goto_cursor
-    nop
-    nop
-    in a, (PORT_VIDEO_DATA)
-    xor 0x60
-    ld c, a
-    call goto_cursor
-    nop
-    out0c PORT_VIDEO_DATA
-    pop bc
-    pop af
     ret
     
-tty_delete_line
-    ld a, (tty_cursory)     ; dest line
-    cp SCREEN_HEIGHT - 1
-    jr z, blank_bottom_line ; if already on the last line, don't move anything
-    ld h, a
-.1
-    ld l, 0                 ; char
-.2
-    inc h                   ; switch to source line
-    out0l PORT_VIDEO_LO
-    out0h PORT_VIDEO_HI
-    dec h                   ; move back to dest
-    nop
-    nop
-    in a, (PORT_VIDEO_DATA)
-    out0l PORT_VIDEO_LO
-    out0h PORT_VIDEO_HI
-    inc l                   ; next char
-    out (PORT_VIDEO_DATA), a
-    ld a, 160
-    cp l
-    jr nz, .2
-
-    inc h
-    ld a, SCREEN_HEIGHT - 1
-    cp h
-    jr nz, .1
+tty_delete_line:
+    ret
 
     ; Blank the bottom line of the screen.
-
 
 blank_bottom_line:
     ld a, SCREEN_HEIGHT - 1
 blank_line_a:
-    ld b, 0
-    out0b PORT_VIDEO_LO
-    out (PORT_VIDEO_HI), a
-    ld b, 160
-    xor a
-.1
-    out (PORT_VIDEO_DATA), a
-    nop
-    nop
-    djnz .1
     ret
 
 tty_insert_line:
-    ld a, (tty_cursory)     ; src line
-    cp SCREEN_HEIGHT - 1
-    jr z, blank_current_line; if already on the last line, don't move anything
-    ld h, a
-.1
-    ld l, 0                 ; char
-.2
-    out0l PORT_VIDEO_LO
-    out0h PORT_VIDEO_HI
-    inc h                   ; move to dest line
-    nop
-    nop
-    in a, (PORT_VIDEO_DATA)
-    out0l PORT_VIDEO_LO
-    out0h PORT_VIDEO_HI
-    dec h                   ; move back to src line
-    out (PORT_VIDEO_DATA), a
-    inc l                   ; next char
-    ld a, 160
-    cp l
-    jr nz, .2
-
-    inc h
-    ld a, SCREEN_HEIGHT - 1
-    cp h
-    jr nz, .1
 
     ; Blank the current line.
 blank_current_line:
     ld a, (tty_cursory)
     jr blank_line_a
 
+line_address_table:
+	line_no = 0
+    rept SCREEN_HEIGHT
+        dw VIDEORAM_BASE + line_no
+        line_no = line_no + SCREEN_STRIDE
+    endm
+
+    
 ; vim: ts=4 sw=4 et ft=asm
 

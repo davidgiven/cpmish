@@ -59,21 +59,65 @@ label BBASE
 
 ; Cold boot on system startup.
 BOOTE:
-    ld a, 'z'
-    ld ($5000), a
+    di
+    ld a, $e0                ; map out the Brother stuff
+    out0a CBAR
 
-    ld a, 0xe0
-    out0a CBAR               ; map out Brother
     ld sp, 0x0100            ; ephemeral user stack
 
+;    ld de, $f000
+;.1
+;    ld h, d
+;    ld l, e
+;    call phex16
+;    inc de
+;    ld a, d
+;    or a
+;    jr nz, .1
+;    jr $
+;
+;    SCREENON
+;    ld a, 'q'
+;    ld ($f000+90*0), a
+;    ld ($f000+90*1), a
+;    ld ($f000+90*2), a
+;    ld ($f000+90*3), a
+;    jr $
     call TTYINIT
     call TTYPUTSI
+    db 13, 10
     cpmish_banner "Brother WP1"
     db 0
 
     xor a
     ld (IOBYTE), a           ; reset iobyte and current disk
     ld (CDISK), a
+
+;phex16:
+;   ld  c,h
+;   call phex8
+;   ld  c,l
+;phex8:
+;   ld  a,c
+;   rra
+;   rra
+;   rra
+;   rra
+;   call pbyte
+;   ld  a,c
+;pbyte:
+;   and $0F
+;   add a,$90
+;   daa
+;   adc a,$40
+;   daa
+;   ld b, a
+;   SCREENON
+;   ld a, b
+;   ld (de), a
+;   SCREENOFF
+;   inc de
+;   ret 
 
     ; fall through
 call_ccp:

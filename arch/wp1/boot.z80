@@ -67,6 +67,11 @@ entry:
     out0c CNTR
     out0a $d8
 
+    ld a, 30
+    out0a $80
+    ld a, 00101000b
+    out0a $81
+
     ; Switch to sys mode.
 
     ld c, $e7
@@ -94,7 +99,7 @@ entry:
     out0a CBR
 
     call putsi
-    db 'BOOT'
+    db 'Boot'
     db 0
 
     ; The actual sector load loop.
@@ -152,7 +157,7 @@ loadloop:
     rst $28
 
     call putsi
-    db 'GO'
+    db 'go!'
     db 0
 
     ; And go.

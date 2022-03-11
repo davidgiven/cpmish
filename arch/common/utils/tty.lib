@@ -25,6 +25,9 @@ tty_init:
     xra a
     ld (commandlen), a
     ld (tty_attributes), a
+	if CLEAR_SCREEN_ON_INIT == 0
+	jr tty_home_cursor
+	endif
     ; fall through
 tty_clear_screen:
     call tty_home_cursor
