@@ -168,25 +168,13 @@ read_syscall:
     ld a, 6                 ; read sector
     rst 0x28
 
-    xor a
-    out0a SAR0L         ; SAR0 = temp buffer phys @ 0x25800
-    ld a, $58
-    out0a SAR0H
-    ld a, $02
-    out0a SAR0B
+    ld hl, disk_buffer
+    ld (fdd_read_target_address), hl
 
-    ld a, disk_buffer & $ff
-    out0a DAR0L         ; DAR0 = target phys @ 0x2xx00
-    ld a, disk_buffer / 256
-    out0a DAR0H
-    ld a, $02
-    out0a DAR0B
-
-    xor a               ; BCR0 = 0x100, one sector
-    out0a BCR0L
-    inc a
-    out0a BCR0H
-
+    ld b, fdd_read_dma_buffer_end - fdd_read_dma_buffer
+    ld c, SAR0L
+    ld hl, fdd_read_dma_buffer
+    otimr
     ld a, 2             ; start DMA
     out0a DMODE
     ld a, $40
@@ -194,8 +182,6 @@ read_syscall:
     
     call SYSOUT
     ret
-
-    dseg
 
 ; On entry, BC = zero-based block to transfer.
 write_syscall:
@@ -205,6 +191,15 @@ write_syscall:
     ret
 
     dseg
+
+fdd_read_dma_buffer:
+    dw 0x5800           ; SAR0 low
+    db 0x02             ; SAR0 high
+fdd_read_target_address:
+    dw 0x0000           ; DAR0 low
+    db 0x02             ; DAR0 high
+    dw 0x0100           ; BCR0
+fdd_read_dma_buffer_end:
 
 drive_a_dph:
     dw 0                    ; Sector translation vector

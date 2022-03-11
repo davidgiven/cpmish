@@ -1,0 +1,90 @@
+; Brother WP1 cpmish BIOS © 2022 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib brotherwp1
+
+    public KBDINIT
+    public KBDSTAT
+    public KBDGET
+
+    extern TTYINIT
+    extern TTYPUTC
+    extern TTYPUT8
+    extern TTYPUT16
+    extern TTYPUTSI
+
+    extern ADDAHL
+
+KBDINIT:
+    ld a, 0x67
+    out0a CNTR
+    ld a, 0xff
+    out0a 0xd8
+    in0a 0x88
+    and 0x02
+    out0a 0x88
+
+.1
+    in0a CNTR
+    and 00100000b           ; test RE
+    jr nz, .1
+
+    ld a, 00100111b         ; RE enable, external clock
+    out0a CNTR
+
+    ret
+
+KBDSTAT:
+    in0a CNTR
+    and 00100000b           ; test RE
+    ret
+
+KBDGET:
+    in0a CNTR
+    and 00100000b           ; test RE
+    jr nz, KBDGET
+
+    in0a TRDR
+
+    ld c, 00100111b         ; RE enable, external clock
+    out0c CNTR
+
+    bit 7, a
+    jr nz, keyup            ; test for keyups
+
+    ld hl, keyboard_flags
+    cp 0x01
+    jr nz, .1               ; no shift pressed?
+    set 0, (hl)
+.1
+    ld de, keyboard_normal_map
+    bit 0, (hl)
+    jr z, .2
+    ld de, keyboard_shifted_map
+.2
+    ex de, hl
+    call ADDAHL
+    ld a, (hl)
+    or a
+    jr z, KBDGET
+    ret
+
+keyup:
+    and 0x7f
+    cp 0x01
+    jr z, KBDGET            ; ignore keyups other than shift
+
+    ld hl, keyboard_flags
+    res 0, (hl)
+    jr KBDGET
+
+    dseg
+    include keytab.inc
+
+keyboard_flags: db 0
+
+; vim: ts=4 sw=4 et ft=asm
+

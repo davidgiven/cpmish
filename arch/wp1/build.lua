@@ -7,7 +7,7 @@ include "utils/build.lua"
 -- Configure the BIOS size here; this will then emit an addresses.lib file
 -- which contains the position of the BDOS and CCP.
 
-local BIOS_SIZE = 0x0500
+local BIOS_SIZE = 0x0800
 local BDOS_SIZE = 3584            -- fixed
 local CCP_SIZE = 2048             -- fixed
 local BBASE = 0x9000 - BIOS_SIZE
@@ -47,6 +47,17 @@ zmac {
 
 --- BIOS --------------------------------------------------------------------
 
+-- The keyboard map.
+
+normalrule {
+    name = "keytab_inc",
+    ins = { "arch/wp1/utils+mkkeytab" },
+    outleaves = { "keytab.inc" },
+    commands = {
+        "%{ins} > %{outs}"
+    }
+}
+
 -- The CP/M BIOS itself.
 
 zmac {
@@ -80,6 +91,16 @@ zmac {
     },
 }
 
+zmac {
+    name = "keyboard_o",
+    srcs = { "./keyboard.z80" },
+    deps = {
+        "include/*.lib",
+        "./include/*.lib",
+		"+keytab_inc",
+    },
+}
+
 -- This is a 64kB file containing the entire CP/M memory image.
 
 ld80 {
@@ -92,6 +113,7 @@ ld80 {
 		"+bios_o",
 		"+tty_o",
 		"+floppy_o",
+		"+keyboard_o",
 	}
 }
 

@@ -11,21 +11,25 @@
     public SYSOUT
     public ADDAHL
 
-    extrn SELDSKE
-    extrn HOMEE
-    extrn SETTRKE
-    extrn SETSECE
-    extrn SETDMAE
-    extrn READE
-    extrn WRITEE
-    extrn SECTRANE
+    extern SELDSKE
+    extern HOMEE
+    extern SETTRKE
+    extern SETSECE
+    extern SETDMAE
+    extern READE
+    extern WRITEE
+    extern SECTRANE
 
-    extrn TTYINIT
-    extrn TTYPUTC
-    extrn TTYPUT8
-    extrn TTYPUT16
-    extrn TTYPUTSI
-    extrn CURSTOGG
+    extern TTYINIT
+    extern TTYPUTC
+    extern TTYPUT8
+    extern TTYPUT16
+    extern TTYPUTSI
+    extern CURSTOGG
+
+    extern KBDINIT
+    extern KBDSTAT
+    extern KBDGET
 
     cseg
 
@@ -70,6 +74,8 @@ BOOTE:
     cpmish_banner "Brother WP1"
     db 0
 
+    call KBDINIT
+
     xor a
     ld (IOBYTE), a          ; reset iobyte and current disk
     ld (CDISK), a
@@ -89,41 +95,30 @@ WBOOTE:
     ld d, CBASE/256 + $70 ; page of destination address (relative to $20000)
 loadloop:
     push bc
-    push de
     push hl
+    push de
     ld a, 6             ; read sector
     rst $28
 
-    pop hl
     pop de
-    pop bc
 
     ; DMA the read sector out of the temporary buffer and into user RAM.
 
-    xor a
-    out0a SAR0L         ; SAR0 = temp buffer phys @ 0x25800
-    ld a, $58
-    out0a SAR0H
-    ld a, $02
-    out0a SAR0B
+    ld hl, bios_load_dma_page
+    ld (hl), d
 
-    xor a
-    out0a DAR0L         ; DAR0 = target phys @ 0x2xx00
-    ld a, d
-    out0a DAR0H
-    ld a, $02
-    out0a DAR0B
-
-    xor a               ; BCR0 = 0x100, one sector
-    out0a BCR0L
-    inc a
-    out0a BCR0H
-
+    ld b, bios_load_dma_buffer_end - bios_load_dma_buffer
+    ld c, SAR0L
+    ld hl, bios_load_dma_buffer
+    otimr
     ld a, 2             ; start DMA
     out0a DMODE
     ld a, $40
     out0a DSTAT
-    
+
+    pop hl
+    pop bc
+
     inc bc              ; advance to next sector
     inc d               ; ...and next address
     dec e               ; ...reduce count
@@ -147,8 +142,8 @@ call_ccp:
 
 stop_disk_motor:
     call SYSIN
-    ld a, 2                  ; finished with disk
-    rst 0x28
+    ;ld a, 2                  ; finished with disk
+    ;rst 0x28
     call SYSOUT
     ret
 
@@ -157,45 +152,10 @@ CONSTE:
     inc (hl)                 ; increment drive motor count and...
     call z, stop_disk_motor  ; ...turn the motor off on rollover
 
-    xor a
-    ret
+    jp KBDSTAT
 
 CONINE:
-;    call CURSTOGG
-;    call SYSIN
-;    ld a, 6                  ; finished with disk
-;    rst 0x28
-;.1
-;    ld a, 9                  ; get a raw key scancode
-;    rst 8
-;    jr nc, .1
-;    call SYSOUT
-;    call CURSTOGG
-;
-;    ld a, d
-;    and 0x3f
-;    bit 7, d
-;    jr z, .2
-;    add 0x40
-;.2
-;    ld hl, keyboard_table
-;    call ADDAHL
-;    ld a, (hl)
-;    or a
-;    bit 7, a
-;    jr nz, .4
-;
-;    bit 6, d                ; CODE pressed?
-;    jr z, .3
-;    bit 6, a                ; 0x40 or up?
-;    jr z, .3
-;    and ~0x20
-;    sub 0x40
-;.3
-;    ret
-;.4
-;    call SYSIN
-;    rst 0
+    jp KBDGET
 
 ADDAHL:
     add a, l
@@ -247,8 +207,18 @@ SYSOUT:
     exx
     ret
 
+bios_load_dma_buffer:
+    dw 0x5800           ; SAR0 low
+    db 0x02             ; SAR0 high
+bios_load_dma_page equ $ + 1
+    dw 0x0000           ; DAR0 low
+    db 0x02             ; DAR0 high
+    dw 0x0100           ; BCR0
+bios_load_dma_buffer_end:
+
 saved_stack: dw 0            ; user stack pointer while in system calls
 disk_off_count: db 0         ; cheap and nasty drive motor timer
+keyboard_buffer: dw 0
 
 ; vim: ts=4 sw=4 expandtab ft=asm
 
