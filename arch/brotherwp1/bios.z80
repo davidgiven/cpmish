@@ -1,0 +1,246 @@
+; Brother WP1 cpmish BIOS © 2022 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib brotherwp1
+    maclib addresses
+
+    public SYSIN
+    public SYSOUT
+    public ADDAHL
+    public DMAMEM
+    public DMAWAIT
+
+    extern SELDSKE
+    extern HOMEE
+    extern SETTRKE
+    extern SETSECE
+    extern SETDMAE
+    extern READE
+    extern WRITEE
+    extern SECTRANE
+    extern MOTORON
+    extern MOTOROFF
+    extern MOTORTICK
+
+    extern TTYINIT
+    extern TTYPUTC
+    extern TTYPUT8
+    extern TTYPUT16
+    extern TTYPUTSI
+    extern CURSON
+    extern CURSOFF
+
+    extern KBDINIT
+    extern KBDSTAT
+    extern KBDGET
+
+    cseg
+
+; BIOS jump table.
+
+    jp BOOTE
+    jp WBOOTE
+    jp CONSTE
+    jp CONINE
+    jp CONOUTE
+    jp LISTE
+    jp PUNCHE
+    jp READERE
+    jp HOMEE
+    jp SELDSKE
+    jp SETTRKE
+    jp SETSECE
+    jp SETDMAE
+    jp READE
+    jp WRITEE
+    jp LISTSTE
+    jp SECTRANE
+
+; Actual BIOS entrypoints.
+;
+; The BIOS calls typically use a simple calling convention where the parameter
+; is in BC and the result is returned in A and HL. The other registers can be
+; corrupted *except* for ix, which ZSDOS requires to be preserved; without it
+; it goes all funny and disk accesses fail weirdly. Eight-bit values are
+; returned in A and sixteen-bit values in HL.
+
+; Cold boot on system startup.
+BOOTE:
+    di
+    ld sp, 0x0100           ; ephemeral user stack
+    ld c, 0xe0              ; map RAM in everywhere
+    out0c CBAR
+
+    ld a, 10
+    out0a VIDEO_ADDR
+    ld a, 0x60
+    out0a VIDEO_DATA
+    ld a, 11
+    out0a VIDEO_ADDR
+    ld a, 0xff
+    out0a VIDEO_DATA
+
+    call TTYINIT
+    call TTYPUTSI
+    db 13, 10
+    cpmish_banner "Brother WP1"
+    db 0
+
+    call KBDINIT
+
+    xor a
+    ld (IOBYTE), a          ; reset iobyte and current disk
+    ld (CDISK), a
+
+    ; fall through
+; Warm boot on application exit.
+WBOOTE:
+    ld sp, 0x0100           ; ephemeral user stack
+
+    ; Reload the CCP (but not the BDOS or CCP).
+
+    call MOTORON
+    call SYSIN
+
+    ld bc, 14           ; sector number; offset $d00
+    ld hl, $f800        ; temp buffer
+    ld e, (BDOS_SIZE+CCP_SIZE)/256 ; number of sectors
+    ld d, CBASE/256 + $70 ; page of destination address (relative to $20000)
+loadloop:
+    push bc
+    push hl
+    push de
+
+    push ix
+    ld a, 6             ; read sector
+    rst $28
+    pop ix
+
+    pop de
+
+    ; DMA the read sector out of the temporary buffer and into user RAM.
+
+    ld hl, bios_load_dma_page
+    ld (hl), d
+
+    ld b, bios_load_dma_buffer_end - bios_load_dma_buffer
+    ld c, SAR0L
+    ld hl, bios_load_dma_buffer
+    otimr
+    ld a, 2             ; start DMA
+    out0a DMODE
+    ld a, $40
+    out0a DSTAT
+    call DMAWAIT
+
+    pop hl
+    pop bc
+
+    inc bc              ; advance to next sector
+    inc d               ; ...and next address
+    dec e               ; ...reduce count
+    jr nz, loadloop
+
+    call SYSOUT
+    ; fall through
+call_ccp:
+    ld a, 0xc3
+    ld hl, BBASE + 3         ; init BIOS entrypoint
+    ld (0x0000), a
+    ld (0x0001), hl
+
+    ld hl, FBASE + 6         ; init BDOS entrypoint
+    ld (0x0005), a
+    ld (0x0006), hl
+
+    ld a, (CDISK)
+    ld c, a                  ; c = current disk
+    jp CBASE                 ; pass control to CCP
+
+CONSTE:
+    call MOTORTICK
+    jp KBDSTAT
+
+CONINE:
+    call MOTOROFF
+    jp KBDGET
+
+ADDAHL:
+    add a, l
+    ld l, a
+    ret nc
+    inc h
+    ret
+
+DMAMEM:
+    otimr
+    ld a, 2             ; start DMA
+    out0a DMODE
+    ld a, $40
+    out0a DSTAT
+DMAWAIT:
+    in0a DSTAT
+    and 10000000b           ; test for DMA completion
+    ret z
+    jr DMAWAIT
+
+CONOUTE:
+    ld a, c
+    jp TTYPUTC
+
+LISTE:
+PUNCHE:
+    ret
+
+LISTSTE:
+READERE:
+return_error:
+    ld a, 0xff
+    ret
+
+; Switch from CP/M mapping to Brother OS mapping, with the BIOS at the top of
+; memory.  DO NOT TAIL CALL THIS.
+
+SYSIN:
+    exx
+    pop hl                  ; return address
+    ld (saved_stack), sp    ; save the CP/M stack pointer
+    ld c, 0xe7              ; expose the Brother ROM
+    out0c CBAR
+    ld sp, 0x0000           ; switch to the Brother stack
+    push hl
+    exx
+    ei
+    ret                     ; exit
+
+; Switch from the Brother OS mapping to the CP/M mapping.
+; DO NOT TAIL CALL THIS.
+
+SYSOUT:
+    di
+    exx
+    pop hl                  ; return address
+    ld c, 0xe0              ; map RAM in everywhere
+    out0c CBAR
+    ld sp, (saved_stack)
+    push hl
+    exx
+    ret
+
+bios_load_dma_buffer:
+    dw 0x5800           ; SAR0 low
+    db 0x02             ; SAR0 high
+bios_load_dma_page equ $ + 1
+    dw 0x0000           ; DAR0 low
+    db 0x02             ; DAR0 high
+    dw 0x0100           ; BCR0
+bios_load_dma_buffer_end:
+
+saved_stack: dw 0            ; user stack pointer while in system calls
+keyboard_buffer: dw 0
+
+; vim: ts=4 sw=4 expandtab ft=asm
+

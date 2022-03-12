@@ -11,5 +11,6 @@ installable {
         ["kayproii.img"] = "arch/kayproii+diskimage",
 		["brotherop2.img"] = "arch/brotherop2+diskimage",
 		["wp2450ds.img"] = "arch/wp2450ds+diskimage",
+		["brotherwp1.img"] = "arch/brotherwp1+diskimage",
     }
 }

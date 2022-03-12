@@ -1,0 +1,121 @@
+; Listing 2.
+; ===============================================
+; CamelForth for the Zilog Z80
+; Copyright (c) 1994,1995 Bradford J. Rodriguez
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+; Commercial inquiries should be directed to the author at 
+; 115 First St., #105, Collingwood, Ontario L9Y 4W3 Canada
+; or via email to bj@camelforth.com
+;
+; ===============================================
+; CAMEL80.Z80: CP/M front end.
+
+		include camel80.inc
+
+; CP/M ENTRY POINT
+        org 100h
+reset:  ld hl,(6h)   ; BDOS address, rounded down
+        ld l,0       ;    = end of avail.mem (EM)
+        dec h        ; EM-100h
+        ld sp,hl     ;      = top of param stack
+        inc h        ; EM
+        push hl
+        pop ix       ;      = top of return stack
+        dec h        ; EM-200h
+        dec h
+        push hl
+        pop iy       ;      = bottom of user area
+        ld de,1      ; do reset if COLD returns
+        jp COLD      ; enter top-level Forth word
+
+; Memory map:
+;   0080h       Terminal Input Buffer, 128 bytes
+;   0100h       Forth kernel = start of CP/M TPA
+;     ? h       Forth dictionary (user RAM)
+;   EM-200h     User area, 128 bytes
+;   EM-180h     Parameter stack, 128B, grows down
+;   EM-100h     HOLD area, 40 bytes, grows down
+;   EM-0D8h     PAD buffer, 88 bytes
+;   EM-80h      Return stack, 128 B, grows down
+;   EM          End of RAM = start of CP/M BDOS
+; See also the definitions of U0, S0, and R0
+; in the "system variables & constants" area.
+; A task w/o terminal input requires 200h bytes.
+; Double all except TIB and PAD for 32-bit CPUs.
+
+; CP/M TERMINAL I/O =============================
+cpmbdos EQU 5h          ; CP/M BDOS entry point
+
+;Z BDOS   de c -- a   call CP/M BDOS
+    head BDOS,4,BDOS,docode
+        ex de,hl    ; save important Forth regs
+        pop de      ;  (DE,IX,IY) & pop DE value
+        push hl
+        push ix
+        push iy
+        call cpmbdos
+        ld c,a      ; result in TOS
+        ld b,0
+        pop iy      ; restore Forth regs
+        pop ix
+        pop de
+        next
+
+;C EMIT     c --    output character to console
+;   6 BDOS DROP ;
+; warning: if c=0ffh, will read one keypress
+    head EMIT,4,EMIT,docolon
+        DW LIT,06H,BDOS,DROP,EXIT
+
+;Z SAVEKEY  -- addr  temporary storage for KEY?
+    head savekey,7,SAVEKEY,dovar
+        DW 0
+
+;X KEY?     -- f    return true if char waiting
+;   0FF 6 BDOS DUP SAVEKEY C! ;   rtns 0 or key
+; must use BDOS function 6 to work with KEY
+    head querykey,4,KEY?,docolon
+        DW LIT,0FFH,LIT,06H,BDOS
+        DW DUP,SAVEKEY,CSTORE,EXIT
+
+;C KEY      -- c    get character from keyboard
+;   BEGIN SAVEKEY C@ 0= WHILE KEY? DROP REPEAT
+;   SAVEKEY C@  0 SAVEKEY C! ;
+; must use CP/M direct console I/O to avoid echo
+; (BDOS function 6, contained within KEY?)
+    head KEY,3,KEY,docolon
+KEY1:   DW SAVEKEY,CFETCH,ZEROEQUAL,qbranch,KEY2
+        DW QUERYKEY,DROP,branch,KEY1
+KEY2:   DW SAVEKEY,CFETCH,LIT,0,SAVEKEY,CSTORE
+        DW EXIT
+
+;Z RAWACCEPT  c-addr +n -- +n'  get line of input
+;   SWAP 2 - TUCK C!      max # of characters
+;   DUP 0A BDOS DROP      CP/M Get Console Buffer
+;   1+ C@  0A EMIT ;      get returned count
+; Note: requires the two locations before c-addr
+; to be available for use.
+    head RAWACCEPT,9,RAWACCEPT,docolon
+        DW SWOP,LIT,2,MINUS,TUCK,CSTORE
+        DW DUP,LIT,0Ah,BDOS,DROP
+        DW ONEPLUS,CFETCH,LIT,0Ah,EMIT,EXIT
+
+;X BYE     i*x --    return to CP/M
+    head bye,3,bye,docode
+        jp 0
+
+		include camel80i.inc
+

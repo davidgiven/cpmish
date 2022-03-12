@@ -7,10 +7,10 @@ include "utils/build.lua"
 -- Configure the BIOS size here; this will then emit an addresses.lib file
 -- which contains the position of the BDOS and CCP.
 
-local BIOS_SIZE = 0x0f00
+local BIOS_SIZE = 0x0a00
 local BDOS_SIZE = 3584            -- fixed
 local CCP_SIZE = 2048             -- fixed
-local BBASE = 0x10000 - BIOS_SIZE
+local BBASE = 0x9000 - BIOS_SIZE
 local FBASE = BBASE - BDOS_SIZE
 local CBASE = FBASE - CCP_SIZE
 
@@ -28,34 +28,49 @@ normalrule {
 	}
 }
 
---- Generated tables --------------------------------------------------------
+--- Bootstrapper ------------------------------------------------------------
 
--- Font and keyboard table.
+-- This is the .APL file which the Brother OS loads. It's responsible for
+-- remapping the memory, doing some device setup, and loading the BIOS into
+-- the top of memory.
 
-normalrule {
-    name = "font_inc",
-    ins = {
-        "arch/wp2450ds/utils+fontconvert",
-        "utils/6x7font.bdf",
+zmac {
+    name = "boot_img",
+    srcs = { "./boot.z80" },
+    deps = {
+        "include/*.lib",
+        "./include/*.lib",
+		"+addresses_lib"
     },
-    outleaves = { "font.inc" },
-    commands = {
-        "%{ins} > %{outs}"
-    }
+	relocatable = false
 }
+
+--- BIOS --------------------------------------------------------------------
+
+-- The keyboard map.
 
 normalrule {
     name = "keytab_inc",
-    ins = { "arch/wp2450ds/utils+mkkeytab" },
+    ins = { "arch/brotherwp1/utils+mkkeytab" },
     outleaves = { "keytab.inc" },
     commands = {
         "%{ins} > %{outs}"
     }
 }
 
---- Libraries ---------------------------------------------------------------
+-- The CP/M BIOS itself.
 
--- These may be used by both the BIOS proper and the bootstrap program.
+zmac {
+    name = "bios_o",
+    srcs = { "./bios.z80" },
+    deps = {
+        "include/*.lib",
+        "./include/*.lib",
+		"arch/common/utils/tty.lib",
+		"arch/common/utils/deblocker.lib",
+		"+addresses_lib",
+    },
+}
 
 zmac {
     name = "tty_o",
@@ -64,17 +79,15 @@ zmac {
         "include/*.lib",
         "./include/*.lib",
 		"arch/common/utils/tty.lib",
-		"+font_inc"
     },
 }
 
 zmac {
-    name = "upd765_o",
-    srcs = { "./upd765.z80" },
+    name = "floppy_o",
+    srcs = { "./floppy.z80" },
     deps = {
         "include/*.lib",
         "./include/*.lib",
-		"arch/common/utils/upd765.lib",
 		"arch/common/utils/deblocker.lib",
     },
 }
@@ -89,52 +102,6 @@ zmac {
     },
 }
 
---- Bootstrapper ------------------------------------------------------------
-
--- This is the .APL file which the Brother OS loads. It's responsible for
--- remapping the memory, doing some device setup, and loading the BIOS into
--- the top of memory.
-
-zmac {
-    name = "boot_o",
-    srcs = { "./boot.z80" },
-    deps = {
-        "include/*.lib",
-        "./include/*.lib",
-		"arch/common/utils/upd765.lib",
-		"arch/common/utils/deblocker.lib",
-		"+addresses_lib"
-    },
-}
-
-ld80 {
-    name = "boot_img",
-	address = 0x5000,
-    srcs = {
-		"-P5000",
-		"+boot_o",
-		"+upd765_o",
-    }
-}
-
---- BIOS --------------------------------------------------------------------
-
--- The CP/M BIOS itself.
-
-zmac {
-    name = "bios_o",
-    srcs = { "./bios.z80" },
-    deps = {
-        "include/*.lib",
-        "./include/*.lib",
-		"arch/common/utils/tty.lib",
-		"arch/common/utils/upd765.lib",
-		"arch/common/utils/deblocker.lib",
-		"+font_inc",
-		"+addresses_lib",
-    },
-}
-
 -- This is a 64kB file containing the entire CP/M memory image.
 
 ld80 {
@@ -145,8 +112,8 @@ ld80 {
 		"-P"..string.format("%x", FBASE), "third_party/zsdos+zsdos",
 		"-P"..string.format("%x", BBASE),
 		"+bios_o",
-		"+upd765_o",
 		"+tty_o",
+		"+floppy_o",
 		"+keyboard_o",
 	}
 }
@@ -162,23 +129,23 @@ binslice {
 }
 
 binslice {
-	name = "systemtrack_img",
+	name = "ccpbdos_img",
 	src = { "+memory_img" },
 	start = CBASE,
 	length = BBASE - CBASE
 }
 
---- FAT file system ---------------------------------------------------------
+--- Brother file system -----------------------------------------------------
 
--- Produces the FAT bit of the disk image.
+-- Produces the fake Brother file system image
 
 zmac {
 	name = "bootfile_img",
-	srcs = { "./fat.z80" },
+	srcs = { "./fs.z80" },
 	deps = {
 		"+boot_img",
 		"+bios_img",
-		"+systemtrack_img"
+		"+ccpbdos_img",
 	},
 	relocatable = false
 }
@@ -194,23 +161,19 @@ unix2cpm {
 
 diskimage {
 	name = "diskimage",
-	format = "brother-wp2450ds",
+	format = "brother-wp1",
 	bootfile = { "+bootfile_img" },
 	map = {
-		["asm.com"] = "cpmtools+asm",
-		["copy.com"] = "cpmtools+copy",
-		["dump.com"] = "cpmtools+dump",
-		["mkfs.com"] = "cpmtools+mkfs",
-		["rawdisk.com"] = "cpmtools+rawdisk",
-		["stat.com"] = "cpmtools+stat",
-		["submit.com"] = "cpmtools+submit",
         ["-readme.txt"] = "+readme",
-		["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic_ADM3A",
-        ["qe.com"] = "cpmtools+qe_BROTHER_WP2450DS",
-		["z8e.com"] = "third_party/z8e+z8e_WP2450DS",
-		["ted.com"] = "third_party/ted+ted_WP2450DS",
+        ["dump.com"] = "cpmtools+dump",
+        ["stat.com"] = "cpmtools+stat",
+        ["asm.com"] = "cpmtools+asm",
+        ["copy.com"] = "cpmtools+copy",
+        ["submit.com"] = "cpmtools+submit",
+        ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic_ADM3A",
 		["camel80.com"] = "third_party/camelforth+camelforth",
 	},
 }
+
 
 

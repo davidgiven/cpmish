@@ -91,7 +91,9 @@ definerule("diskimage",
             ins = deps,
             commands = {
                 "mkfs.cpm -f "..e.format.." -b "..bootfile.." %{outs}",
-                commands
+                commands,
+				"(cpmcp -f "..e.format.." %{outs} /dev/zero 0:padding 2> /dev/null) || true",
+				"cpmrm -f "..e.format.." %{outs} 0:padding"
             }
         }
 	end

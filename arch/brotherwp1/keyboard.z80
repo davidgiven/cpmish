@@ -1,0 +1,155 @@
+; Brother WP1 cpmish BIOS © 2022 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib brotherwp1
+
+    public KBDINIT
+    public KBDSTAT
+    public KBDGET
+
+    extern TTYINIT
+    extern TTYPUTC
+    extern TTYPUT8
+    extern TTYPUT16
+    extern TTYPUTSI
+
+    extern ADDAHL
+
+MODIFIER_BIT_SHIFT = 0
+MODIFIER_BIT_CTRL = 1
+MODIFIER_BIT_CAPS = 2
+
+KBDINIT:
+    ld a, 0xff
+    out0a 0xd8
+
+    in0a 0x88               ; enable keyboard?
+    and 0x02
+    out0a 0x88
+
+    ld a, 00100111b         ; RE enable, external clock
+    out0a CNTR
+
+    ret
+
+KBDSTAT:
+    ld a, (pending_key)
+    or a
+    jr nz, .2               ; branch if key pending
+
+    call kbdpoll            ; check harware for key
+    ld (pending_key), a
+    or a
+    ret z                   ; 0 = still no key pending
+.2
+    ld a, 0xff
+    ret                     ; 0xff = key pending
+
+KBDGET:
+    call KBDSTAT
+    or a
+    jr z, KBDGET            ; wait until key pending
+    ld hl, pending_key
+    ld a, (hl)
+    ld (hl), 0
+    ret
+
+; Returns the ASCII keycode in A, or 0 if nothing is pending.
+kbdpoll:
+    xor a
+    in0c CNTR
+    bit 5, c                ; test RE clear
+    ret nz                  ; do nothing if no key waiting
+
+    in0a TRDR
+
+    ld c, 00100111b         ; RE enable, external clock
+    out0c CNTR
+
+    ; We now have a keyboard scancode in A, so use the keyboard map to convert
+    ; it to ASCII.
+
+    ld b, a
+    and 0x7f
+    jr z, ctrl_change       ; CTRL = keycode 0
+    dec a
+    jr z, shift_change      ; SHIFT = keycode 1
+
+    xor a
+    bit 7, b
+    ret nz                  ; ignore keyups
+
+    ld a, b
+    cp 0x02
+    jr z, caps_pressed
+
+    ld c, b
+    ld b, 0
+    ld a, (keyboard_modifiers)
+    ld hl, keyboard_normal_map
+    bit MODIFIER_BIT_SHIFT, a
+    jr z, shift_not_pressed
+    ld hl, keyboard_shifted_map
+shift_not_pressed:
+    add hl, bc
+    ld a, (hl)              ; pull the ASCII value from the keymap
+
+    ld hl, keyboard_modifiers
+    bit MODIFIER_BIT_CTRL, (hl)
+    jr z, ctrl_not_pressed
+    and 31
+ctrl_not_pressed:
+
+    bit MODIFIER_BIT_CAPS, (hl)
+    ret z
+    cp 'A'
+    ret c
+    cp 'z'+1
+    ret nc
+    cp 'Z'+1
+    jr c, do_flip_case
+    cp 'a'
+    ret c
+do_flip_case:
+    xor 0x20                ; toggle case bit
+    ret
+
+shift_change:
+    xor a
+    ld hl, keyboard_modifiers
+    res MODIFIER_BIT_SHIFT, (hl)
+    bit 7, b
+    ret nz
+    set MODIFIER_BIT_SHIFT, (hl)
+    ret
+
+ctrl_change:
+    xor a
+    ld hl, keyboard_modifiers
+    res MODIFIER_BIT_CTRL, (hl)
+    bit 7, b
+    ret nz
+    set MODIFIER_BIT_CTRL, (hl)
+    ret
+
+caps_pressed:
+    ld hl, keyboard_modifiers
+    ld a, (hl)
+    xor 1<<MODIFIER_BIT_CAPS
+    ld (hl), a
+    xor a
+    ret
+
+    dseg
+    include keytab.inc
+
+pending_key:
+    db 0
+keyboard_modifiers:
+    db 0
+
+; vim: ts=4 sw=4 et ft=asm
+

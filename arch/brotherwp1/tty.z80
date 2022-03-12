@@ -1,0 +1,171 @@
+; Brother WP1 cpmish BIOS © 2022 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib brotherwp1
+
+    extrn SYSIN
+    extrn SYSOUT
+    extrn ADDAHL
+
+    public TTYINIT
+    public TTYPUTC
+    public TTYPUT8
+    public TTYPUT16
+    public TTYPUTSI
+
+    cseg
+
+CURSOR_UPDATES = 1
+CLEAR_SCREEN_ON_INIT = 0
+EMULATE_CLEAR_TO_EOL = 1
+EMULATE_CLEAR_TO_EOS = 1
+    maclib tty
+
+TTYINIT equ tty_init
+TTYPUTC equ tty_putc
+TTYPUT8 equ tty_puthex8
+TTYPUT16 equ tty_puthex16
+TTYPUTSI equ tty_putsi
+
+tty_rawwrite:
+    ld a, -$20
+    add c
+    ld hl, character_map_table
+    call ADDAHL
+    ld c, (hl)
+
+    ld de, (tty_cursorx)    ; d=Y, e=X
+    call calc_cursor
+
+    SCREENON
+    ld (hl), c
+    SCREENOFF
+
+    ret
+
+; DE is YX on entry. Returns the address in HL.
+calc_cursor:
+    ld a, d
+    add a
+    ld hl, line_address_table
+    call ADDAHL
+    ld a, (hl)
+    inc hl
+    ld h, (hl)
+    ld l, a
+    ld a, e
+    jp ADDAHL
+    
+; Moves the cursor to the current location.
+tty_update_cursor;
+    ld de, (tty_cursorx)
+    call calc_cursor
+
+    ld a, 15
+    out0a VIDEO_ADDR
+    nop
+    out0l VIDEO_DATA
+    ld a, 14
+    out0a VIDEO_ADDR
+    ld a, h
+    and $0f
+    out0a VIDEO_DATA
+
+    ret
+
+tty_delete_line:
+    ld de, (tty_cursorx)
+    ld e, 0
+
+.1
+    ld a, SCREEN_HEIGHT-1   ; give up if we're on the last line
+    cp d
+    jr z, blank_line_de
+
+    call calc_cursor
+    push de
+    ld d, h
+    ld e, l                 ; de -> address of line to delete
+    ld a, SCREEN_STRIDE
+    call ADDAHL             ; hl -> address of next line
+    ld bc, SCREEN_WIDTH
+    SCREENON
+    ldir
+    SCREENOFF
+    pop de
+
+    inc d                   ; go to next line
+    jr .1
+
+    ; Blank the bottom line of the screen.
+
+blank_bottom_line:
+    ld a, SCREEN_HEIGHT-1
+blank_line_a:
+    ld d, a
+    ld e, 0
+blank_line_de:
+    call calc_cursor
+    ld d, h
+    ld e, l
+    inc de
+    ld bc, SCREEN_WIDTH-1
+    SCREENON
+    ld (hl), ' '
+    ldir
+    SCREENOFF
+    ret
+
+tty_insert_line:
+    ld de, (tty_cursorx)
+    ld a, SCREEN_HEIGHT-1
+    cp d
+    jr z, blank_line_a      ; if we're on the bottom line, just blank it
+
+    ld e, 0
+    call calc_cursor
+    ld h, d
+    ld l, e
+    ld a, SCREEN_STRIDE
+    call ADDAHL
+    ex de, hl
+    SCREENON
+    ldir
+    SCREENOFF
+    ; fall through
+
+    ; Blank the current line.
+blank_current_line:
+    ld a, (tty_cursory)
+    jr blank_line_a
+
+line_address_table:
+	line_no = 0
+    rept SCREEN_HEIGHT
+        dw VIDEORAM_BASE + line_no
+        line_no = line_no + SCREEN_STRIDE
+    endm
+    
+    dseg
+
+; Maps from ASCII (minus $20) to the Brother character set.
+
+character_map_table:
+    db ' ', '!', '"', '#', '$', '%', '&', $27
+    db '(', ')', '*', '+', ',', '-', '.', '/'
+    db '0', '1', '2', '3', '4', '5', '6', '7'
+    db '8', '9', ':', ';', '<', '=', '>', '?'
+    db '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G'
+    db 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'
+    db 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W'
+    db 'X', 'Y', 'Z', '[', $eb, ']', $8b, '_'
+    db $8d, 'a', 'b', 'c', 'd', 'e', 'f', 'g'
+    db 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o'
+    db 'p', 'q', 'r', 's', 't', 'u', 'v', 'w'
+    db 'x', 'y', 'z', $cc, $9b, $cd, $8f, $0d
+
+; vim: ts=4 sw=4 et ft=asm
+

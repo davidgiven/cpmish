@@ -1,0 +1,24 @@
+    maclib z180
+
+SCREEN_WIDTH = 91
+SCREEN_HEIGHT = 15
+SCREEN_STRIDE = 192
+
+VIDEORAM_BASE = 0xf000
+VIDEORAM_TOP = VIDEORAM_BASE + (SCREEN_HEIGHT*SCREEN_STRIDE)
+
+VIDEO_ADDR = 0x80
+VIDEO_DATA = 0x81
+
+SCREENON macro
+    ld a, $02
+    out0a CBR
+	endm
+
+SCREENOFF macro
+    ld a, $16
+    out0a CBR
+	endm
+
+; vim: ts=4 sw=4 et ft=asm
+

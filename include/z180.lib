@@ -9,6 +9,19 @@ TDR1:   equ 0x07
 RDR0:   equ 0x08
 RDR1:   equ 0x09
 
+CNTR:	equ 0x0a
+TRDR:	equ 0x0b
+TMDR0L: equ 0x0c
+TMDR0H: equ 0x0d
+RLDR0L: equ 0x0e
+RLDR0H: equ 0x0f
+TCR:	equ 0x10
+TMDR1L:	equ 0x14
+TMDR1H: equ 0x15
+RLDR1L:	equ 0x16
+RLDR1H:	equ 0x17
+FRC:	equ 0x18
+
 ASTC0L: equ 0x1a
 ASTC1L: equ 0x1c
 ASTC0H: equ 0x1b
@@ -33,9 +46,16 @@ DSTAT:  equ 0x30
 DMODE:  equ 0x31
 DCNTL:  equ 0x32
 
-BBR:    equ 0x39
+IL:		equ 0x33
+ITC:	equ 0x34
+RCR:	equ 0x36
+
 CBR:    equ 0x38
+BBR:    equ 0x39
 CBAR:   equ 0x3a
+
+OMCR:	equ 0x3e
+ICR:	equ 0x3f
 
 out0a   macro port
         dw 0x39ed
@@ -121,6 +141,14 @@ mltbc   macro
 
 otimr	macro
 		dw 0x93ed
+		endm
+
+tsthl	macro
+		db 0xed, 0x34
+		endm
+
+tstio	macro const
+		db 0xed, 0x24, const
 		endm
 
 ; vim: ts=4 sw=4 et ft=asm

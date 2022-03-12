@@ -22,6 +22,7 @@ What you get is a working CP/M 2.2 clone consisting of:
   - [R.T. Russell's superb BBC Basic](http://www.bbcbasic.co.uk/bbcbasic.html),
     Z80 edition (with integrated assembler)
   - Richard Surwilo's Z8E full-screen symbolic debugger
+  - B. J. Rodriguez's CamelForth
   - a build system which provides a turnkey cross-compilation system for
     producing bootable disk images for any of the supported platforms
   - a classic CP/M syntax assembler and linker for cross-compiling ancient
@@ -183,3 +184,8 @@ Specifically:
 	library, mostly written by Pigmaker57. It is distributable under the terms
 	of the General Public license version 2. See the
 	`third_party/libz80ex/COPYING` file for the full text.
+
+  - `third_party/camelforth` contains a copy of CamelForth for the Z80, written
+	by B. J. Rodriguez. It is distributable under the terms of the General
+	Public License version 3. See `third_party/camelforth/COPYING` for the full
+	text.

@@ -17,6 +17,13 @@ commandlen:    db 0
 commandgot:    db 0
 commandbuf:    ds 3
 
+maybe_update_cursor macro
+		if CURSOR_UPDATES
+			ld hl, tty_update_cursor
+			push hl
+		endif
+	endm
+
     cseg
 
 ; --- Clears (and initialises) the screen -----------------------------------
@@ -25,12 +32,16 @@ tty_init:
     xra a
     ld (commandlen), a
     ld (tty_attributes), a
+	if CLEAR_SCREEN_ON_INIT == 0
+	jr tty_home_cursor
+	endif
     ; fall through
 tty_clear_screen:
     call tty_home_cursor
     jp tty_clear_to_eos
     
 tty_home_cursor:
+	maybe_update_cursor
     xor a
     ld (tty_cursorx), a
     ld (tty_cursory), a
@@ -172,6 +183,7 @@ tty_newline:
     call tty_cursor_down
     ; fall through
 tty_carriagereturn:
+	maybe_update_cursor
     xor a
     ld (tty_cursorx), a
     ret
@@ -179,6 +191,7 @@ tty_carriagereturn:
 ; --- Move the cursor -------------------------------------------------------
 
 tty_cursor_left:
+	maybe_update_cursor
     ld hl, tty_cursorx
     dec (hl)
     ret p
@@ -186,6 +199,7 @@ tty_cursor_left:
     ret
 
 tty_cursor_up:
+	maybe_update_cursor
     ld hl, tty_cursory
     dec (hl)
     ret p
@@ -193,6 +207,7 @@ tty_cursor_up:
     ret
 
 tty_cursor_right:
+	maybe_update_cursor
     ld hl, tty_cursorx
     ld a, (hl)
     inc a
@@ -202,6 +217,7 @@ tty_cursor_right:
     ret
 
 tty_cursor_down:
+	maybe_update_cursor
     ld hl, tty_cursory
     ld a, (hl)
     inc a
@@ -210,6 +226,7 @@ tty_cursor_down:
     ret nz
     dec (hl)                ; oops, don't go the next line after all
 tty_scroll:
+	maybe_update_cursor
 	ld hl, tty_cursory
 	ld a, (hl)
 	push af
@@ -221,6 +238,7 @@ tty_scroll:
 
 ; Move to (B, C).
 tty_goto_xy:
+	maybe_update_cursor
     ld a, b
     cp SCREEN_WIDTH
     ret nc
@@ -230,7 +248,7 @@ tty_goto_xy:
     cp SCREEN_HEIGHT
     ret nc
     ld (tty_cursory), a
-    ret
+	ret
 
 ; --- Prints the character in A ---------------------------------------------
 ; (also tty_newline)
@@ -362,6 +380,7 @@ tty_putc:
 
     ; Now we've drawn a character, advance the cursor.
 
+	maybe_update_cursor
     ld hl, tty_cursorx
     ld a, (hl)
     inc a
