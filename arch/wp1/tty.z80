@@ -31,6 +31,12 @@ TTYPUT16 equ tty_puthex16
 TTYPUTSI equ tty_putsi
 
 tty_rawwrite:
+    ld a, -$20
+    add c
+    ld hl, character_map_table
+    call ADDAHL
+    ld c, (hl)
+
     ld de, (tty_cursorx)    ; d=Y, e=X
     call calc_cursor
 
@@ -143,5 +149,23 @@ line_address_table:
         line_no = line_no + SCREEN_STRIDE
     endm
     
+    dseg
+
+; Maps from ASCII (minus $20) to the Brother character set.
+
+character_map_table:
+    db ' ', '!', '"', '#', '$', '%', '&', $27
+    db '(', ')', '*', '+', ',', '-', '.', '/'
+    db '0', '1', '2', '3', '4', '5', '6', '7'
+    db '8', '9', ':', ';', '<', '=', '>', '?'
+    db '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G'
+    db 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'
+    db 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W'
+    db 'X', 'Y', 'Z', '[', $eb, ']', $8b, '_'
+    db $8d, 'a', 'b', 'c', 'd', 'e', 'f', 'g'
+    db 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o'
+    db 'p', 'q', 'r', 's', 't', 'u', 'v', 'w'
+    db 'x', 'y', 'z', $cc, $9b, $cd, $8f, $0d
+
 ; vim: ts=4 sw=4 et ft=asm
 
