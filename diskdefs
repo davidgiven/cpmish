@@ -48,7 +48,7 @@ diskdef brother-wp1
     tracks 39
     sectrk 12
     blocksize 1024
-    maxdir 16
+    maxdir 32
     boottrk 3
     os 2.2
 end
