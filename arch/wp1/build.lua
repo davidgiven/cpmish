@@ -7,7 +7,7 @@ include "utils/build.lua"
 -- Configure the BIOS size here; this will then emit an addresses.lib file
 -- which contains the position of the BDOS and CCP.
 
-local BIOS_SIZE = 0x0900
+local BIOS_SIZE = 0x0a00
 local BDOS_SIZE = 3584            -- fixed
 local CCP_SIZE = 2048             -- fixed
 local BBASE = 0x9000 - BIOS_SIZE
@@ -88,6 +88,7 @@ zmac {
     deps = {
         "include/*.lib",
         "./include/*.lib",
+		"arch/common/utils/deblocker.lib",
     },
 }
 

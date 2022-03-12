@@ -10,6 +10,8 @@
     public SYSIN
     public SYSOUT
     public ADDAHL
+    public DMAMEM
+    public DMAWAIT
 
     extern SELDSKE
     extern HOMEE
@@ -132,6 +134,7 @@ loadloop:
     out0a DMODE
     ld a, $40
     out0a DSTAT
+    call DMAWAIT
 
     pop hl
     pop bc
@@ -171,6 +174,18 @@ ADDAHL:
     ret nc
     inc h
     ret
+
+DMAMEM:
+    otimr
+    ld a, 2             ; start DMA
+    out0a DMODE
+    ld a, $40
+    out0a DSTAT
+DMAWAIT:
+    in0a DSTAT
+    and 10000000b           ; test for DMA completion
+    ret z
+    jr DMAWAIT
 
 CONOUTE:
     ld a, c
