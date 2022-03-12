@@ -15,10 +15,10 @@
     public TTYPUT8
     public TTYPUT16
     public TTYPUTSI
-    public CURSTOGG
 
     cseg
 
+CURSOR_UPDATES = 1
 CLEAR_SCREEN_ON_INIT = 0
 EMULATE_CLEAR_TO_EOL = 1
 EMULATE_CLEAR_TO_EOS = 1
@@ -53,9 +53,23 @@ calc_cursor:
     ld a, e
     jp ADDAHL
     
-CURSTOGG:
+; Moves the cursor to the current location.
+tty_update_cursor;
+    ld de, (tty_cursorx)
+    call calc_cursor
+
+    ld a, 15
+    out0a VIDEO_ADDR
+    nop
+    out0l VIDEO_DATA
+    ld a, 14
+    out0a VIDEO_ADDR
+    ld a, h
+    and $0f
+    out0a VIDEO_DATA
+
     ret
-    
+
 tty_delete_line:
     ld de, (tty_cursorx)
     ld e, 0
@@ -128,7 +142,6 @@ line_address_table:
         dw VIDEORAM_BASE + line_no
         line_no = line_no + SCREEN_STRIDE
     endm
-
     
 ; vim: ts=4 sw=4 et ft=asm
 

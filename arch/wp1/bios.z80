@@ -28,7 +28,8 @@
     extern TTYPUT8
     extern TTYPUT16
     extern TTYPUTSI
-    extern CURSTOGG
+    extern CURSON
+    extern CURSOFF
 
     extern KBDINIT
     extern KBDSTAT
@@ -70,6 +71,15 @@ BOOTE:
     ld sp, 0x0100           ; ephemeral user stack
     ld c, 0xe0              ; map RAM in everywhere
     out0c CBAR
+
+    ld a, 10
+    out0a VIDEO_ADDR
+    ld a, 0x60
+    out0a VIDEO_DATA
+    ld a, 11
+    out0a VIDEO_ADDR
+    ld a, 0xff
+    out0a VIDEO_DATA
 
     call TTYINIT
     call TTYPUTSI
