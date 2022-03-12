@@ -7,7 +7,7 @@
 ; $10000 ; video attribute memory
 ; $11000 ; video character memory
 ; $24000 : kernel workspace?
-; $25800 : temporary buffer used for loading sectors
+; $25800 : temporary buffer used for loading sectors (0x800 long)
 ; $27000 : application RAM
 ; $30000 : top of application RAM
 ;

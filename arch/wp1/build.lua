@@ -7,7 +7,7 @@ include "utils/build.lua"
 -- Configure the BIOS size here; this will then emit an addresses.lib file
 -- which contains the position of the BDOS and CCP.
 
-local BIOS_SIZE = 0x0800
+local BIOS_SIZE = 0x0900
 local BDOS_SIZE = 3584            -- fixed
 local CCP_SIZE = 2048             -- fixed
 local BBASE = 0x9000 - BIOS_SIZE
@@ -164,6 +164,12 @@ diskimage {
 	bootfile = { "+bootfile_img" },
 	map = {
         ["-readme.txt"] = "+readme",
+        ["dump.com"] = "cpmtools+dump",
+        ["stat.com"] = "cpmtools+stat",
+        ["asm.com"] = "cpmtools+asm",
+        ["copy.com"] = "cpmtools+copy",
+        ["submit.com"] = "cpmtools+submit",
+        ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic_ADM3A",
 	},
 }
 

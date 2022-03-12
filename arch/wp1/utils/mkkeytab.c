@@ -82,7 +82,19 @@ int main(int argc, const char* argv[])
 	key(0x17, 135, 145);
 	key(0x18, 136, 146);
 
-	key(0x03, 27,  27);
+	key(0x0c, 0,   0); /* nav cluster */
+	key(0x0b, 0,   0);
+	key(0x07, 0,   0);
+	key(0x09, 0,   0);
+	key(0x0e, 0,   0);
+	key(0x0a, 0,   0);
+
+	key(0x1e, 11,  11); /* up */
+	key(0x1d, 8,   8); /* left */
+	key(0x1f, 10,  10); /* down */
+	key(0x1c, 12,  12); /* right */
+
+	key(0x03, 27,  27); /* left row */
 	key(0x04, 137, 147);
 	key(0x05, 148, 150);
 	key(0x06, 149, 151);
