@@ -19,6 +19,9 @@
     extern READE
     extern WRITEE
     extern SECTRANE
+    extern MOTORON
+    extern MOTOROFF
+    extern MOTORTICK
 
     extern TTYINIT
     extern TTYPUTC
@@ -87,6 +90,7 @@ WBOOTE:
 
     ; Reload the CCP (but not the BDOS or CCP).
 
+    call MOTORON
     call SYSIN
 
     ld bc, 14           ; sector number; offset $d00
@@ -97,8 +101,11 @@ loadloop:
     push bc
     push hl
     push de
+
+    push ix
     ld a, 6             ; read sector
     rst $28
+    pop ix
 
     pop de
 
@@ -140,21 +147,12 @@ call_ccp:
     ld c, a                  ; c = current disk
     jp CBASE                 ; pass control to CCP
 
-stop_disk_motor:
-    call SYSIN
-    ;ld a, 2                  ; finished with disk
-    ;rst 0x28
-    call SYSOUT
-    ret
-
 CONSTE:
-    ld hl, disk_off_count
-    inc (hl)                 ; increment drive motor count and...
-    call z, stop_disk_motor  ; ...turn the motor off on rollover
-
+    call MOTORTICK
     jp KBDSTAT
 
 CONINE:
+    call MOTOROFF
     jp KBDGET
 
 ADDAHL:
@@ -217,7 +215,6 @@ bios_load_dma_page equ $ + 1
 bios_load_dma_buffer_end:
 
 saved_stack: dw 0            ; user stack pointer while in system calls
-disk_off_count: db 0         ; cheap and nasty drive motor timer
 keyboard_buffer: dw 0
 
 ; vim: ts=4 sw=4 expandtab ft=asm

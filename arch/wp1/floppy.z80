@@ -23,6 +23,8 @@
     public SECTRANE
     public READE
     public WRITEE
+    public MOTORTICK
+    public MOTORON
     public MOTOROFF
 
 ; This file contains the floppy drive handling code, and the deblocker. We
@@ -100,13 +102,44 @@ return_bios_error:
     ld a, 1
     ret
 
-MOTOROFF:
+MOTORON:
+    ld hl, motor_status
+    ld a, (hl)
+    or a
+    ld (hl), 0xff
+    ret nz
     call SYSIN
-    ld a, 2                  ; finished with disk
+    push ix
+    ld a, 1                  ; turn disk motor on
     rst 0x28
+    pop ix
     call SYSOUT
     ret
-    
+
+MOTORTICK:
+    ld hl, motor_status
+    ld a, (hl)
+    or a
+    ret z
+    dec (hl)
+    jr z, really_motor_off
+    ret
+
+MOTOROFF:
+    ld hl, motor_status
+    ld a, (hl)
+    or a
+    ret z
+    ld (hl), 0
+really_motor_off:
+    call SYSIN
+    push ix
+    ld a, 2                  ; turn disk motor off
+    rst 0x28
+    pop ix
+    call SYSOUT
+    ret
+
     ; Changes the block in the deblocking buffer.
     ; Returns C on exit; HL contains the address of the CP/M sector.
 getblock;
@@ -169,10 +202,8 @@ flush_current_block:
 
 ; On entry, BC = zero-based block to transfer.
 read_syscall:
+    call MOTORON
     call SYSIN
-
-    ;ld a, 1                 ; motor on
-    ;rst 0x28
 
     ld hl, $f800
     inc bc                  ; block number must be one based
@@ -250,6 +281,7 @@ current_sector: db 0
 current_track:  db 0
 current_block:  dw 0xffff
 disk_buffer:    ds 256
+motor_status:   db 0
 
 ; vim: ts=4 sw=4 et ft=asm
 
