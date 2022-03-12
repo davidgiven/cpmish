@@ -51,7 +51,7 @@ zmac {
 
 normalrule {
     name = "keytab_inc",
-    ins = { "arch/wp1/utils+mkkeytab" },
+    ins = { "arch/brotherwp1/utils+mkkeytab" },
     outleaves = { "keytab.inc" },
     commands = {
         "%{ins} > %{outs}"
@@ -171,6 +171,7 @@ diskimage {
         ["copy.com"] = "cpmtools+copy",
         ["submit.com"] = "cpmtools+submit",
         ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic_ADM3A",
+		["camel80.com"] = "third_party/camelforth+camelforth",
 	},
 }
 
