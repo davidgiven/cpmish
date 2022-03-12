@@ -42,6 +42,7 @@ int main(int argc, const char* argv[])
 	key(0x70, 'p', 'P');
 	key(0x7c, '[', '{');
 	key(0x5d, ']', '}');
+	key(0x08, 127, 127);
 
 	key(0x61, 'a', 'A');
 	key(0x73, 's', 'S');
@@ -67,6 +68,9 @@ int main(int argc, const char* argv[])
 	key(0x2c, ',', '<');
 	key(0x2e, '.', '>');
 	key(0x2f, '/', '?');
+
+	key(0x20, ' ', ' ');
+	key(0x7f, 127, 127);
 
 	key(0x10, 128, 138); /* function keys */
 	key(0x11, 129, 139);
