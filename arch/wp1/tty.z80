@@ -31,6 +31,7 @@ TTYPUT16 equ tty_puthex16
 TTYPUTSI equ tty_putsi
 
 tty_rawwrite:
+    ld de, (tty_cursorx)    ; d=Y, e=X
     call calc_cursor
 
     SCREENON
@@ -39,8 +40,9 @@ tty_rawwrite:
 
     ret
 
+; DE is YX on entry. Returns the address in HL.
 calc_cursor:
-    ld a, (tty_cursory)
+    ld a, d
     add a
     ld hl, line_address_table
     call ADDAHL
@@ -48,23 +50,72 @@ calc_cursor:
     inc hl
     ld h, (hl)
     ld l, a
-    ld a, (tty_cursorx)
+    ld a, e
     jp ADDAHL
     
 CURSTOGG:
     ret
     
 tty_delete_line:
-    ret
+    ld de, (tty_cursorx)
+    ld e, 0
+
+.1
+    ld a, SCREEN_HEIGHT-1   ; give up if we're on the last line
+    cp d
+    jr z, blank_line_de
+
+    call calc_cursor
+    push de
+    ld d, h
+    ld e, l                 ; de -> address of line to delete
+    ld a, SCREEN_STRIDE
+    call ADDAHL             ; hl -> address of next line
+    ld bc, SCREEN_WIDTH
+    SCREENON
+    ldir
+    SCREENOFF
+    pop de
+
+    inc d                   ; go to next line
+    jr .1
 
     ; Blank the bottom line of the screen.
 
 blank_bottom_line:
-    ld a, SCREEN_HEIGHT - 1
+    ld a, SCREEN_HEIGHT-1
 blank_line_a:
+    ld d, a
+    ld e, 0
+blank_line_de:
+    call calc_cursor
+    ld d, h
+    ld e, l
+    inc de
+    ld bc, SCREEN_WIDTH-1
+    SCREENON
+    ld (hl), ' '
+    ldir
+    SCREENOFF
     ret
 
 tty_insert_line:
+    ld de, (tty_cursorx)
+    ld a, SCREEN_HEIGHT-1
+    cp d
+    jr z, blank_line_a      ; if we're on the bottom line, just blank it
+
+    ld e, 0
+    call calc_cursor
+    ld h, d
+    ld l, e
+    ld a, SCREEN_STRIDE
+    call ADDAHL
+    ex de, hl
+    SCREENON
+    ldir
+    SCREENOFF
+    ; fall through
 
     ; Blank the current line.
 blank_current_line:
