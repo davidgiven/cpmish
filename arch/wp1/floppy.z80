@@ -23,6 +23,7 @@
     public SECTRANE
     public READE
     public WRITEE
+    public MOTOROFF
 
 ; This file contains the floppy drive handling code, and the deblocker. We
 ; don't use the standard deblocker because space is really at a premium and
@@ -99,6 +100,13 @@ return_bios_error:
     ld a, 1
     ret
 
+MOTOROFF:
+    call SYSIN
+    ld a, 2                  ; finished with disk
+    rst 0x28
+    call SYSOUT
+    ret
+    
     ; Changes the block in the deblocking buffer.
     ; Returns C on exit; HL contains the address of the CP/M sector.
 getblock;
@@ -163,12 +171,19 @@ flush_current_block:
 read_syscall:
     call SYSIN
 
+    ;ld a, 1                 ; motor on
+    ;rst 0x28
+
     ld hl, $f800
     inc bc                  ; block number must be one based
+    push ix
     ld a, 6                 ; read sector
     rst 0x28
+    pop ix
 
     ld hl, disk_buffer
+    ld de, 0x7000           ; convert to physical address
+    add hl, de
     ld (fdd_read_target_address), hl
 
     ld b, fdd_read_dma_buffer_end - fdd_read_dma_buffer
