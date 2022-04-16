@@ -1,0 +1,99 @@
+	maclib addresses
+
+RS_IDLE     = 0<<0
+RS_READABLE = 1<<0
+RS_DONE     = 2<<0
+RS_MASK     = 0x3
+
+RA_DATA     = 1
+RA_DONE     = 2
+
+WS_WRITABLE = 0<<2
+WS_WRITING  = 1<<2
+WS_DONE     = 2<<2
+WS_MASK     = 0xc
+
+WA_DATA     = 4
+WA_DONE     = 8
+
+RESET       = 128
+
+
+	cseg
+	org 0x100
+
+	ld a, RESET
+	out (0x41), a
+
+loop:
+	call BBASE+0x06 ; CONST
+	or a
+	jr z, nokeypressed
+	in a, (0x41)
+	and WS_MASK
+	jr nz, nokeypressed
+
+	; Read key from console and write it to the interface.
+
+	call BBASE+0x09 ; CONIN
+	out (0x40), a
+	ld a, WA_DATA
+	out (0x41), a
+.1
+	;ld c, 'w'
+	;call BBASE+0x0c ; CONOUT
+	;in a, (0x41)
+	;call printstate
+	in a, (0x41)
+	and WS_MASK
+	cmp WS_DONE
+	jr nz, .1
+
+	ld a, WA_DONE
+	out (0x41), a
+	; fall through
+
+nokeypressed:
+	in a, (0x41)
+	and RS_MASK
+	cmp RS_READABLE
+	jr nz, nointerfacebyte
+
+	; Read byte from interface and write it to the console.
+
+	in a, (0x40)
+	ld c, a
+	call BBASE+0x0c	; CONOUT
+
+	ld a, RA_DATA
+	out (0x41), a
+
+.1
+	;ld c, 'r'
+	;call BBASE+0x0c ; CONOUT
+	;in a, (0x41)
+	;call printstate
+	in a, (0x41)
+	and RS_MASK
+	cmp RS_DONE
+	jr nz, .1
+
+	ld a, RA_DONE
+	out (0x41), a
+	; fall through
+
+nointerfacebyte:
+	jr loop
+
+printstate:
+	push af
+	and 15
+	add a, 0x90
+	daa
+	adc a, 0x40
+	daa
+	ld c, a
+	call BBASE+0x0c ; CONOUT
+	pop af
+	ret
+

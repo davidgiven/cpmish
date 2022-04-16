@@ -45,6 +45,10 @@ extern void con_revoff(void);
 	#define SCREENWIDTH 80
 	#define SCREENHEIGHT 24
 	#define LIBCUSS_ANSI
+#elif defined LIBCUSS_BROTHER_WP1
+	#define SCREENWIDTH 91
+	#define SCREENHEIGHT 15
+	#define LIBCUSS_ADM3
 #else
     #error "No libcuss configuration specified."
 #endif

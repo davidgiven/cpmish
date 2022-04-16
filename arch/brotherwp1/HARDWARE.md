@@ -22,3 +22,6 @@ IO Ports
 	5
 	6 tested during read
 	7
+
+Looks similar to https://tnt23.livejournal.com/873479.html!
+
