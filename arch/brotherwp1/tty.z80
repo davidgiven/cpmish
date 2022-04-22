@@ -20,9 +20,10 @@
 
 CURSOR_UPDATES = 1
 CLEAR_SCREEN_ON_INIT = 0
-EMULATE_CLEAR_TO_EOL = 1
+EMULATE_CLEAR_TO_EOL = 0
 EMULATE_CLEAR_TO_EOS = 1
     maclib tty
+    maclib print
 
 TTYINIT equ tty_init
 TTYPUTC equ tty_putc
@@ -31,14 +32,21 @@ TTYPUT16 equ tty_puthex16
 TTYPUTSI equ tty_putsi
 
 tty_rawwrite:
-    ld a, -$20
-    add c
+    sub $20
     ld hl, character_map_table
     call ADDAHL
     ld c, (hl)
 
     ld de, (tty_cursorx)    ; d=Y, e=X
     call calc_cursor
+
+;.1
+;    ld a, 31
+;    out0a VIDEO_ADDR
+;    nop
+;    in0a VIDEO_DATA
+;    and 0x02
+;    jr z, .1
 
     SCREENON
     ld (hl), c
@@ -77,28 +85,60 @@ tty_update_cursor;
     ret
 
 tty_delete_line:
-    ld de, (tty_cursorx)
-    ld e, 0
+    ld de, (tty_cursorx)    ; (y,x) -> (d, e)
+    ld e, 0                 ; beginning of line -> x
 
 .1
     ld a, SCREEN_HEIGHT-1   ; give up if we're on the last line
     cp d
     jr z, blank_line_de
 
-    call calc_cursor
+    call calc_cursor        ; address -> hl
     push de
     ld d, h
-    ld e, l                 ; de -> address of line to delete
+    ld e, l                 ; address of line to delete -> de
     ld a, SCREEN_STRIDE
-    call ADDAHL             ; hl -> address of next line
+    call ADDAHL             ; address of next line -> hl
     ld bc, SCREEN_WIDTH
     SCREENON
-    ldir
+    ldir                    ; [hl] -> [de]
     SCREENOFF
     pop de
 
     inc d                   ; go to next line
     jr .1
+
+tty_insert_line:
+    ld a, (tty_cursory)     ; if we're on the last line, just blank it
+    cp SCREEN_HEIGHT-1
+    jr z, blank_line_a
+
+    ld de, (SCREEN_HEIGHT-2)<<8 ; (y,x) -> (d,e)
+
+.1
+    call calc_cursor        ; address -> hl
+    push de
+    ld d, h
+    ld e, l                 ; address -> de
+    ld a, SCREEN_STRIDE
+    call ADDAHL             ; address of next line -> hl
+    ld bc, SCREEN_WIDTH
+    ex de, hl
+    SCREENON
+    ldir
+    SCREENOFF
+    pop de
+
+    ld a, (tty_cursory)
+    cp d
+    jr z, blank_current_line
+    dec d
+    jr .1
+
+    ; Blank the current line.
+blank_current_line:
+    ld a, (tty_cursory)
+    jr blank_line_a
 
     ; Blank the bottom line of the screen.
 
@@ -108,39 +148,32 @@ blank_line_a:
     ld d, a
     ld e, 0
 blank_line_de:
-    call calc_cursor
+    call calc_cursor        ; address -> hl
     ld d, h
     ld e, l
     inc de
     ld bc, SCREEN_WIDTH-1
     SCREENON
     ld (hl), ' '
-    ldir
+    ldir                    ; [hl] -> [de]
     SCREENOFF
     ret
 
-tty_insert_line:
-    ld de, (tty_cursorx)
-    ld a, SCREEN_HEIGHT-1
-    cp d
-    jr z, blank_line_a      ; if we're on the bottom line, just blank it
-
-    ld e, 0
+tty_clear_to_eol:
+    ld de, (tty_cursorx)    ; (y,x) -> (d, e)
     call calc_cursor
-    ld h, d
-    ld l, e
-    ld a, SCREEN_STRIDE
-    call ADDAHL
-    ex de, hl
-    SCREENON
-    ldir
-    SCREENOFF
-    ; fall through
 
-    ; Blank the current line.
-blank_current_line:
-    ld a, (tty_cursory)
-    jr blank_line_a
+    ld a, SCREEN_WIDTH
+    sub e
+    ld b, a                 ; number of chars - 1 -> b
+    SCREENON
+.1
+    ld (hl), ' '
+    inc hl
+    djnz .1
+    SCREENOFF
+
+    ret
 
 line_address_table:
 	line_no = 0
