@@ -172,6 +172,8 @@ diskimage {
         ["submit.com"] = "cpmtools+submit",
         ["bbcbasic.com"] = "third_party/bbcbasic+bbcbasic_ADM3A",
 		["camel80.com"] = "third_party/camelforth+camelforth",
+		["qe.com"] = "cpmtools+qe_BROTHER_WP1",
+		["pterm.com"] = "arch/brotherwp1/tools+pterm",
 	},
 }
 

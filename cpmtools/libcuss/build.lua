@@ -2,6 +2,7 @@ local libcuss_terminals = {
     "KAYPROII",
     "NC200",
 	"BROTHEROP2",
+	"BROTHER_WP1",
 	"BROTHER_WP2450DS",
 	"SPECTRUM_PLUS_THREE",
 	"SPECTRUM_NEXT",

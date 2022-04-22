@@ -24,6 +24,7 @@ CLEAR_SCREEN_ON_INIT = 1
 EMULATE_CLEAR_TO_EOL = 1
 EMULATE_CLEAR_TO_EOS = 1
     maclib tty
+    maclib print
 
 TTYINIT equ tty_init
 TTYPUTC equ tty_putc

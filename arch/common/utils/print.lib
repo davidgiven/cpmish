@@ -1,0 +1,99 @@
+; cpmish BIOS © 2022 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This provides generic routines for printing things.
+
+    cseg
+
+; --- Prints a zero-terminated string in HL ---------------------------------
+
+; Prints a zero-terminated string in hl.
+tty_puts:
+    ld a, (hl)
+    or a
+    ret z
+    inc hl
+    push hl
+    call tty_putc
+    pop hl
+    jr tty_puts
+
+; Prints an inline string.
+tty_putsi:
+    pop hl
+    call tty_puts
+    inc hl
+    jp (hl)
+
+; --- Prints the hex bytes in HL or A ---------------------------------------
+
+; prints HL
+tty_puthex16:
+    ld a, h
+    call tty_puthex8
+    ld a, l
+tty_puthex8:
+    ld c, a
+    rra
+    rra
+    rra
+    rra
+    call .1
+    ld a, c
+.1
+    and 15
+    add a, 0x90
+    daa
+    adc a, 0x40
+    daa
+    push hl
+    push bc
+    call tty_putc
+    pop bc
+    pop hl
+    ret
+
+; --- Prints the decimal number in HL ---------------------------------------
+
+tty_putdec16:
+    ld d, 0             ; suppress zeroes
+    ld bc, -10000
+    call .1
+    ld bc, -1000
+    call .1
+    ld bc, -100
+    call .1
+    ld bc, -10
+    call .1
+    dec d               ; don't suppress this zero
+    ld bc, -1
+.1                      ; loop which prints one digit
+    ld a, '0'-1
+.2
+    inc a
+    add hl, bc
+    jr c, .2            ; keep subtracting bc to get one digit
+    sbc hl, bc          ; under last subtraction (carry is known to be clear)
+
+    ; Did we get a zero?
+    cp '0'
+    jr z, .3
+    ; Not a zero.
+    dec d               ; don't suppress zeroes any more
+.4
+    push hl             ; print the digit
+    push de
+    call tty_putc
+    pop de
+    pop hl
+    ret
+
+    ; We got a zero.
+.3
+    bit 7, d            ; are we suppressing zeroes?
+    ret z               ; yes.
+    jr .4               ; no, so print it anyway.
+
+; vim: sw=4 ts=4 expandtab ft=asm
+
