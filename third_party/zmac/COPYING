@@ -1,0 +1,16 @@
+Bruce Norskog originally wrote zmac in 1978.
+
+Updates and bugfixes over the years by John Providenza, Colin Kelley, and more
+recently by Russell Marks, Mark RISON, Chris Smith, Matthew Phillips and Tim
+Mann.
+
+Extensive modifications for cycle counting, multiple output formats, ".rel"
+output, 8080 mode and older assembler compatibilty were written by George
+Phillips.
+
+This document was based on Russell Marks zmac man page which had tweaks by Mark
+RISON and Tim Mann. George Phillips converted it to HTML and documented the new
+features and some older ones (e.g., phase/dephase).  ￼ To the extent possible
+under law, George Phillips has waived all copyright and related or neighboring
+rights to zmac macro cross assembler for the Zilog Z-80 microprocessor. This
+work is published from: Canada.

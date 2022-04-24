@@ -11,6 +11,10 @@
 //		in (c)			ed70
 //		out (c),0		ed71
 //		srop (ix+d),r	undocumented IX/IY shift/rotate instructions
+//
+// We don't know what the undocumented Z180 instructions do.  For now
+// you're best to turn off undoc when setting Z180 mode.  Though we do
+// know that the I[XY][HL] instructions do not work on the Z180.
 
 #include <stdio.h>
 #include <string.h>
@@ -30,6 +34,7 @@ struct Opcode {
 	int			args;
 	int			tstates;
 	int			tstates8080;
+	int			tstates180;
 };
 
 // Opcode args if name == 0
@@ -65,584 +70,584 @@ struct Opcode {
 #define VT(low, high)	(((low) << 8) | (high))
 
 static Opcode z_major[256] = {
-	{ "nop",			0,				 4,  4 }, /* 00 */
-	{ "ld bc,%s",		WC|WD,			10, 10 }, /* 01 */
-	{ "ld (bc),a",		BT|MR,			 7,  7 }, /* 02 */
-	{ "inc bc",			WD,				 6,  5 }, /* 03 */
-	{ "inc b",			BT,				 4,  5 }, /* 04 */
-	{ "dec b",			BT,				 4,  5 }, /* 05 */
-	{ "ld b,%s",		BC|BT,			 7,  7 }, /* 06 */
-	{ "rlca",			BT,				 4,  4 }, /* 07 */
+	{ "nop",			0,				 4,  4,  3 }, /* 00 */
+	{ "ld bc,%s",		WC|WD,			10, 10,  9 }, /* 01 */
+	{ "ld (bc),a",		BT|MR,			 7,  7,  7 }, /* 02 */
+	{ "inc bc",			WD,				 6,  5,  4 }, /* 03 */
+	{ "inc b",			BT,				 4,  5,  4 }, /* 04 */
+	{ "dec b",			BT,				 4,  5,  4 }, /* 05 */
+	{ "ld b,%s",		BC|BT,			 7,  7,  6 }, /* 06 */
+	{ "rlca",			BT,				 4,  4,  3 }, /* 07 */
 
-	{ "ex af,af'",		WD,				 4,  4 }, /* 08 */
-	{ "add hl,bc",		WD,				11, 10 }, /* 09 */
-	{ "ld a,(bc)",		BT|MR,			 7,  7 }, /* 0a */
-	{ "dec bc",			WD,				 6,  5 }, /* 0b */
-	{ "inc c",			BT,				 4,  5 }, /* 0c */
-	{ "dec c",			BT,				 4,  5 }, /* 0d */
-	{ "ld c,%s",		BC|BT,			 7,  7 }, /* 0e */
-	{ "rrca",			BT,				 4,  4 }, /* 0f */
+	{ "ex af,af'",		WD,				 4,  4,  4 }, /* 08 */
+	{ "add hl,bc",		WD,				11, 10,  7 }, /* 09 */
+	{ "ld a,(bc)",		BT|MR,			 7,  7,  6 }, /* 0a */
+	{ "dec bc",			WD,				 6,  5,  4 }, /* 0b */
+	{ "inc c",			BT,				 4,  5,  4 }, /* 0c */
+	{ "dec c",			BT,				 4,  5,  4 }, /* 0d */
+	{ "ld c,%s",		BC|BT,			 7,  7,  6 }, /* 0e */
+	{ "rrca",			BT,				 4,  4,  3 }, /* 0f */
 
-	{ "djnz %s",		JR,		 VT(8, 13),  4 }, /* 10 */
-	{ "ld de,%s",		WC|WD,			10, 10 }, /* 11 */
-	{ "ld (de),a",		BT|MW,			 7,  7 }, /* 12 */
-	{ "inc de",			WD,				 6,  5 }, /* 13 */
-	{ "inc d",			BT,				 4,  5 }, /* 14 */
-	{ "dec d",			BT,				 4,  5 }, /* 15 */
-	{ "ld d,%s",		BC|BT,			 7,  7 }, /* 16 */
-	{ "rla",			BT,				 4,  4 }, /* 17 */
+	{ "djnz %s",		JR,		 VT(8, 13),  4, VT(7, 9) }, /* 10 */
+	{ "ld de,%s",		WC|WD,			10, 10,  9 }, /* 11 */
+	{ "ld (de),a",		BT|MW,			 7,  7,  7 }, /* 12 */
+	{ "inc de",			WD,				 6,  5,  4 }, /* 13 */
+	{ "inc d",			BT,				 4,  5,  4 }, /* 14 */
+	{ "dec d",			BT,				 4,  5,  4 }, /*15 */
+	{ "ld d,%s",		BC|BT,			 7,  7,  6 }, /* 16 */
+	{ "rla",			BT,				 4,  4,  3 }, /* 17 */
 
-	{ "jr %s",			JR | UNBR,		12,  4 }, /* 18 */
-	{ "add hl,de",		WD,				11, 10 }, /* 19 */
-	{ "ld a,(de)",		BT|MW,			 7,  7 }, /* 1a */
-	{ "dec de",			WD,				 6,  5 }, /* 1b */
-	{ "inc e",			BT,				 4,  5 }, /* 1c */
-	{ "dec e",			BT,				 4,  5 }, /* 1d */
-	{ "ld e,%s",		BC|BT,			 7,  7 }, /* 1e */
-	{ "rra",			BT,				 4,  4 }, /* 1f */
+	{ "jr %s",			JR | UNBR,		12,  4,  8 }, /* 18 */
+	{ "add hl,de",		WD,				11, 10,  7 }, /* 19 */
+	{ "ld a,(de)",		BT|MW,			 7,  7,  6 }, /* 1a */
+	{ "dec de",			WD,				 6,  5,  4 }, /* 1b */
+	{ "inc e",			BT,				 4,  5,  4 }, /* 1c */
+	{ "dec e",			BT,				 4,  5,  4 }, /* 1d */
+	{ "ld e,%s",		BC|BT,			 7,  7,  6 }, /* 1e */
+	{ "rra",			BT,				 4,  4,  3 }, /* 1f */
 
-	{ "jr nz,%s",		JR,		 VT(7, 12),  4 }, /* 20 */
-	{ "ld hl,%s",		WC|WD,			10, 10 }, /* 21 */
-	{ "ld (%s),hl",		ADDR|WD|MW,		16, 16 }, /* 22 */
-	{ "inc hl",			WD,				 6,  5 }, /* 23 */
-	{ "inc h",			BT,				 4,  5 }, /* 24 */
-	{ "dec h",			BT,				 4,  5 }, /* 25 */
-	{ "ld h,%s",		BC|BT,			 7,  7 }, /* 26 */
-	{ "daa",			BT,				 4,  4 }, /* 27 */
+	{ "jr nz,%s",		JR,		 VT(7, 12),  4, VT(6, 8) }, /* 20 */
+	{ "ld hl,%s",		WC|WD,			10, 10,  9 }, /* 21 */
+	{ "ld (%s),hl",		ADDR|WD|MW,		16, 16, 16 }, /* 22 */
+	{ "inc hl",			WD,				 6,  5,  4 }, /* 23 */
+	{ "inc h",			BT,				 4,  5,  4 }, /* 24 */
+	{ "dec h",			BT,				 4,  5,  4 }, /* 25 */
+	{ "ld h,%s",		BC|BT,			 7,  7,  6 }, /* 26 */
+	{ "daa",			BT,				 4,  4,  4 }, /* 27 */
 
-	{ "jr z,%s",		JR,		 VT(7, 12),  4 }, /* 28 */
-	{ "add hl,hl",		WD,				11, 10 }, /* 29 */
-	{ "ld hl,(%s)",		ADDR|WD|MW,		16, 16 }, /* 2a */
-	{ "dec hl",			WD,				 6,  5 }, /* 2b */
-	{ "inc l",			BT,				 4,  5 }, /* 2c */
-	{ "dec l",			BT,				 4,  5 }, /* 2d */
-	{ "ld l,%s",		BC|BT,			 7,  7 }, /* 2e */
-	{ "cpl",			BT,				 4,  4 }, /* 2f */
+	{ "jr z,%s",		JR,		 VT(7, 12),  4, VT(6, 8) }, /* 28 */
+	{ "add hl,hl",		WD,				11, 10,  7 }, /* 29 */
+	{ "ld hl,(%s)",		ADDR|WD|MW,		16, 16, 15 }, /* 2a */
+	{ "dec hl",			WD,				 6,  5,  4 }, /* 2b */
+	{ "inc l",			BT,				 4,  5,  4 }, /* 2c */
+	{ "dec l",			BT,				 4,  5,  4 }, /* 2d */
+	{ "ld l,%s",		BC|BT,			 7,  7,  6 }, /* 2e */
+	{ "cpl",			BT,				 4,  4,  4 }, /* 2f */
 
-	{ "jr nc,%s",		JR,		 VT(7, 12),  4 }, /* 30 */
-	{ "ld sp,%s",		WC|WD,			10, 10 }, /* 31 */
-	{ "ld (%s),a",		ADDR|BT|MW,		13, 13 }, /* 32 */
-	{ "inc sp",			WD,				 6,  5 }, /* 33 */
-	{ "inc (hl)",		BT|MR|MW,		11, 10 }, /* 34 */
-	{ "dec (hl)",		BT|MR|MW,		11, 10 }, /* 35 */
-	{ "ld (hl),%s",		BC|WD|MW,			10, 10 }, /* 36 */
-	{ "scf",			0,				 4,  4 }, /* 37 */
+	{ "jr nc,%s",		JR,		 VT(7, 12),  4, VT(6, 8) }, /* 30 */
+	{ "ld sp,%s",		WC|WD,			10, 10,  9 }, /* 31 */
+	{ "ld (%s),a",		ADDR|BT|MW,		13, 13, 13 }, /* 32 */
+	{ "inc sp",			WD,				 6,  5,  4 }, /* 33 */
+	{ "inc (hl)",		BT|MR|MW,		11, 10, 10 }, /* 34 */
+	{ "dec (hl)",		BT|MR|MW,		11, 10, 10 }, /* 35 */
+	{ "ld (hl),%s",		BC|WD|MW,		10, 10,  9 }, /* 36 */
+	{ "scf",			0,				 4,  4,  3 }, /* 37 */
 
-	{ "jr c,%s",		JR,		 VT(7, 12),  4 }, /* 38 */
-	{ "add hl,sp",		WD,				11, 10 }, /* 39 */
-	{ "ld a,(%s)",		ADDR|BT|MR,		13, 13 }, /* 3a */
-	{ "dec sp",			WD,				 6,  5 }, /* 3b */
-	{ "inc a",			BT,				 4,  5 }, /* 3c */
-	{ "dec a",			BT,				 4,  5 }, /* 3d */
-	{ "ld a,%s",		BC|BT,			 7,  7 }, /* 3e */
-	{ "ccf",			0,				 4,  4 }, /* 3f */
+	{ "jr c,%s",		JR,		 VT(7, 12),  4, VT(6, 8) }, /* 38 */
+	{ "add hl,sp",		WD,				11, 10,  7 }, /* 39 */
+	{ "ld a,(%s)",		ADDR|BT|MR,		13, 13, 12 }, /* 3a */
+	{ "dec sp",			WD,				 6,  5,  4 }, /* 3b */
+	{ "inc a",			BT,				 4,  5,  4 }, /* 3c */
+	{ "dec a",			BT,				 4,  5,  4 }, /* 3d */
+	{ "ld a,%s",		BC|BT,			 7,  7,  6 }, /* 3e */
+	{ "ccf",			0,				 4,  4,  3 }, /* 3f */
 
-	{ "ld b,b",			BT,				 4,  5 }, /* 40 */
-	{ "ld b,c",			BT,				 4,  5 }, /* 41 */
-	{ "ld b,d",			BT,				 4,  5 }, /* 42 */
-	{ "ld b,e",			BT,				 4,  5 }, /* 43 */
-	{ "ld b,h",			BT,				 4,  5 }, /* 44 */
-	{ "ld b,l",			BT,				 4,  5 }, /* 45 */
-	{ "ld b,(hl)",		BT|MR,			 7,  7 }, /* 46 */
-	{ "ld b,a",			BT,				 4,  5 }, /* 47 */
+	{ "ld b,b",			BT,				 4,  5,  4 }, /* 40 */
+	{ "ld b,c",			BT,				 4,  5,  4 }, /* 41 */
+	{ "ld b,d",			BT,				 4,  5,  4 }, /* 42 */
+	{ "ld b,e",			BT,				 4,  5,  4 }, /* 43 */
+	{ "ld b,h",			BT,				 4,  5,  4 }, /* 44 */
+	{ "ld b,l",			BT,				 4,  5,  4 }, /* 45 */
+	{ "ld b,(hl)",		BT|MR,			 7,  7,  6 }, /* 46 */
+	{ "ld b,a",			BT,				 4,  5,  4 }, /* 47 */
 
-	{ "ld c,b",			BT,				 4,  5 }, /* 48 */
-	{ "ld c,c",			BT,				 4,  5 }, /* 49 */
-	{ "ld c,d",			BT,				 4,  5 }, /* 4a */
-	{ "ld c,e",			BT,				 4,  5 }, /* 4b */
-	{ "ld c,h",			BT,				 4,  5 }, /* 4c */
-	{ "ld c,l",			BT,				 4,  5 }, /* 4d */
-	{ "ld c,(hl)",		BT|MR,			 7,  7 }, /* 4e */
-	{ "ld c,a",			BT,				 4,  5 }, /* 4f */
+	{ "ld c,b",			BT,				 4,  5,  4 }, /* 48 */
+	{ "ld c,c",			BT,				 4,  5,  4 }, /* 49 */
+	{ "ld c,d",			BT,				 4,  5,  4 }, /* 4a */
+	{ "ld c,e",			BT,				 4,  5,  4 }, /* 4b */
+	{ "ld c,h",			BT,				 4,  5,  4 }, /* 4c */
+	{ "ld c,l",			BT,				 4,  5,  4 }, /* 4d */
+	{ "ld c,(hl)",		BT|MR,			 7,  7,  6 }, /* 4e */
+	{ "ld c,a",			BT,				 4,  5,  4 }, /* 4f */
 
-	{ "ld d,b",			BT,				 4,  5 }, /* 50 */
-	{ "ld d,c",			BT,				 4,  5 }, /* 51 */
-	{ "ld d,d",			BT,				 4,  5 }, /* 52 */
-	{ "ld d,e",			BT,				 4,  5 }, /* 53 */
-	{ "ld d,h",			BT,				 4,  5 }, /* 54 */
-	{ "ld d,l",			BT,				 4,  5 }, /* 55 */
-	{ "ld d,(hl)",		BT|MR,			 7,  7 }, /* 56 */
-	{ "ld d,a",			BT,				 4,  5 }, /* 57 */
+	{ "ld d,b",			BT,				 4,  5,  4 }, /* 50 */
+	{ "ld d,c",			BT,				 4,  5,  4 }, /* 51 */
+	{ "ld d,d",			BT,				 4,  5,  4 }, /* 52 */
+	{ "ld d,e",			BT,				 4,  5,  4 }, /* 53 */
+	{ "ld d,h",			BT,				 4,  5,  4 }, /* 54 */
+	{ "ld d,l",			BT,				 4,  5,  4 }, /* 55 */
+	{ "ld d,(hl)",		BT|MR,			 7,  7,  6 }, /* 56 */
+	{ "ld d,a",			BT,				 4,  5,  4 }, /* 57 */
 
-	{ "ld e,b",			BT,				 4,  5 }, /* 58 */
-	{ "ld e,c",			BT,				 4,  5 }, /* 59 */
-	{ "ld e,d",			BT,				 4,  5 }, /* 5a */
-	{ "ld e,e",			BT,				 4,  5 }, /* 5b */
-	{ "ld e,h",			BT,				 4,  5 }, /* 5c */
-	{ "ld e,l",			BT,				 4,  5 }, /* 5d */
-	{ "ld e,(hl)",		BT|MR,			 7,  7 }, /* 5e */
-	{ "ld e,a",			BT,				 4,  5 }, /* 5f */
+	{ "ld e,b",			BT,				 4,  5,  4 }, /* 58 */
+	{ "ld e,c",			BT,				 4,  5,  4 }, /* 59 */
+	{ "ld e,d",			BT,				 4,  5,  4 }, /* 5a */
+	{ "ld e,e",			BT,				 4,  5,  4 }, /* 5b */
+	{ "ld e,h",			BT,				 4,  5,  4 }, /* 5c */
+	{ "ld e,l",			BT,				 4,  5,  4 }, /* 5d */
+	{ "ld e,(hl)",		BT|MR,			 7,  7,  6 }, /* 5e */
+	{ "ld e,a",			BT,				 4,  5,  4 }, /* 5f */
 
-	{ "ld h,b",			BT,				 4,  5 }, /* 60 */
-	{ "ld h,c",			BT,				 4,  5 }, /* 61 */
-	{ "ld h,d",			BT,				 4,  5 }, /* 62 */
-	{ "ld h,e",			BT,				 4,  5 }, /* 63 */
-	{ "ld h,h",			BT,				 4,  5 }, /* 64 */
-	{ "ld h,l",			BT,				 4,  5 }, /* 65 */
-	{ "ld h,(hl)",		BT|MR,			 7,  7 }, /* 66 */
-	{ "ld h,a",			BT,				 4,  5 }, /* 67 */
+	{ "ld h,b",			BT,				 4,  5,  4 }, /* 60 */
+	{ "ld h,c",			BT,				 4,  5,  4 }, /* 61 */
+	{ "ld h,d",			BT,				 4,  5,  4 }, /* 62 */
+	{ "ld h,e",			BT,				 4,  5,  4 }, /* 63 */
+	{ "ld h,h",			BT,				 4,  5,  4 }, /* 64 */
+	{ "ld h,l",			BT,				 4,  5,  4 }, /* 65 */
+	{ "ld h,(hl)",		BT|MR,			 7,  7,  6 }, /* 66 */
+	{ "ld h,a",			BT,				 4,  5,  4 }, /* 67 */
 
-	{ "ld l,b",			BT,				 4,  5 }, /* 68 */
-	{ "ld l,c",			BT,				 4,  5 }, /* 69 */
-	{ "ld l,d",			BT,				 4,  5 }, /* 6a */
-	{ "ld l,e",			BT,				 4,  5 }, /* 6b */
-	{ "ld l,h",			BT,				 4,  5 }, /* 6c */
-	{ "ld l,l",			BT,				 4,  5 }, /* 6d */
-	{ "ld l,(hl)",		BT|MR,			 7,  7 }, /* 6e */
-	{ "ld l,a",			BT,				 4,  5 }, /* 6f */
+	{ "ld l,b",			BT,				 4,  5,  4 }, /* 68 */
+	{ "ld l,c",			BT,				 4,  5,  4 }, /* 69 */
+	{ "ld l,d",			BT,				 4,  5,  4 }, /* 6a */
+	{ "ld l,e",			BT,				 4,  5,  4 }, /* 6b */
+	{ "ld l,h",			BT,				 4,  5,  4 }, /* 6c */
+	{ "ld l,l",			BT,				 4,  5,  4 }, /* 6d */
+	{ "ld l,(hl)",		BT|MR,			 7,  7,  6 }, /* 6e */
+	{ "ld l,a",			BT,				 4,  5,  4 }, /* 6f */
 
-	{ "ld (hl),b",		BT|MW,			 7,  7 }, /* 70 */
-	{ "ld (hl),c",		BT|MW,			 7,  7 }, /* 71 */
-	{ "ld (hl),d",		BT|MW,			 7,  7 }, /* 72 */
-	{ "ld (hl),e",		BT|MW,			 7,  7 }, /* 73 */
-	{ "ld (hl),h",		BT|MW,			 7,  7 }, /* 74 */
-	{ "ld (hl),l",		BT|MW,			 7,  7 }, /* 75 */
-	{ "halt",			0,				 4,  7 }, /* 76 */
-	{ "ld (hl),a",		BT|MW,			 7,  7 }, /* 77 */
+	{ "ld (hl),b",		BT|MW,			 7,  7,  7 }, /* 70 */
+	{ "ld (hl),c",		BT|MW,			 7,  7,  7 }, /* 71 */
+	{ "ld (hl),d",		BT|MW,			 7,  7,  7 }, /* 72 */
+	{ "ld (hl),e",		BT|MW,			 7,  7,  7 }, /* 73 */
+	{ "ld (hl),h",		BT|MW,			 7,  7,  7 }, /* 74 */
+	{ "ld (hl),l",		BT|MW,			 7,  7,  7 }, /* 75 */
+	{ "halt",			0,				 4,  7,  3 }, /* 76 */
+	{ "ld (hl),a",		BT|MW,			 7,  7,  7 }, /* 77 */
 
-	{ "ld a,b",			BT,				 4,  5 }, /* 78 */
-	{ "ld a,c",			BT,				 4,  5 }, /* 79 */
-	{ "ld a,d",			BT,				 4,  5 }, /* 7a */
-	{ "ld a,e",			BT,				 4,  5 }, /* 7b */
-	{ "ld a,h",			BT,				 4,  5 }, /* 7c */
-	{ "ld a,l",			BT,				 4,  5 }, /* 7d */
-	{ "ld a,(hl)",		BT|MR,			 7,  7 }, /* 7e */
-	{ "ld a,a",			BT,				 4,  5 }, /* 7f */
+	{ "ld a,b",			BT,				 4,  5,  4 }, /* 78 */
+	{ "ld a,c",			BT,				 4,  5,  4 }, /* 79 */
+	{ "ld a,d",			BT,				 4,  5,  4 }, /* 7a */
+	{ "ld a,e",			BT,				 4,  5,  4 }, /* 7b */
+	{ "ld a,h",			BT,				 4,  5,  4 }, /* 7c */
+	{ "ld a,l",			BT,				 4,  5,  4 }, /* 7d */
+	{ "ld a,(hl)",		BT|MR,			 7,  7,  7 }, /* 7e */
+	{ "ld a,a",			BT,				 4,  5,  4 }, /* 7f */
 
-	{ "add a,b",		BT,				 4,  4 }, /* 80 */
-	{ "add a,c",		BT,				 4,  4 }, /* 81 */
-	{ "add a,d",		BT,				 4,  4 }, /* 82 */
-	{ "add a,e",		BT,				 4,  4 }, /* 83 */
-	{ "add a,h",		BT,				 4,  4 }, /* 84 */
-	{ "add a,l",		BT,				 4,  4 }, /* 85 */
-	{ "add a,(hl)",		BT|MR,			 7,  7 }, /* 86 */
-	{ "add a,a",		BT,				 4,  4 }, /* 87 */
+	{ "add a,b",		BT,				 4,  4,  4 }, /* 80 */
+	{ "add a,c",		BT,				 4,  4,  4 }, /* 81 */
+	{ "add a,d",		BT,				 4,  4,  4 }, /* 82 */
+	{ "add a,e",		BT,				 4,  4,  4 }, /* 83 */
+	{ "add a,h",		BT,				 4,  4,  4 }, /* 84 */
+	{ "add a,l",		BT,				 4,  4,  4 }, /* 85 */
+	{ "add a,(hl)",		BT|MR,			 7,  7,  6 }, /* 86 */
+	{ "add a,a",		BT,				 4,  4,  4 }, /* 87 */
 
-	{ "adc a,b",		BT,				 4,  4 }, /* 88 */
-	{ "adc a,c",		BT,				 4,  4 }, /* 89 */
-	{ "adc a,d",		BT,				 4,  4 }, /* 8a */
-	{ "adc a,e",		BT,				 4,  4 }, /* 8b */
-	{ "adc a,h",		BT,				 4,  4 }, /* 8c */
-	{ "adc a,l",		BT,				 4,  4 }, /* 8d */
-	{ "adc a,(hl)",		BT|MR,			 7,  7 }, /* 8e */
-	{ "adc a,a",		BT,				 4,  4 }, /* 8f */
+	{ "adc a,b",		BT,				 4,  4,  4 }, /* 88 */
+	{ "adc a,c",		BT,				 4,  4,  4 }, /* 89 */
+	{ "adc a,d",		BT,				 4,  4,  4 }, /* 8a */
+	{ "adc a,e",		BT,				 4,  4,  4 }, /* 8b */
+	{ "adc a,h",		BT,				 4,  4,  4 }, /* 8c */
+	{ "adc a,l",		BT,				 4,  4,  4 }, /* 8d */
+	{ "adc a,(hl)",		BT|MR,			 7,  7,  6 }, /* 8e */
+	{ "adc a,a",		BT,				 4,  4,  4 }, /* 8f */
 
-	{ "sub b",			BT,				 4,  4 }, /* 90 */
-	{ "sub c",			BT,				 4,  4 }, /* 91 */
-	{ "sub d",			BT,				 4,  4 }, /* 92 */
-	{ "sub e",			BT,				 4,  4 }, /* 93 */
-	{ "sub h",			BT,				 4,  4 }, /* 94 */
-	{ "sub l",			BT,				 4,  4 }, /* 95 */
-	{ "sub (hl)",		BT|MR,			 7,  7 }, /* 96 */
-	{ "sub a",			BT,				 4,  4 }, /* 97 */
+	{ "sub b",			BT,				 4,  4,  4 }, /* 90 */
+	{ "sub c",			BT,				 4,  4,  4 }, /* 91 */
+	{ "sub d",			BT,				 4,  4,  4 }, /* 92 */
+	{ "sub e",			BT,				 4,  4,  4 }, /* 93 */
+	{ "sub h",			BT,				 4,  4,  4 }, /* 94 */
+	{ "sub l",			BT,				 4,  4,  4 }, /* 95 */
+	{ "sub (hl)",		BT|MR,			 7,  7,  6 }, /* 96 */
+	{ "sub a",			BT,				 4,  4,  4 }, /* 97 */
 
-	{ "sbc a,b",		BT,				 4,  4 }, /* 98 */
-	{ "sbc a,c",		BT,				 4,  4 }, /* 99 */
-	{ "sbc a,d",		BT,				 4,  4 }, /* 9a */
-	{ "sbc a,e",		BT,				 4,  4 }, /* 9b */
-	{ "sbc a,h",		BT,				 4,  4 }, /* 9c */
-	{ "sbc a,l",		BT,				 4,  4 }, /* 9d */
-	{ "sbc a,(hl)",		BT|MR,			 7,  7 }, /* 9e */
-	{ "sbc a,a",		BT,				 4,  4 }, /* 9f */
+	{ "sbc a,b",		BT,				 4,  4,  4 }, /* 98 */
+	{ "sbc a,c",		BT,				 4,  4,  4 }, /* 99 */
+	{ "sbc a,d",		BT,				 4,  4,  4 }, /* 9a */
+	{ "sbc a,e",		BT,				 4,  4,  4 }, /* 9b */
+	{ "sbc a,h",		BT,				 4,  4,  4 }, /* 9c */
+	{ "sbc a,l",		BT,				 4,  4,  4 }, /* 9d */
+	{ "sbc a,(hl)",		BT|MR,			 7,  7,  6 }, /* 9e */
+	{ "sbc a,a",		BT,				 4,  4,  4 }, /* 9f */
 
-	{ "and b",			BT,				 4,  4 }, /* a0 */
-	{ "and c",			BT,				 4,  4 }, /* a1 */
-	{ "and d",			BT,				 4,  4 }, /* a2 */
-	{ "and e",			BT,				 4,  4 }, /* a3 */
-	{ "and h",			BT,				 4,  4 }, /* a4 */
-	{ "and l",			BT,				 4,  4 }, /* a5 */
-	{ "and (hl)",		BT|MR,			 7,  7 }, /* a6 */
-	{ "and a",			BT,				 4,  4 }, /* a7 */
+	{ "and b",			BT,				 4,  4,  4 }, /* a0 */
+	{ "and c",			BT,				 4,  4,  4 }, /* a1 */
+	{ "and d",			BT,				 4,  4,  4 }, /* a2 */
+	{ "and e",			BT,				 4,  4,  4 }, /* a3 */
+	{ "and h",			BT,				 4,  4,  4 }, /* a4 */
+	{ "and l",			BT,				 4,  4,  4 }, /* a5 */
+	{ "and (hl)",		BT|MR,			 7,  7,  6 }, /* a6 */
+	{ "and a",			BT,				 4,  4,  4 }, /* a7 */
 
-	{ "xor b",			BT,				 4,  4 }, /* a8 */
-	{ "xor c",			BT,				 4,  4 }, /* a9 */
-	{ "xor d",			BT,				 4,  4 }, /* aa */
-	{ "xor e",			BT,				 4,  4 }, /* ab */
-	{ "xor h",			BT,				 4,  4 }, /* ac */
-	{ "xor l",			BT,				 4,  4 }, /* ad */
-	{ "xor (hl)",		BT|MR,			 7,  7 }, /* ae */
-	{ "xor a",			BT,				 4,  4 }, /* af */
+	{ "xor b",			BT,				 4,  4,  4 }, /* a8 */
+	{ "xor c",			BT,				 4,  4,  4 }, /* a9 */
+	{ "xor d",			BT,				 4,  4,  4 }, /* aa */
+	{ "xor e",			BT,				 4,  4,  4 }, /* ab */
+	{ "xor h",			BT,				 4,  4,  4 }, /* ac */
+	{ "xor l",			BT,				 4,  4,  4 }, /* ad */
+	{ "xor (hl)",		BT|MR,			 7,  7,  6 }, /* ae */
+	{ "xor a",			BT,				 4,  4,  4 }, /* af */
 
-	{ "or b",			BT,				 4,  4 }, /* b0 */
-	{ "or c",			BT,				 4,  4 }, /* b1 */
-	{ "or d",			BT,				 4,  4 }, /* b2 */
-	{ "or e",			BT,				 4,  4 }, /* b3 */
-	{ "or h",			BT,				 4,  4 }, /* b4 */
-	{ "or l",			BT,				 4,  4 }, /* b5 */
-	{ "or (hl)",		BT|MR,			 7,  7 }, /* b6 */
-	{ "or a",			BT,				 4,  4 }, /* b7 */
+	{ "or b",			BT,				 4,  4,  4 }, /* b0 */
+	{ "or c",			BT,				 4,  4,  4 }, /* b1 */
+	{ "or d",			BT,				 4,  4,  4 }, /* b2 */
+	{ "or e",			BT,				 4,  4,  4 }, /* b3 */
+	{ "or h",			BT,				 4,  4,  4 }, /* b4 */
+	{ "or l",			BT,				 4,  4,  4 }, /* b5 */
+	{ "or (hl)",		BT|MR,			 7,  7,  6 }, /* b6 */
+	{ "or a",			BT,				 4,  4,  4 }, /* b7 */
 
-	{ "cp b",			BT,				 4,  4 }, /* b8 */
-	{ "cp c",			BT,			 	 4,  4 }, /* b9 */
-	{ "cp d",			BT,				 4,  4 }, /* ba */
-	{ "cp e",			BT,				 4,  4 }, /* bb */
-	{ "cp h",			BT,				 4,  4 }, /* bc */
-	{ "cp l",			BT,				 4,  4 }, /* bd */
-	{ "cp (hl)",		BT|MR,			 7,  7 }, /* be */
-	{ "cp a",			BT,				 4,  4 }, /* bf */
+	{ "cp b",			BT,				 4,  4,  4 }, /* b8 */
+	{ "cp c",			BT,			 	 4,  4,  4 }, /* b9 */
+	{ "cp d",			BT,				 4,  4,  4 }, /* ba */
+	{ "cp e",			BT,				 4,  4,  4 }, /* bb */
+	{ "cp h",			BT,				 4,  4,  4 }, /* bc */
+	{ "cp l",			BT,				 4,  4,  4 }, /* bd */
+	{ "cp (hl)",		BT|MR,			 7,  7,  6 }, /* be */
+	{ "cp a",			BT,				 4,  4,  4 }, /* bf */
 
-	{ "ret nz",			WD,		 VT(5, 11), VT(5, 11) }, /* c0 */
-	{ "pop bc",			WD|MR,			10, 10 }, /* c1 */
-	{ "jp nz,%s",		ADDR,			10, 10 }, /* c2 */
-	{ "jp %s",			ADDR | UNBR,	10, 10 }, /* c3 */
-	{ "call nz,%s",		CALL,   VT(10, 17), VT(11, 17) }, /* c4 */
-	{ "push bc",		WD|MW,			11, 11 }, /* c5 */
-	{ "add a,%s",		BC|BT,			 7,  7 }, /* c6 */
-	{ "rst %s",			RST,			11, 11 }, /* c7 */
+	{ "ret nz",			WD,		 VT(5, 11), VT(5, 11), VT(5, 10) }, /* c0 */
+	{ "pop bc",			WD|MR,			10, 10,  9 }, /* c1 */
+	{ "jp nz,%s",		ADDR,			10, 10, VT(6, 9) }, /* c2 */
+	{ "jp %s",			ADDR | UNBR,	10, 10,  9 }, /* c3 */
+	{ "call nz,%s",		CALL,   VT(10, 17), VT(11, 17), VT(6, 16) }, /* c4 */
+	{ "push bc",		WD|MW,			11, 11, 11 }, /* c5 */
+	{ "add a,%s",		BC|BT,			 7,  7,  6 }, /* c6 */
+	{ "rst %s",			RST,			11, 11, 11 }, /* c7 */
 
-	{ "ret z",			WD,		 VT(5, 11), VT(5, 11) }, /* c8 */
-	{ "ret",			WD | UNBR,		10, 10 }, /* c9 */
-	{ "jp z,%s",		ADDR,			10, 10 }, /* ca */
-	{ 0,				0,				 0, 10 }, /* cb */
-	{ "call z,%s",		CALL,	VT(10, 17), VT(11, 17) }, /* cc */
-	{ "call %s",		CALL,			17, 17 }, /* cd */
-	{ "adc a,%s",		BC|BT,			 7,  7 }, /* ce */
-	{ "rst %s",			RST,			11, 11 }, /* cf */
+	{ "ret z",			WD,		 VT(5, 11), VT(5, 11), VT(5, 10) }, /* c8 */
+	{ "ret",			WD | UNBR,		10, 10,  9 }, /* c9 */
+	{ "jp z,%s",		ADDR,			10, 10, VT(6, 9) }, /* ca */
+	{ 0,				0,				 0, 10,  0 }, /* cb */
+	{ "call z,%s",		CALL,	VT(10, 17), VT(11, 17), VT(6, 16) }, /* cc */
+	{ "call %s",		CALL,			17, 17, 16 }, /* cd */
+	{ "adc a,%s",		BC|BT,			 7,  7,  6 }, /* ce */
+	{ "rst %s",			RST,			11, 11, 11 }, /* cf */
 
-	{ "ret nc",			WD,		 VT(5, 11), VT(5, 11) }, /* d0 */
-	{ "pop de",			WD|MR,			10, 10 }, /* d1 */
-	{ "jp nc,%s",		ADDR,			10, 10 }, /* d2 */
-	{ "out (%s),a",		PORT|OT,		11, 10 }, /* d3 */
-	{ "call nc,%s",		CALL,	VT(10, 17), VT(11, 17) }, /* d4 */
-	{ "push de",		WD|MW,			11, 11 }, /* d5 */
-	{ "sub %s",			BC|BT,			 7,  7 }, /* d6 */
-	{ "rst %s",			RST,			11, 11 }, /* d7 */
+	{ "ret nc",			WD,		 VT(5, 11), VT(5, 11), VT(5, 10) }, /* d0 */
+	{ "pop de",			WD|MR,			10, 10,  9 }, /* d1 */
+	{ "jp nc,%s",		ADDR,			10, 10, VT(6, 9) }, /* d2 */
+	{ "out (%s),a",		PORT|OT,		11, 10, 10 }, /* d3 */
+	{ "call nc,%s",		CALL,	VT(10, 17), VT(11, 17), VT(6, 16) }, /* d4 */
+	{ "push de",		WD|MW,			11, 11, 11 }, /* d5 */
+	{ "sub %s",			BC|BT,			 7,  7,  6 }, /* d6 */
+	{ "rst %s",			RST,			11, 11, 11 }, /* d7 */
 
-	{ "ret c",			WD,		 VT(5, 11), VT(5, 11) }, /* d8 */
-	{ "exx",			WD,				 4, 10 }, /* d9 */
-	{ "jp c,%s",		ADDR,			10, 10 }, /* da */
-	{ "in a,(%s)",		PORT|IN,		11, 10 }, /* db */
-	{ "call c,%s",		CALL,	VT(10, 17), VT(11, 17) }, /* dc */
-	{ 0,				1,				 0, 17 }, /* dd */
-	{ "sbc a,%s",		BC|BT,			 7,  7 }, /* de */
-	{ "rst %s",			RST,			11, 11 }, /* df */
+	{ "ret c",			WD,		 VT(5, 11), VT(5, 11), VT(5, 10) }, /* d8 */
+	{ "exx",			WD,				 4, 10,  3 }, /* d9 */
+	{ "jp c,%s",		ADDR,			10, 10, VT(6, 9) }, /* da */
+	{ "in a,(%s)",		PORT|IN,		11, 10,  9 }, /* db */
+	{ "call c,%s",		CALL,	VT(10, 17), VT(11, 17), VT(6, 16) }, /* dc */
+	{ 0,				1,				 0, 17,  0 }, /* dd */
+	{ "sbc a,%s",		BC|BT,			 7,  7,  6 }, /* de */
+	{ "rst %s",			RST,			11, 11, 11 }, /* df */
 
-	{ "ret po",			WD,		 VT(5, 11), VT(5, 11)}, /* e0 */
-	{ "pop hl",			WD|MR,			10, 10 }, /* e1 */
-	{ "jp po,%s",		ADDR,			10, 10 }, /* e2 */
-	{ "ex (sp),hl",		WD|MR|MW,		19, 18 }, /* e3 */
-	{ "call po,%s",		CALL,	VT(10, 17), VT(11, 17)}, /* e4 */
-	{ "push hl",		WD|MR,			11, 11 }, /* e5 */
-	{ "and %s",			BC|BT,			 7,  7 }, /* e6 */
-	{ "rst %s",			RST,			11, 11 }, /* e7 */
+	{ "ret po",			WD,		 VT(5, 11), VT(5, 11), VT(5, 10) }, /* e0 */
+	{ "pop hl",			WD|MR,			10, 10,  9 }, /* e1 */
+	{ "jp po,%s",		ADDR,			10, 10, VT(6, 9) }, /* e2 */
+	{ "ex (sp),hl",		WD|MR|MW,		19, 18, 16 }, /* e3 */
+	{ "call po,%s",		CALL,	VT(10, 17), VT(11, 17), VT(6, 16) }, /* e4 */
+	{ "push hl",		WD|MR,			11, 11, 11 }, /* e5 */
+	{ "and %s",			BC|BT,			 7,  7,  6 }, /* e6 */
+	{ "rst %s",			RST,			11, 11, 11 }, /* e7 */
 
-	{ "ret pe",			WD,		 VT(5, 11), VT(5, 11) }, /* e8 */
-	{ "jp (hl)",		0 | UNBR,		 4,  5 }, /* e9 */
-	{ "jp pe,%s",		ADDR,			10, 10 }, /* ea */
-	{ "ex de,hl",		WD,				 4,  4 }, /* eb */
-	{ "call pe,%s",		CALL,	VT(10, 17), VT(11, 17) }, /* ec */
-	{ 0,				2,				 0, 17 }, /* ed */
-	{ "xor %s",			BC|BT,			 7,  7 }, /* ee */
-	{ "rst %s",			RST,			11, 11 }, /* ef */
+	{ "ret pe",			WD,		 VT(5, 11), VT(5, 11), VT(5, 10) }, /* e8 */
+	{ "jp (hl)",		0 | UNBR,		 4,  5,  3 }, /* e9 */
+	{ "jp pe,%s",		ADDR,			10, 10, VT(6, 9) }, /* ea */
+	{ "ex de,hl",		WD,				 4,  4,  3 }, /* eb */
+	{ "call pe,%s",		CALL,	VT(10, 17), VT(11, 17), VT(6, 16) }, /* ec */
+	{ 0,				2,				 0, 17,  0 }, /* ed */
+	{ "xor %s",			BC|BT,			 7,  7,  6 }, /* ee */
+	{ "rst %s",			RST,			11, 11, 11 }, /* ef */
 
-	{ "ret p",			0,		 VT(5, 11), VT(5, 11) }, /* f0 */
-	{ "pop af",			WD|MR,			10, 10 }, /* f1 */
-	{ "jp p,%s",		ADDR,			10, 10 }, /* f2 */
-	{ "di",				0,				 4,  4 }, /* f3 */
-	{ "call p,%s",		CALL,	VT(10, 17), VT(11, 17) }, /* f4 */
-	{ "push af",		WD|MW,			11, 11 }, /* f5 */
-	{ "or %s",			BC|BT,			 7,  7 }, /* f6 */
-	{ "rst %s",			RST,			11, 11 }, /* f7 */
+	{ "ret p",			0,		 VT(5, 11), VT(5, 11), VT(5, 10) }, /* f0 */
+	{ "pop af",			WD|MR,			10, 10,  9 }, /* f1 */
+	{ "jp p,%s",		ADDR,			10, 10, VT(6, 9) }, /* f2 */
+	{ "di",				0,				 4,  4,  3 }, /* f3 */
+	{ "call p,%s",		CALL,	VT(10, 17), VT(11, 17), VT(6, 16) }, /* f4 */
+	{ "push af",		WD|MW,			11, 11, 11 }, /* f5 */
+	{ "or %s",			BC|BT,			 7,  7,  6 }, /* f6 */
+	{ "rst %s",			RST,			11, 11, 11 }, /* f7 */
 
-	{ "ret m",			WD,		 VT(5, 11), VT(5, 11) }, /* f8 */
-	{ "ld sp,hl",		WD,				 6,  5 }, /* f9 */
-	{ "jp m,%s",		ADDR,			10, 10 }, /* fa */
-	{ "ei",				0,				 4,  4 }, /* fb */
-	{ "call m,%s",		CALL,	VT(10, 17), VT(11, 17) }, /* fc */
-	{ 0,				1,				 0, 17 }, /* fd */
-	{ "cp %s",			BC|BT,			 7,  7 }, /* fe */
-	{ "rst %s",			RST,			11, 11 }, /* ff */
+	{ "ret m",			WD,		 VT(5, 11), VT(5, 11), VT(5, 10) }, /* f8 */
+	{ "ld sp,hl",		WD,				 6,  5,  4 }, /* f9 */
+	{ "jp m,%s",		ADDR,			10, 10, VT(6, 9) }, /* fa */
+	{ "ei",				0,				 4,  4,  3 }, /* fb */
+	{ "call m,%s",		CALL,	VT(10, 17), VT(11, 17), VT(6, 16) }, /* fc */
+	{ 0,				1,				 0, 17,  0 }, /* fd */
+	{ "cp %s",			BC|BT,			 7,  7,  6 }, /* fe */
+	{ "rst %s",			RST,			11, 11, 11 }, /* ff */
 };
 
 static Opcode z_minor[3][256] = {
   {							/* cb */
-	{ "rlc b",			BT,				 8 }, /* cb00 */
-	{ "rlc c",			BT,				 8 }, /* cb01 */
-	{ "rlc d",			BT,				 8 }, /* cb02 */
-	{ "rlc e",			BT,				 8 }, /* cb03 */
-	{ "rlc h",			BT,				 8 }, /* cb04 */
-	{ "rlc l",			BT,				 8 }, /* cb05 */
-	{ "rlc (hl)",		BT|MR|MW,		15 }, /* cb06 */
-	{ "rlc a",			BT,				 8 }, /* cb07 */
+	{ "rlc b",			BT,				 8, 0,  7 }, /* cb00 */
+	{ "rlc c",			BT,				 8, 0,  7 }, /* cb01 */
+	{ "rlc d",			BT,				 8, 0,  7 }, /* cb02 */
+	{ "rlc e",			BT,				 8, 0,  7 }, /* cb03 */
+	{ "rlc h",			BT,				 8, 0,  7 }, /* cb04 */
+	{ "rlc l",			BT,				 8, 0,  7 }, /* cb05 */
+	{ "rlc (hl)",		BT|MR|MW,		15, 0, 13 }, /* cb06 */
+	{ "rlc a",			BT,				 8, 0,  7 }, /* cb07 */
 
-	{ "rrc b",			BT,				 8 }, /* cb08 */
-	{ "rrc c",			BT,				 8 }, /* cb09 */
-	{ "rrc d",			BT,				 8 }, /* cb0a */
-	{ "rrc e",			BT,				 8 }, /* cb0b */
-	{ "rrc h",			BT,				 8 }, /* cb0c */
-	{ "rrc l",			BT,				 8 }, /* cb0d */
-	{ "rrc (hl)",		BT|MR|MW,		15 }, /* cb0e */
-	{ "rrc a",			BT,				 8 }, /* cb0f */
+	{ "rrc b",			BT,				 8, 0,  7 }, /* cb08 */
+	{ "rrc c",			BT,				 8, 0,  7 }, /* cb09 */
+	{ "rrc d",			BT,				 8, 0,  7 }, /* cb0a */
+	{ "rrc e",			BT,				 8, 0,  7 }, /* cb0b */
+	{ "rrc h",			BT,				 8, 0,  7 }, /* cb0c */
+	{ "rrc l",			BT,				 8, 0,  7 }, /* cb0d */
+	{ "rrc (hl)",		BT|MR|MW,		15, 0, 13 }, /* cb0e */
+	{ "rrc a",			BT,				 8, 0,  7 }, /* cb0f */
 
-	{ "rl b",			BT,				 8 }, /* cb10 */
-	{ "rl c",			BT,				 8 }, /* cb11 */
-	{ "rl d",			BT,				 8 }, /* cb12 */
-	{ "rl e",			BT,				 8 }, /* cb13 */
-	{ "rl h",			BT,				 8 }, /* cb14 */
-	{ "rl l",			BT,				 8 }, /* cb15 */
-	{ "rl (hl)",		BT|MR|MW,		15 }, /* cb16 */
-	{ "rl a",			BT,				 8 }, /* cb17 */
+	{ "rl b",			BT,				 8, 0,  7 }, /* cb10 */
+	{ "rl c",			BT,				 8, 0,  7 }, /* cb11 */
+	{ "rl d",			BT,				 8, 0,  7 }, /* cb12 */
+	{ "rl e",			BT,				 8, 0,  7 }, /* cb13 */
+	{ "rl h",			BT,				 8, 0,  7 }, /* cb14 */
+	{ "rl l",			BT,				 8, 0,  7 }, /* cb15 */
+	{ "rl (hl)",		BT|MR|MW,		15, 0, 13 }, /* cb16 */
+	{ "rl a",			BT,				 8, 0,  7 }, /* cb17 */
 
-	{ "rr b",			BT,				 8 }, /* cb18 */
-	{ "rr c",			BT,				 8 }, /* cb19 */
-	{ "rr d",			BT,				 8 }, /* cb1a */
-	{ "rr e",			BT,				 8 }, /* cb1b */
-	{ "rr h",			BT,				 8 }, /* cb1c */
-	{ "rr l",			BT,				 8 }, /* cb1d */
-	{ "rr (hl)",		BT|MR|MW,		15 }, /* cb1e */
-	{ "rr a",			BT,				 8 }, /* cb1f */
+	{ "rr b",			BT,				 8, 0,  7 }, /* cb18 */
+	{ "rr c",			BT,				 8, 0,  7 }, /* cb19 */
+	{ "rr d",			BT,				 8, 0,  7 }, /* cb1a */
+	{ "rr e",			BT,				 8, 0,  7 }, /* cb1b */
+	{ "rr h",			BT,				 8, 0,  7 }, /* cb1c */
+	{ "rr l",			BT,				 8, 0,  7 }, /* cb1d */
+	{ "rr (hl)",		BT|MR|MW,		15, 0, 13 }, /* cb1e */
+	{ "rr a",			BT,				 8, 0,  7 }, /* cb1f */
 
-	{ "sla b",			BT,				 8 }, /* cb20 */
-	{ "sla c",			BT,				 8 }, /* cb21 */
-	{ "sla d",			BT,				 8 }, /* cb22 */
-	{ "sla e",			BT,				 8 }, /* cb23 */
-	{ "sla h",			BT,				 8 }, /* cb24 */
-	{ "sla l",			BT,				 8 }, /* cb25 */
-	{ "sla (hl)",		BT|MR|MW,		15 }, /* cb26 */
-	{ "sla a",			BT,				 8 }, /* cb27 */
+	{ "sla b",			BT,				 8, 0,  7 }, /* cb20 */
+	{ "sla c",			BT,				 8, 0,  7 }, /* cb21 */
+	{ "sla d",			BT,				 8, 0,  7 }, /* cb22 */
+	{ "sla e",			BT,				 8, 0,  7 }, /* cb23 */
+	{ "sla h",			BT,				 8, 0,  7 }, /* cb24 */
+	{ "sla l",			BT,				 8, 0,  7 }, /* cb25 */
+	{ "sla (hl)",		BT|MR|MW,		15, 0, 13 }, /* cb26 */
+	{ "sla a",			BT,				 8, 0,  7 }, /* cb27 */
 
-	{ "sra b",			BT,				 8 }, /* cb28 */
-	{ "sra c",			BT,				 8 }, /* cb29 */
-	{ "sra d",			BT,				 8 }, /* cb2a */
-	{ "sra e",			BT,				 8 }, /* cb2b */
-	{ "sra h",			BT,				 8 }, /* cb2c */
-	{ "sra l",			BT,				 8 }, /* cb2d */
-	{ "sra (hl)",		BT|MR|MW,		15 }, /* cb2e */
-	{ "sra a",			BT,				 8 }, /* cb2f */
+	{ "sra b",			BT,				 8, 0,  7 }, /* cb28 */
+	{ "sra c",			BT,				 8, 0,  7 }, /* cb29 */
+	{ "sra d",			BT,				 8, 0,  7 }, /* cb2a */
+	{ "sra e",			BT,				 8, 0,  7 }, /* cb2b */
+	{ "sra h",			BT,				 8, 0,  7 }, /* cb2c */
+	{ "sra l",			BT,				 8, 0,  7 }, /* cb2d */
+	{ "sra (hl)",		BT|MR|MW,		15, 0, 13 }, /* cb2e */
+	{ "sra a",			BT,				 8, 0,  7 }, /* cb2f */
 
-	{ "sl1 b",			UNDOC|BT,		 8 }, /* cb30 */
-	{ "sl1 c",			UNDOC|BT,		 8 }, /* cb31 */
-	{ "sl1 d",			UNDOC|BT,		 8 }, /* cb32 */
-	{ "sl1 e",			UNDOC|BT,		 8 }, /* cb33 */
-	{ "sl1 h",			UNDOC|BT,		 8 }, /* cb34 */
-	{ "sl1 l",			UNDOC|BT,		 8 }, /* cb35 */
-	{ "sl1 (hl)",		UNDOC|BT|MR|MW,	15 }, /* cb36 */
-	{ "sl1 a",			UNDOC|BT,		 8 }, /* cb37 */
+	{ "sl1 b",			UNDOC|BT,		 8, 0,  0 }, /* cb30 */
+	{ "sl1 c",			UNDOC|BT,		 8, 0,  0 }, /* cb31 */
+	{ "sl1 d",			UNDOC|BT,		 8, 0,  0 }, /* cb32 */
+	{ "sl1 e",			UNDOC|BT,		 8, 0,  0 }, /* cb33 */
+	{ "sl1 h",			UNDOC|BT,		 8, 0,  0 }, /* cb34 */
+	{ "sl1 l",			UNDOC|BT,		 8, 0,  0 }, /* cb35 */
+	{ "sl1 (hl)",		UNDOC|BT|MR|MW,	15, 0,  0 }, /* cb36 */
+	{ "sl1 a",			UNDOC|BT,		 8, 0,  0 }, /* cb37 */
 
-	{ "srl b",			BT,				 8 }, /* cb38 */
-	{ "srl c",			BT,				 8 }, /* cb39 */
-	{ "srl d",			BT,				 8 }, /* cb3a */
-	{ "srl e",			BT,				 8 }, /* cb3b */
-	{ "srl h",			BT,				 8 }, /* cb3c */
-	{ "srl l",			BT,				 8 }, /* cb3d */
-	{ "srl (hl)",		BT|MR|MW,		15 }, /* cb3e */
-	{ "srl a",			BT,				 8 }, /* cb3f */
+	{ "srl b",			BT,				 8, 0,  7 }, /* cb38 */
+	{ "srl c",			BT,				 8, 0,  7 }, /* cb39 */
+	{ "srl d",			BT,				 8, 0,  7 }, /* cb3a */
+	{ "srl e",			BT,				 8, 0,  7 }, /* cb3b */
+	{ "srl h",			BT,				 8, 0,  7 }, /* cb3c */
+	{ "srl l",			BT,				 8, 0,  7 }, /* cb3d */
+	{ "srl (hl)",		BT|MR|MW,		15, 0, 13 }, /* cb3e */
+	{ "srl a",			BT,				 8, 0,  7 }, /* cb3f */
 
-	{ "bit 0,b",		BT,				 8 }, /* cb40 */
-	{ "bit 0,c",		BT,				 8 }, /* cb41 */
-	{ "bit 0,d",		BT,				 8 }, /* cb42 */
-	{ "bit 0,e",		BT,				 8 }, /* cb43 */
-	{ "bit 0,h",		BT,				 8 }, /* cb44 */
-	{ "bit 0,l",		BT,				 8 }, /* cb45 */
-	{ "bit 0,(hl)",		BT|MR|MW,		12 }, /* cb46 */
-	{ "bit 0,a",		BT,				 8 }, /* cb47 */
+	{ "bit 0,b",		BT,				 8, 0,  6 }, /* cb40 */
+	{ "bit 0,c",		BT,				 8, 0,  6 }, /* cb41 */
+	{ "bit 0,d",		BT,				 8, 0,  6 }, /* cb42 */
+	{ "bit 0,e",		BT,				 8, 0,  6 }, /* cb43 */
+	{ "bit 0,h",		BT,				 8, 0,  6 }, /* cb44 */
+	{ "bit 0,l",		BT,				 8, 0,  6 }, /* cb45 */
+	{ "bit 0,(hl)",		BT|MR|MW,		12, 0,  9 }, /* cb46 */
+	{ "bit 0,a",		BT,				 8, 0,  6 }, /* cb47 */
 
-	{ "bit 1,b",		BT,				 8 }, /* cb48 */
-	{ "bit 1,c",		BT,				 8 }, /* cb49 */
-	{ "bit 1,d",		BT,				 8 }, /* cb4a */
-	{ "bit 1,e",		BT,				 8 }, /* cb4b */
-	{ "bit 1,h",		BT,				 8 }, /* cb4c */
-	{ "bit 1,l",		BT,				 8 }, /* cb4d */
-	{ "bit 1,(hl)",		BT|MR|MW,		12 }, /* cb4e */
-	{ "bit 1,a",		BT,				 8 }, /* cb4f */
+	{ "bit 1,b",		BT,				 8, 0,  6 }, /* cb48 */
+	{ "bit 1,c",		BT,				 8, 0,  6 }, /* cb49 */
+	{ "bit 1,d",		BT,				 8, 0,  6 }, /* cb4a */
+	{ "bit 1,e",		BT,				 8, 0,  6 }, /* cb4b */
+	{ "bit 1,h",		BT,				 8, 0,  6 }, /* cb4c */
+	{ "bit 1,l",		BT,				 8, 0,  6 }, /* cb4d */
+	{ "bit 1,(hl)",		BT|MR|MW,		12, 0,  9 }, /* cb4e */
+	{ "bit 1,a",		BT,				 8, 0,  6 }, /* cb4f */
 
-	{ "bit 2,b",		BT,				 8 }, /* cb50 */
-	{ "bit 2,c",		BT,				 8 }, /* cb51 */
-	{ "bit 2,d",		BT,				 8 }, /* cb52 */
-	{ "bit 2,e",		BT,				 8 }, /* cb53 */
-	{ "bit 2,h",		BT,				 8 }, /* cb54 */
-	{ "bit 2,l",		BT,				 8 }, /* cb55 */
-	{ "bit 2,(hl)",		BT|MR|MW,		12 }, /* cb56 */
-	{ "bit 2,a",		BT,				 8 }, /* cb57 */
+	{ "bit 2,b",		BT,				 8, 0,  6 }, /* cb50 */
+	{ "bit 2,c",		BT,				 8, 0,  6 }, /* cb51 */
+	{ "bit 2,d",		BT,				 8, 0,  6 }, /* cb52 */
+	{ "bit 2,e",		BT,				 8, 0,  6 }, /* cb53 */
+	{ "bit 2,h",		BT,				 8, 0,  6 }, /* cb54 */
+	{ "bit 2,l",		BT,				 8, 0,  6 }, /* cb55 */
+	{ "bit 2,(hl)",		BT|MR|MW,		12, 0,  9 }, /* cb56 */
+	{ "bit 2,a",		BT,				 8, 0,  6 }, /* cb57 */
 
-	{ "bit 3,b",		BT,				 8 }, /* cb58 */
-	{ "bit 3,c",		BT,				 8 }, /* cb59 */
-	{ "bit 3,d",		BT,				 8 }, /* cb5a */
-	{ "bit 3,e",		BT,				 8 }, /* cb5b */
-	{ "bit 3,h",		BT,				 8 }, /* cb5c */
-	{ "bit 3,l",		BT,				 8 }, /* cb5d */
-	{ "bit 3,(hl)",		BT|MR|MW,		12 }, /* cb5e */
-	{ "bit 3,a",		BT,				 8 }, /* cb5f */
+	{ "bit 3,b",		BT,				 8, 0,  6 }, /* cb58 */
+	{ "bit 3,c",		BT,				 8, 0,  6 }, /* cb59 */
+	{ "bit 3,d",		BT,				 8, 0,  6 }, /* cb5a */
+	{ "bit 3,e",		BT,				 8, 0,  6 }, /* cb5b */
+	{ "bit 3,h",		BT,				 8, 0,  6 }, /* cb5c */
+	{ "bit 3,l",		BT,				 8, 0,  6 }, /* cb5d */
+	{ "bit 3,(hl)",		BT|MR|MW,		12, 0,  9 }, /* cb5e */
+	{ "bit 3,a",		BT,				 8, 0,  6 }, /* cb5f */
 
-	{ "bit 4,b",		BT,				 8 }, /* cb60 */
-	{ "bit 4,c",		BT,				 8 }, /* cb61 */
-	{ "bit 4,d",		BT,				 8 }, /* cb62 */
-	{ "bit 4,e",		BT,				 8 }, /* cb63 */
-	{ "bit 4,h",		BT,				 8 }, /* cb64 */
-	{ "bit 4,l",		BT,				 8 }, /* cb65 */
-	{ "bit 4,(hl)",		BT|MR|MW,		12 }, /* cb66 */
-	{ "bit 4,a",		BT,				 8 }, /* cb67 */
+	{ "bit 4,b",		BT,				 8, 0,  6 }, /* cb60 */
+	{ "bit 4,c",		BT,				 8, 0,  6 }, /* cb61 */
+	{ "bit 4,d",		BT,				 8, 0,  6 }, /* cb62 */
+	{ "bit 4,e",		BT,				 8, 0,  6 }, /* cb63 */
+	{ "bit 4,h",		BT,				 8, 0,  6 }, /* cb64 */
+	{ "bit 4,l",		BT,				 8, 0,  6 }, /* cb65 */
+	{ "bit 4,(hl)",		BT|MR|MW,		12, 0,  9 }, /* cb66 */
+	{ "bit 4,a",		BT,				 8, 0,  6 }, /* cb67 */
 
-	{ "bit 5,b",		BT,				 8 }, /* cb68 */
-	{ "bit 5,c",		BT,				 8 }, /* cb69 */
-	{ "bit 5,d",		BT,				 8 }, /* cb6a */
-	{ "bit 5,e",		BT,				 8 }, /* cb6b */
-	{ "bit 5,h",		BT,				 8 }, /* cb6c */
-	{ "bit 5,l",		BT,				 8 }, /* cb6d */
-	{ "bit 5,(hl)",		BT|MR|MW,		12 }, /* cb6e */
-	{ "bit 5,a",		BT,				 8 }, /* cb6f */
+	{ "bit 5,b",		BT,				 8, 0,  6 }, /* cb68 */
+	{ "bit 5,c",		BT,				 8, 0,  6 }, /* cb69 */
+	{ "bit 5,d",		BT,				 8, 0,  6 }, /* cb6a */
+	{ "bit 5,e",		BT,				 8, 0,  6 }, /* cb6b */
+	{ "bit 5,h",		BT,				 8, 0,  6 }, /* cb6c */
+	{ "bit 5,l",		BT,				 8, 0,  6 }, /* cb6d */
+	{ "bit 5,(hl)",		BT|MR|MW,		12, 0,  9 }, /* cb6e */
+	{ "bit 5,a",		BT,				 8, 0,  6 }, /* cb6f */
 
-	{ "bit 6,b",		BT,				 8 }, /* cb70 */
-	{ "bit 6,c",		BT,				 8 }, /* cb71 */
-	{ "bit 6,d",		BT,				 8 }, /* cb72 */
-	{ "bit 6,e",		BT,				 8 }, /* cb73 */
-	{ "bit 6,h",		BT,				 8 }, /* cb74 */
-	{ "bit 6,l",		BT,				 8 }, /* cb75 */
-	{ "bit 6,(hl)",		BT|MR|MW,		12 }, /* cb76 */
-	{ "bit 6,a",		BT,				 8 }, /* cb77 */
+	{ "bit 6,b",		BT,				 8, 0,  6 }, /* cb70 */
+	{ "bit 6,c",		BT,				 8, 0,  6 }, /* cb71 */
+	{ "bit 6,d",		BT,				 8, 0,  6 }, /* cb72 */
+	{ "bit 6,e",		BT,				 8, 0,  6 }, /* cb73 */
+	{ "bit 6,h",		BT,				 8, 0,  6 }, /* cb74 */
+	{ "bit 6,l",		BT,				 8, 0,  6 }, /* cb75 */
+	{ "bit 6,(hl)",		BT|MR|MW,		12, 0,  9 }, /* cb76 */
+	{ "bit 6,a",		BT,				 8, 0,  6 }, /* cb77 */
 
-	{ "bit 7,b",		BT,				 8 }, /* cb78 */
-	{ "bit 7,c",		BT,				 8 }, /* cb79 */
-	{ "bit 7,d",		BT,				 8 }, /* cb7a */
-	{ "bit 7,e",		BT,				 8 }, /* cb7b */
-	{ "bit 7,h",		BT,				 8 }, /* cb7c */
-	{ "bit 7,l",		BT,				 8 }, /* cb7d */
-	{ "bit 7,(hl)",		BT|MR|MW,		12 }, /* cb7e */
-	{ "bit 7,a",		BT,				 8 }, /* cb7f */
+	{ "bit 7,b",		BT,				 8, 0,  6 }, /* cb78 */
+	{ "bit 7,c",		BT,				 8, 0,  6 }, /* cb79 */
+	{ "bit 7,d",		BT,				 8, 0,  6 }, /* cb7a */
+	{ "bit 7,e",		BT,				 8, 0,  6 }, /* cb7b */
+	{ "bit 7,h",		BT,				 8, 0,  6 }, /* cb7c */
+	{ "bit 7,l",		BT,				 8, 0,  6 }, /* cb7d */
+	{ "bit 7,(hl)",		BT|MR|MW,		12, 0,  9 }, /* cb7e */
+	{ "bit 7,a",		BT,				 8, 0,  6 }, /* cb7f */
 
-	{ "res 0,b",		BT,				 8 }, /* cb80 */
-	{ "res 0,c",		BT,				 8 }, /* cb81 */
-	{ "res 0,d",		BT,				 8 }, /* cb82 */
-	{ "res 0,e",		BT,				 8 }, /* cb83 */
-	{ "res 0,h",		BT,				 8 }, /* cb84 */
-	{ "res 0,l",		BT,				 8 }, /* cb85 */
-	{ "res 0,(hl)",		BT|MR|MW,		15 }, /* cb86 */
-	{ "res 0,a",		BT,				 8 }, /* cb87 */
+	{ "res 0,b",		BT,				 8, 0,  7 }, /* cb80 */
+	{ "res 0,c",		BT,				 8, 0,  7 }, /* cb81 */
+	{ "res 0,d",		BT,				 8, 0,  7 }, /* cb82 */
+	{ "res 0,e",		BT,				 8, 0,  7 }, /* cb83 */
+	{ "res 0,h",		BT,				 8, 0,  7 }, /* cb84 */
+	{ "res 0,l",		BT,				 8, 0,  7 }, /* cb85 */
+	{ "res 0,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cb86 */
+	{ "res 0,a",		BT,				 8, 0,  7 }, /* cb87 */
 
-	{ "res 1,b",		BT,				 8 }, /* cb88 */
-	{ "res 1,c",		BT,				 8 }, /* cb89 */
-	{ "res 1,d",		BT,				 8 }, /* cb8a */
-	{ "res 1,e",		BT,				 8 }, /* cb8b */
-	{ "res 1,h",		BT,				 8 }, /* cb8c */
-	{ "res 1,l",		BT,				 8 }, /* cb8d */
-	{ "res 1,(hl)",		BT|MR|MW,		15 }, /* cb8e */
-	{ "res 1,a",		BT,				 8 }, /* cb8f */
+	{ "res 1,b",		BT,				 8, 0,  7 }, /* cb88 */
+	{ "res 1,c",		BT,				 8, 0,  7 }, /* cb89 */
+	{ "res 1,d",		BT,				 8, 0,  7 }, /* cb8a */
+	{ "res 1,e",		BT,				 8, 0,  7 }, /* cb8b */
+	{ "res 1,h",		BT,				 8, 0,  7 }, /* cb8c */
+	{ "res 1,l",		BT,				 8, 0,  7 }, /* cb8d */
+	{ "res 1,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cb8e */
+	{ "res 1,a",		BT,				 8, 0,  7 }, /* cb8f */
 
-	{ "res 2,b",		BT,				 8 }, /* cb90 */
-	{ "res 2,c",		BT,				 8 }, /* cb91 */
-	{ "res 2,d",		BT,				 8 }, /* cb92 */
-	{ "res 2,e",		BT,				 8 }, /* cb93 */
-	{ "res 2,h",		BT,				 8 }, /* cb94 */
-	{ "res 2,l",		BT,				 8 }, /* cb95 */
-	{ "res 2,(hl)",		BT|MR|MW,		15 }, /* cb96 */
-	{ "res 2,a",		BT,				 8 }, /* cb97 */
+	{ "res 2,b",		BT,				 8, 0,  7 }, /* cb90 */
+	{ "res 2,c",		BT,				 8, 0,  7 }, /* cb91 */
+	{ "res 2,d",		BT,				 8, 0,  7 }, /* cb92 */
+	{ "res 2,e",		BT,				 8, 0,  7 }, /* cb93 */
+	{ "res 2,h",		BT,				 8, 0,  7 }, /* cb94 */
+	{ "res 2,l",		BT,				 8, 0,  7 }, /* cb95 */
+	{ "res 2,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cb96 */
+	{ "res 2,a",		BT,				 8, 0,  7 }, /* cb97 */
 
-	{ "res 3,b",		BT,				 8 }, /* cb98 */
-	{ "res 3,c",		BT,				 8 }, /* cb99 */
-	{ "res 3,d",		BT,				 8 }, /* cb9a */
-	{ "res 3,e",		BT,				 8 }, /* cb9b */
-	{ "res 3,h",		BT,				 8 }, /* cb9c */
-	{ "res 3,l",		BT,				 8 }, /* cb9d */
-	{ "res 3,(hl)",		BT|MR|MW,		15 }, /* cb9e */
-	{ "res 3,a",		BT,				 8 }, /* cb9f */
+	{ "res 3,b",		BT,				 8, 0,  7 }, /* cb98 */
+	{ "res 3,c",		BT,				 8, 0,  7 }, /* cb99 */
+	{ "res 3,d",		BT,				 8, 0,  7 }, /* cb9a */
+	{ "res 3,e",		BT,				 8, 0,  7 }, /* cb9b */
+	{ "res 3,h",		BT,				 8, 0,  7 }, /* cb9c */
+	{ "res 3,l",		BT,				 8, 0,  7 }, /* cb9d */
+	{ "res 3,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cb9e */
+	{ "res 3,a",		BT,				 8, 0,  7 }, /* cb9f */
 
-	{ "res 4,b",		BT,				 8 }, /* cba0 */
-	{ "res 4,c",		BT,				 8 }, /* cba1 */
-	{ "res 4,d",		BT,				 8 }, /* cba2 */
-	{ "res 4,e",		BT,				 8 }, /* cba3 */
-	{ "res 4,h",		BT,				 8 }, /* cba4 */
-	{ "res 4,l",		BT,				 8 }, /* cba5 */
-	{ "res 4,(hl)",		BT|MR|MW,		15 }, /* cba6 */
-	{ "res 4,a",		BT,				 8 }, /* cba7 */
+	{ "res 4,b",		BT,				 8, 0,  7 }, /* cba0 */
+	{ "res 4,c",		BT,				 8, 0,  7 }, /* cba1 */
+	{ "res 4,d",		BT,				 8, 0,  7 }, /* cba2 */
+	{ "res 4,e",		BT,				 8, 0,  7 }, /* cba3 */
+	{ "res 4,h",		BT,				 8, 0,  7 }, /* cba4 */
+	{ "res 4,l",		BT,				 8, 0,  7 }, /* cba5 */
+	{ "res 4,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cba6 */
+	{ "res 4,a",		BT,				 8, 0,  7 }, /* cba7 */
 
-	{ "res 5,b",		BT,				 8 }, /* cba8 */
-	{ "res 5,c",		BT,				 8 }, /* cba9 */
-	{ "res 5,d",		BT,				 8 }, /* cbaa */
-	{ "res 5,e",		BT,				 8 }, /* cbab */
-	{ "res 5,h",		BT,				 8 }, /* cbac */
-	{ "res 5,l",		BT,				 8 }, /* cbad */
-	{ "res 5,(hl)",		BT|MR|MW,		15 }, /* cbae */
-	{ "res 5,a",		BT,				 8 }, /* cbaf */
+	{ "res 5,b",		BT,				 8, 0,  7 }, /* cba8 */
+	{ "res 5,c",		BT,				 8, 0,  7 }, /* cba9 */
+	{ "res 5,d",		BT,				 8, 0,  7 }, /* cbaa */
+	{ "res 5,e",		BT,				 8, 0,  7 }, /* cbab */
+	{ "res 5,h",		BT,				 8, 0,  7 }, /* cbac */
+	{ "res 5,l",		BT,				 8, 0,  7 }, /* cbad */
+	{ "res 5,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbae */
+	{ "res 5,a",		BT,				 8, 0,  7 }, /* cbaf */
 
-	{ "res 6,b",		BT,				 8 }, /* cbb0 */
-	{ "res 6,c",		BT,				 8 }, /* cbb1 */
-	{ "res 6,d",		BT,				 8 }, /* cbb2 */
-	{ "res 6,e",		BT,				 8 }, /* cbb3 */
-	{ "res 6,h",		BT,				 8 }, /* cbb4 */
-	{ "res 6,l",		BT,				 8 }, /* cbb5 */
-	{ "res 6,(hl)",		BT|MR|MW,		15 }, /* cbb6 */
-	{ "res 6,a",		BT,				 8 }, /* cbb7 */
+	{ "res 6,b",		BT,				 8, 0,  7 }, /* cbb0 */
+	{ "res 6,c",		BT,				 8, 0,  7 }, /* cbb1 */
+	{ "res 6,d",		BT,				 8, 0,  7 }, /* cbb2 */
+	{ "res 6,e",		BT,				 8, 0,  7 }, /* cbb3 */
+	{ "res 6,h",		BT,				 8, 0,  7 }, /* cbb4 */
+	{ "res 6,l",		BT,				 8, 0,  7 }, /* cbb5 */
+	{ "res 6,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbb6 */
+	{ "res 6,a",		BT,				 8, 0,  7 }, /* cbb7 */
 
-	{ "res 7,b",		BT,				 8 }, /* cbb8 */
-	{ "res 7,c",		BT,				 8 }, /* cbb9 */
-	{ "res 7,d",		BT,				 8 }, /* cbba */
-	{ "res 7,e",		BT,				 8 }, /* cbbb */
-	{ "res 7,h",		BT,				 8 }, /* cbbc */
-	{ "res 7,l",		BT,				 8 }, /* cbbd */
-	{ "res 7,(hl)",		BT|MR|MW,		15 }, /* cbbe */
-	{ "res 7,a",		BT,				 8 }, /* cbbf */
+	{ "res 7,b",		BT,				 8, 0,  7 }, /* cbb8 */
+	{ "res 7,c",		BT,				 8, 0,  7 }, /* cbb9 */
+	{ "res 7,d",		BT,				 8, 0,  7 }, /* cbba */
+	{ "res 7,e",		BT,				 8, 0,  7 }, /* cbbb */
+	{ "res 7,h",		BT,				 8, 0,  7 }, /* cbbc */
+	{ "res 7,l",		BT,				 8, 0,  7 }, /* cbbd */
+	{ "res 7,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbbe */
+	{ "res 7,a",		BT,				 8, 0,  7 }, /* cbbf */
 
-	{ "set 0,b",		BT,				 8 }, /* cbc0 */
-	{ "set 0,c",		BT,				 8 }, /* cbc1 */
-	{ "set 0,d",		BT,				 8 }, /* cbc2 */
-	{ "set 0,e",		BT,				 8 }, /* cbc3 */
-	{ "set 0,h",		BT,				 8 }, /* cbc4 */
-	{ "set 0,l",		BT,				 8 }, /* cbc5 */
-	{ "set 0,(hl)",		BT|MR|MW,		15 }, /* cbc6 */
-	{ "set 0,a",		BT,				 8 }, /* cbc7 */
+	{ "set 0,b",		BT,				 8, 0,  7 }, /* cbc0 */
+	{ "set 0,c",		BT,				 8, 0,  7 }, /* cbc1 */
+	{ "set 0,d",		BT,				 8, 0,  7 }, /* cbc2 */
+	{ "set 0,e",		BT,				 8, 0,  7 }, /* cbc3 */
+	{ "set 0,h",		BT,				 8, 0,  7 }, /* cbc4 */
+	{ "set 0,l",		BT,				 8, 0,  7 }, /* cbc5 */
+	{ "set 0,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbc6 */
+	{ "set 0,a",		BT,				 8, 0,  7 }, /* cbc7 */
 
-	{ "set 1,b",		BT,				 8 }, /* cbc8 */
-	{ "set 1,c",		BT,				 8 }, /* cbc9 */
-	{ "set 1,d",		BT,				 8 }, /* cbca */
-	{ "set 1,e",		BT,				 8 }, /* cbcb */
-	{ "set 1,h",		BT,				 8 }, /* cbcc */
-	{ "set 1,l",		BT,				 8 }, /* cbcd */
-	{ "set 1,(hl)",		BT|MR|MW,		15 }, /* cbce */
-	{ "set 1,a",		BT,				 8 }, /* cbcf */
+	{ "set 1,b",		BT,				 8, 0,  7 }, /* cbc8 */
+	{ "set 1,c",		BT,				 8, 0,  7 }, /* cbc9 */
+	{ "set 1,d",		BT,				 8, 0,  7 }, /* cbca */
+	{ "set 1,e",		BT,				 8, 0,  7 }, /* cbcb */
+	{ "set 1,h",		BT,				 8, 0,  7 }, /* cbcc */
+	{ "set 1,l",		BT,				 8, 0,  7 }, /* cbcd */
+	{ "set 1,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbce */
+	{ "set 1,a",		BT,				 8, 0,  7 }, /* cbcf */
 
-	{ "set 2,b",		BT,				 8 }, /* cbd0 */
-	{ "set 2,c",		BT,				 8 }, /* cbd1 */
-	{ "set 2,d",		BT,				 8 }, /* cbd2 */
-	{ "set 2,e",		BT,				 8 }, /* cbd3 */
-	{ "set 2,h",		BT,				 8 }, /* cbd4 */
-	{ "set 2,l",		BT,				 8 }, /* cbd5 */
-	{ "set 2,(hl)",		BT|MR|MW,		15 }, /* cbd6 */
-	{ "set 2,a",		BT,				 8 }, /* cbd7 */
+	{ "set 2,b",		BT,				 8, 0,  7 }, /* cbd0 */
+	{ "set 2,c",		BT,				 8, 0,  7 }, /* cbd1 */
+	{ "set 2,d",		BT,				 8, 0,  7 }, /* cbd2 */
+	{ "set 2,e",		BT,				 8, 0,  7 }, /* cbd3 */
+	{ "set 2,h",		BT,				 8, 0,  7 }, /* cbd4 */
+	{ "set 2,l",		BT,				 8, 0,  7 }, /* cbd5 */
+	{ "set 2,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbd6 */
+	{ "set 2,a",		BT,				 8, 0,  7 }, /* cbd7 */
 
-	{ "set 3,b",		BT,				 8 }, /* cbd8 */
-	{ "set 3,c",		BT,				 8 }, /* cbd9 */
-	{ "set 3,d",		BT,				 8 }, /* cbda */
-	{ "set 3,e",		BT,				 8 }, /* cbdb */
-	{ "set 3,h",		BT,				 8 }, /* cbdc */
-	{ "set 3,l",		BT,				 8 }, /* cbdd */
-	{ "set 3,(hl)",		BT|MR|MW,		15 }, /* cbde */
-	{ "set 3,a",		BT,				 8 }, /* cbdf */
+	{ "set 3,b",		BT,				 8, 0,  7 }, /* cbd8 */
+	{ "set 3,c",		BT,				 8, 0,  7 }, /* cbd9 */
+	{ "set 3,d",		BT,				 8, 0,  7 }, /* cbda */
+	{ "set 3,e",		BT,				 8, 0,  7 }, /* cbdb */
+	{ "set 3,h",		BT,				 8, 0,  7 }, /* cbdc */
+	{ "set 3,l",		BT,				 8, 0,  7 }, /* cbdd */
+	{ "set 3,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbde */
+	{ "set 3,a",		BT,				 8, 0,  7 }, /* cbdf */
 
-	{ "set 4,b",		BT,				 8 }, /* cbe0 */
-	{ "set 4,c",		BT,				 8 }, /* cbe1 */
-	{ "set 4,d",		BT,				 8 }, /* cbe2 */
-	{ "set 4,e",		BT,				 8 }, /* cbe3 */
-	{ "set 4,h",		BT,				 8 }, /* cbe4 */
-	{ "set 4,l",		BT,				 8 }, /* cbe5 */
-	{ "set 4,(hl)",		BT|MR|MW,		15 }, /* cbe6 */
-	{ "set 4,a",		BT,				 8 }, /* cbe7 */
+	{ "set 4,b",		BT,				 8, 0,  7 }, /* cbe0 */
+	{ "set 4,c",		BT,				 8, 0,  7 }, /* cbe1 */
+	{ "set 4,d",		BT,				 8, 0,  7 }, /* cbe2 */
+	{ "set 4,e",		BT,				 8, 0,  7 }, /* cbe3 */
+	{ "set 4,h",		BT,				 8, 0,  7 }, /* cbe4 */
+	{ "set 4,l",		BT,				 8, 0,  7 }, /* cbe5 */
+	{ "set 4,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbe6 */
+	{ "set 4,a",		BT,				 8, 0,  7 }, /* cbe7 */
 
-	{ "set 5,b",		BT,				 8 }, /* cbe8 */
-	{ "set 5,c",		BT,				 8 }, /* cbe9 */
-	{ "set 5,d",		BT,				 8 }, /* cbea */
-	{ "set 5,e",		BT,				 8 }, /* cbeb */
-	{ "set 5,h",		BT,				 8 }, /* cbec */
-	{ "set 5,l",		BT,				 8 }, /* cbed */
-	{ "set 5,(hl)",		BT|MR|MW,		15 }, /* cbee */
-	{ "set 5,a",		BT,				 8 }, /* cbef */
+	{ "set 5,b",		BT,				 8, 0,  7 }, /* cbe8 */
+	{ "set 5,c",		BT,				 8, 0,  7 }, /* cbe9 */
+	{ "set 5,d",		BT,				 8, 0,  7 }, /* cbea */
+	{ "set 5,e",		BT,				 8, 0,  7 }, /* cbeb */
+	{ "set 5,h",		BT,				 8, 0,  7 }, /* cbec */
+	{ "set 5,l",		BT,				 8, 0,  7 }, /* cbed */
+	{ "set 5,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbee */
+	{ "set 5,a",		BT,				 8, 0,  7 }, /* cbef */
 
-	{ "set 6,b",		BT,				 8 }, /* cbf0 */
-	{ "set 6,c",		BT,				 8 }, /* cbf1 */
-	{ "set 6,d",		BT,				 8 }, /* cbf2 */
-	{ "set 6,e",		BT,				 8 }, /* cbf3 */
-	{ "set 6,h",		BT,				 8 }, /* cbf4 */
-	{ "set 6,l",		BT,				 8 }, /* cbf5 */
-	{ "set 6,(hl)",		BT|MR|MW,		15 }, /* cbf6 */
-	{ "set 6,a",		BT,				 8 }, /* cbf7 */
+	{ "set 6,b",		BT,				 8, 0,  7 }, /* cbf0 */
+	{ "set 6,c",		BT,				 8, 0,  7 }, /* cbf1 */
+	{ "set 6,d",		BT,				 8, 0,  7 }, /* cbf2 */
+	{ "set 6,e",		BT,				 8, 0,  7 }, /* cbf3 */
+	{ "set 6,h",		BT,				 8, 0,  7 }, /* cbf4 */
+	{ "set 6,l",		BT,				 8, 0,  7 }, /* cbf5 */
+	{ "set 6,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbf6 */
+	{ "set 6,a",		BT,				 8, 0,  7 }, /* cbf7 */
 
-	{ "set 7,b",		BT,				 8 }, /* cbf8 */
-	{ "set 7,c",		BT,				 8 }, /* cbf9 */
-	{ "set 7,d",		BT,				 8 }, /* cbfa */
-	{ "set 7,e",		BT,				 8 }, /* cbfb */
-	{ "set 7,h",		BT,				 8 }, /* cbfc */
-	{ "set 7,l",		BT,				 8 }, /* cbfd */
-	{ "set 7,(hl)",		BT|MR|MW,		15 }, /* cbfe */
-	{ "set 7,a",		BT,				 8 }, /* cbff */
+	{ "set 7,b",		BT,				 8, 0,  7 }, /* cbf8 */
+	{ "set 7,c",		BT,				 8, 0,  7 }, /* cbf9 */
+	{ "set 7,d",		BT,				 8, 0,  7 }, /* cbfa */
+	{ "set 7,e",		BT,				 8, 0,  7 }, /* cbfb */
+	{ "set 7,h",		BT,				 8, 0,  7 }, /* cbfc */
+	{ "set 7,l",		BT,				 8, 0,  7 }, /* cbfd */
+	{ "set 7,(hl)",		BT|MR|MW,		15, 0, 13 }, /* cbfe */
+	{ "set 7,a",		BT,				 8, 0,  7 }, /* cbff */
   },
   {							/* dd fd */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd00 fd00 */
@@ -655,7 +660,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd07 fd07 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd08 fd08 */
-	{ "add ix,bc",		WD,				15 }, /* dd09 fd09 */
+	{ "add ix,bc",		WD,				15, 0, 10 }, /* dd09 fd09 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd0a fd0a */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd0b fd0b */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd0c fd0c */
@@ -673,7 +678,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd17 fd17 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd18 fd18 */
-	{ "add ix,de",		WD,				15 }, /* dd19 fd19 */
+	{ "add ix,de",		WD,				15, 0, 10 }, /* dd19 fd19 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd1a fd1a */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd1b fd1b */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd1c fd1c */
@@ -682,34 +687,34 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd1f fd1f */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd20 fd20 */
-	{ "ld ix,%s",		WC|WD,			14 }, /* dd21 fd21 */
-	{ "ld (%s),ix",		ADDR|WD|MW,		20 }, /* dd22 fd22 */
-	{ "inc ix",			WD,				10 }, /* dd23 fd23 */
+	{ "ld ix,%s",		WC|WD,			14, 0, 12 }, /* dd21 fd21 */
+	{ "ld (%s),ix",		ADDR|WD|MW,		20, 0, 19 }, /* dd22 fd22 */
+	{ "inc ix",			WD,				10, 0,  7 }, /* dd23 fd23 */
 	{ "inc ixh",		UNDOC|BT,		 8 }, /* dd24 fd24 */
 	{ "dec ixh",		UNDOC|BT,		 8 }, /* dd25 fd25 */
-	{ "ld ixh,%s",		BC|BT,			11 }, /* dd26 fd26 */
+	{ "ld ixh,%s",		UNDOC|BC|BT,	11 }, /* dd26 fd26 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd27 fd27 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd28 fd28 */
-	{ "add ix,ix",		WD,				15 }, /* dd29 fd29 */
-	{ "ld ix,(%s)",		ADDR|WD|MR,		20 }, /* dd2a fd2a */
-	{ "dec ix",			WD,				10 }, /* dd2b fd2b */
+	{ "add ix,ix",		WD,				15, 0, 10 }, /* dd29 fd29 */
+	{ "ld ix,(%s)",		ADDR|WD|MR,		20, 0, 18 }, /* dd2a fd2a */
+	{ "dec ix",			WD,				10, 0,  7 }, /* dd2b fd2b */
 	{ "inc ixl",		UNDOC|BT,		 8 }, /* dd2c fd2c */
 	{ "dec ixl",		UNDOC|BT,		 8 }, /* dd2d fd2d */
-	{ "ld ixl,%s",		BC|BT,			11 }, /* dd2e fd2e */
+	{ "ld ixl,%s",		UNDOC|BC|BT,	11 }, /* dd2e fd2e */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd2f fd2f */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd30 fd30 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd31 fd31 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd32 fd32 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd33 fd33 */
-	{ "inc (ix%s)",		IND|BT|MR|MW,	23 }, /* dd34 fd34 */
-	{ "dec (ix%s)",		IND|BT|MR|MW,	23 }, /* dd35 fd35 */
-	{ "ld (ix%s),%s",	IND_1|BT|MW,	19 }, /* dd36 fd36 */
+	{ "inc (ix%s)",		IND|BT|MR|MW,	23, 0, 18 }, /* dd34 fd34 */
+	{ "dec (ix%s)",		IND|BT|MR|MW,	23, 0, 18 }, /* dd35 fd35 */
+	{ "ld (ix%s),%s",	IND_1|BT|MW,	19, 0, 15 }, /* dd36 fd36 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd37 fd37 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd38 fd38 */
-	{ "add ix,sp",		WD,				15 }, /* dd39 fd39 */
+	{ "add ix,sp",		WD,				15, 0, 10 }, /* dd39 fd39 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd3a fd3a */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd3b fd3b */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd3c fd3c */
@@ -723,7 +728,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd43 fd43 */
 	{ "ld b,ixh",		UNDOC|BT,		 8 }, /* dd44 fd44 */
 	{ "ld b,ixl",		UNDOC|BT,		 8 }, /* dd45 fd45 */
-	{ "ld b,(ix%s)",	IND|BT|MR,		19 }, /* dd46 fd46 */
+	{ "ld b,(ix%s)",	IND|BT|MR,		19, 0, 14 }, /* dd46 fd46 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd47 fd47 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd48 fd48 */
@@ -732,7 +737,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd4b fd4b */
 	{ "ld c,ixh",		UNDOC|BT,		 8 }, /* dd4c fd4c */
 	{ "ld c,ixl",		UNDOC|BT,		 8 }, /* dd4d fd4d */
-	{ "ld c,(ix%s)",	IND|BT|MR,		19 }, /* dd4e fd4e */
+	{ "ld c,(ix%s)",	IND|BT|MR,		19, 0, 14 }, /* dd4e fd4e */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd4f fd4f */
 	
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd50 fd50 */
@@ -741,7 +746,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd53 fd53 */
 	{ "ld d,ixh",		UNDOC|BT,		 8 }, /* dd54 fd54 */
 	{ "ld d,ixl",		UNDOC|BT,		 8 }, /* dd55 fd55 */
-	{ "ld d,(ix%s)",	IND|BT|MR,		19 }, /* dd56 fd56 */
+	{ "ld d,(ix%s)",	IND|BT|MR,		19, 0, 14 }, /* dd56 fd56 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd57 fd57 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd58 fd58 */
@@ -750,7 +755,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd5b fd5b */
 	{ "ld e,ixh",		UNDOC|BT,		 8 }, /* dd5c fd5c */
 	{ "ld e,ixl",		UNDOC|BT,		 8 }, /* dd5d fd5d */
-	{ "ld e,(ix%s)",	IND|BT|MR,		19 }, /* dd5e fd5e */
+	{ "ld e,(ix%s)",	IND|BT|MR,		19, 0, 14 }, /* dd5e fd5e */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd5f fd5f */
 	
 	{ "ld ixh,b",		UNDOC|BT,		 8 }, /* dd60 fd60 */
@@ -759,7 +764,7 @@ static Opcode z_minor[3][256] = {
 	{ "ld ixh,e",		UNDOC|BT,		 8 }, /* dd63 fd63 */
 	{ "ld ixh,ixh",		UNDOC|BT,		 8 }, /* dd64 fd64 */
 	{ "ld ixh,ixl",		UNDOC|BT,		 8 }, /* dd65 fd65 */
-	{ "ld h,(ix%s)",	IND|BT|MR,		19 }, /* dd66 fd66 */
+	{ "ld h,(ix%s)",	IND|BT|MR,		19, 0, 14 }, /* dd66 fd66 */
 	{ "ld ixh,a",		UNDOC|BT,		 8 }, /* dd67 fd67 */
 
 	{ "ld ixl,b",		UNDOC|BT,		 8 }, /* dd68 fd68 */
@@ -768,17 +773,17 @@ static Opcode z_minor[3][256] = {
 	{ "ld ixl,e",		UNDOC|BT,		 8 }, /* dd6b fd6b */
 	{ "ld ixl,ixh",		UNDOC|BT,		 8 }, /* dd6c fd6c */
 	{ "ld ixl,ixl",		UNDOC|BT,		 8 }, /* dd6d fd6d */
-	{ "ld l,(ix%s)",	IND|BT|MR,		19 }, /* dd6e fd6e */
+	{ "ld l,(ix%s)",	IND|BT|MR,		19, 0, 14 }, /* dd6e fd6e */
 	{ "ld ixl,a",		UNDOC|BT,		 8 }, /* dd6f fd6f */
 	
-	{ "ld (ix%s),b",	IND|BT|MW,		19 }, /* dd70 fd70 */
-	{ "ld (ix%s),c",	IND|BT|MW,		19 }, /* dd71 fd71 */
-	{ "ld (ix%s),d",	IND|BT|MW,		19 }, /* dd72 fd72 */
-	{ "ld (ix%s),e",	IND|BT|MW,		19 }, /* dd73 fd73 */
-	{ "ld (ix%s),h",	IND|BT|MW,		19 }, /* dd74 fd74 */
-	{ "ld (ix%s),l",	IND|BT|MW,		19 }, /* dd75 fd75 */
+	{ "ld (ix%s),b",	IND|BT|MW,		19, 0, 15 }, /* dd70 fd70 */
+	{ "ld (ix%s),c",	IND|BT|MW,		19, 0, 15 }, /* dd71 fd71 */
+	{ "ld (ix%s),d",	IND|BT|MW,		19, 0, 15 }, /* dd72 fd72 */
+	{ "ld (ix%s),e",	IND|BT|MW,		19, 0, 15 }, /* dd73 fd73 */
+	{ "ld (ix%s),h",	IND|BT|MW,		19, 0, 15 }, /* dd74 fd74 */
+	{ "ld (ix%s),l",	IND|BT|MW,		19, 0, 15 }, /* dd75 fd75 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd76 fd76 */
-	{ "ld (ix%s),a",	IND|BT|MW,		19 }, /* dd77 fd77 */
+	{ "ld (ix%s),a",	IND|BT|MW,		19, 0, 15 }, /* dd77 fd77 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd78 fd78 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd79 fd79 */
@@ -786,7 +791,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd7b fd7b */
 	{ "ld a,ixh",		UNDOC|BT,		 8 }, /* dd7c fd7c */
 	{ "ld a,ixl",		UNDOC|BT,		 8 }, /* dd7d fd7d */
-	{ "ld a,(ix%s)",	IND|BT|MR,		19 }, /* dd7e fd7e */
+	{ "ld a,(ix%s)",	IND|BT|MR,		19, 0, 14 }, /* dd7e fd7e */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd7f fd7f */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd80 fd80 */
@@ -795,7 +800,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd83 fd83 */
 	{ "add a,ixh",		UNDOC|BT,		 8 }, /* dd84 fd84 */
 	{ "add a,ixl",		UNDOC|BT,		 8 }, /* dd85 fd85 */
-	{ "add a,(ix%s)",	IND|BT|MR,		19 }, /* dd86 fd86 */
+	{ "add a,(ix%s)",	IND|BT|MR,		19, 0, 14 }, /* dd86 fd86 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd87 fd87 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd88 fd88 */
@@ -804,7 +809,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd8b fd8b */
 	{ "adc a,ixh",		UNDOC|BT,		 8 }, /* dd8c fd8c */
 	{ "adc a,ixl",		UNDOC|BT,		 8 }, /* dd8d fd8d */
-	{ "adc a,(ix%s)",	IND|BT|MR,		19 }, /* dd8e fd8e */
+	{ "adc a,(ix%s)",	IND|BT|MR,		19, 0, 14 }, /* dd8e fd8e */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd8f fd8f */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd90 fd90 */
@@ -813,7 +818,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd93 fd93 */
 	{ "sub ixh",		UNDOC|BT,		 8 }, /* dd94 fd94 */
 	{ "sub ixl",		UNDOC|BT,		 8 }, /* dd95 fd95 */
-	{ "sub (ix%s)",		IND|BT|MR,		19 }, /* dd96 fd96 */
+	{ "sub (ix%s)",		IND|BT|MR,		19, 0, 14 }, /* dd96 fd96 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd97 fd97 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd98 fd98 */
@@ -822,7 +827,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd9b fd9b */
 	{ "sbc ixh",		UNDOC|BT,		 8 }, /* dd9c fd9c */
 	{ "sbx ixl",		UNDOC|BT,		 8 }, /* dd9d fd9d */
-	{ "sbc a,(ix%s)",	IND|BT|MR,		19 }, /* dd9e fd9e */
+	{ "sbc a,(ix%s)",	IND|BT|MR,		19, 0, 14 }, /* dd9e fd9e */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dd9f fd9f */
 	
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dda0 fda0 */
@@ -831,7 +836,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dda3 fda3 */
 	{ "and ixh",		UNDOC|BT,		 8 }, /* dda4 fda4 */
 	{ "and ixl",		UNDOC|BT,		 8 }, /* dda5 fda5 */
-	{ "and (ix%s)",		IND|BT|MR,		19 }, /* dda6 fda6 */
+	{ "and (ix%s)",		IND|BT|MR,		19, 0, 14 }, /* dda6 fda6 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dda7 fda7 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dda8 fda8 */
@@ -840,7 +845,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddab fdab */
 	{ "xor ixh",		UNDOC|BT,		 8 }, /* ddac fdac */
 	{ "xor ixl",		UNDOC|BT,		 8 }, /* ddad fdad */
-	{ "xor (ix%s)",		IND|BT|MR,		19 }, /* ddae fdae */
+	{ "xor (ix%s)",		IND|BT|MR,		19, 0, 14 }, /* ddae fdae */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddaf fdaf */
 	
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddb0 fdb0 */
@@ -849,7 +854,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddb3 fdb3 */
 	{ "or ixh",			UNDOC|BT,		 8 }, /* ddb4 fdb4 */
 	{ "or ixl",			UNDOC|BT,		 8 }, /* ddb5 fdb5 */
-	{ "or (ix%s)",		IND|BT|MR,		19 }, /* ddb6 fdb6 */
+	{ "or (ix%s)",		IND|BT|MR,		19, 0, 14 }, /* ddb6 fdb6 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddb7 fdb7 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddb8 fdb8 */
@@ -858,7 +863,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddbb fdbb */
 	{ "cp ixh",			UNDOC|BT,		 8 }, /* ddbc fdbc */
 	{ "cp ixl",			UNDOC|BT,		 8 }, /* ddbd fdbd */
-	{ "cp (ix%s)",		IND|BT|MR,		19 }, /* ddbe fdbe */
+	{ "cp (ix%s)",		IND|BT|MR,		19, 0, 14 }, /* ddbe fdbe */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddbf fdbf */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddc0 fdc0 */
@@ -898,16 +903,16 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dddf fddf */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dde0 fde0 */
-	{ "pop ix",			WD|MR,			14 }, /* dde1 fde1 */
+	{ "pop ix",			WD|MR,			14, 0, 12 }, /* dde1 fde1 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dde2 fde2 */
-	{ "ex (sp),ix",		WD,				23 }, /* dde3 fde3 */
+	{ "ex (sp),ix",		WD,				23, 0, 19 }, /* dde3 fde3 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dde4 fde4 */
-	{ "push ix",		WD|MW,			15 }, /* dde5 fde5 */
+	{ "push ix",		WD|MW,			15, 0, 14 }, /* dde5 fde5 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dde6 fde6 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dde7 fde7 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* dde8 fde8 */
-	{ "jp (ix)",		0 | UNBR,		 8 }, /* dde9 fde9 */
+	{ "jp (ix)",		0 | UNBR,		 8, 0,  6 }, /* dde9 fde9 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddea fdea */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* eb */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddec fdec */
@@ -925,7 +930,7 @@ static Opcode z_minor[3][256] = {
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddf7 fdf7 */
 
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddf8 fdf8 */
-	{ "ld sp,ix",		WD,				10 }, /* ddf9 fdf9 */
+	{ "ld sp,ix",		WD,				10, 0,  7 }, /* ddf9 fdf9 */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddfa fdfa */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddfb fdfb */
 	{ pfix,				UNDOC | NOEFF,	 4 }, /* ddfc fdfc */
@@ -1006,73 +1011,73 @@ static Opcode z_minor[3][256] = {
 	{ ednop,			UNDOC,			 8 }, /* ed3e */
 	{ ednop,			UNDOC,			 8 }, /* ed3f */
 
-	{ "in b,(c)",		IN,				12 }, /* ed40 */
-	{ "out (c),b",		OT,				12 }, /* ed41 */
-	{ "sbc hl,bc",		WD,				15 }, /* ed42 */
-	{ "ld (%s),bc",		ADDR|WD|MW,		20 }, /* ed43 */
-	{ "neg",			BT,				 8 }, /* ed44 */
-	{ "retn",			WD | UNBR,		14 }, /* ed45 */
-	{ "im 0",			0,				 8 }, /* ed46 */
-	{ "ld i,a",			BT,				 9 }, /* ed47 */
+	{ "in b,(c)",		IN,				12, 0,  9 }, /* ed40 */
+	{ "out (c),b",		OT,				12, 0, 10 }, /* ed41 */
+	{ "sbc hl,bc",		WD,				15, 0, 10 }, /* ed42 */
+	{ "ld (%s),bc",		ADDR|WD|MW,		20, 0, 19 }, /* ed43 */
+	{ "neg",			BT,				 8, 0,  6 }, /* ed44 */
+	{ "retn",			WD | UNBR,		14, 0, 12 }, /* ed45 */
+	{ "im 0",			0,				 8, 0,  6 }, /* ed46 */
+	{ "ld i,a",			BT,				 9, 0,  6 }, /* ed47 */
 
-	{ "in c,(c)",		IN,				12 }, /* ed48 */
-	{ "out (c),c",		OT,				12 }, /* ed49 */
-	{ "adc hl,bc",		WD,				15 }, /* ed4a */
-	{ "ld bc,(%s)",		ADDR|WD|MW,		20 }, /* ed4b */
+	{ "in c,(c)",		IN,				12, 0,  9 }, /* ed48 */
+	{ "out (c),c",		OT,				12, 0, 10 }, /* ed49 */
+	{ "adc hl,bc",		WD,				15, 0, 10 }, /* ed4a */
+	{ "ld bc,(%s)",		ADDR|WD|MW,		20, 0, 18 }, /* ed4b */
 	{ "neg",			UNDOC|BT,		 8 }, /* ed4c */
-	{ "reti",			WD | UNBR,		14 }, /* ed4d */
+	{ "reti",			WD | UNBR,		14, 0, 12 }, /* ed4d */
 	{ "im 0",			UNDOC,			 8 }, /* ed4e */
-	{ "ld r,a",			BT,				 9 }, /* ed4f */
+	{ "ld r,a",			BT,				 9, 0,  6 }, /* ed4f */
 
-	{ "in d,(c)",		IN,				12 }, /* ed50 */
-	{ "out (c),d",		OT,				12 }, /* ed51 */
-	{ "sbc hl,de",		WD,				15 }, /* ed52 */
-	{ "ld (%s),de",		ADDR|WD|MW,		20 }, /* ed53 */
+	{ "in d,(c)",		IN,				12, 0,  9 }, /* ed50 */
+	{ "out (c),d",		OT,				12, 0, 10 }, /* ed51 */
+	{ "sbc hl,de",		WD,				15, 0, 10 }, /* ed52 */
+	{ "ld (%s),de",		ADDR|WD|MW,		20, 0, 19 }, /* ed53 */
 	{ "neg",			UNDOC|BT,		 8 }, /* ed54 */
 	{ "retn",			UNDOC|WD|UNBR,	14 }, /* ed55 */
-	{ "im 1",			0,				 8 }, /* ed56 */
-	{ "ld a,i",			BT,				 9 }, /* ed57 */
+	{ "im 1",			0,				 8, 0,  6 }, /* ed56 */
+	{ "ld a,i",			BT,				 9, 0,  6 }, /* ed57 */
 
-	{ "in e,(c)",		IN,				12 }, /* ed58 */
-	{ "out (c),e",		OT,				12 }, /* ed59 */
-	{ "adc hl,de",		WD,				15 }, /* ed5a */
-	{ "ld de,(%s)",		ADDR|WD|MR,		20 }, /* ed5b */
+	{ "in e,(c)",		IN,				12, 0,  9 }, /* ed58 */
+	{ "out (c),e",		OT,				12, 0, 10 }, /* ed59 */
+	{ "adc hl,de",		WD,				15, 0, 10 }, /* ed5a */
+	{ "ld de,(%s)",		ADDR|WD|MR,		20, 0, 18 }, /* ed5b */
 	{ "neg",			UNDOC|BT,		 8 }, /* ed5c */
 	{ "retn",			UNDOC|WD|UNBR,	14 }, /* ed5d */
-	{ "im 2",			0,				 8 }, /* ed5e */
-	{ "ld a,r",			BT,				 9 }, /* ed5f */
+	{ "im 2",			0,				 8, 0,  6 }, /* ed5e */
+	{ "ld a,r",			BT,				 9, 0,  6 }, /* ed5f */
 
-	{ "in h,(c)",		IN,				12 }, /* ed60 */
-	{ "out (c),h",		OT,				12 }, /* ed61 */
-	{ "sbc hl,hl",		WD,				15 }, /* ed62 */
-	{ "ld (%s),hl",		ADDR|WD|MW,		20 }, /* ed63 */
+	{ "in h,(c)",		IN,				12, 0,  9 }, /* ed60 */
+	{ "out (c),h",		OT,				12, 0, 10 }, /* ed61 */
+	{ "sbc hl,hl",		WD,				15, 0, 10 }, /* ed62 */
+	{ "ld (%s),hl",		ADDR|WD|MW,		20, 0, 19 }, /* ed63 */
 	{ "neg",			UNDOC|BT,		 8 }, /* ed64 */
 	{ "retn",			UNDOC|WD|UNBR,	14 }, /* ed65 */
 	{ "im 0",			UNDOC,			 8 }, /* ed66 */
-	{ "rrd",			BT|MR|MW,		18 }, /* ed67 */
+	{ "rrd",			BT|MR|MW,		18, 0, 16 }, /* ed67 */
 
-	{ "in l,(c)",		IN,				12 }, /* ed68 */
-	{ "out (c),l",		OT,				12 }, /* ed69 */
-	{ "adc hl,hl",		WD,				15 }, /* ed6a */
-	{ "ld hl,(%s)",		ADDR|WD|MR,		20 }, /* ed6b */
+	{ "in l,(c)",		IN,				12, 0,  9 }, /* ed68 */
+	{ "out (c),l",		OT,				12, 0, 10 }, /* ed69 */
+	{ "adc hl,hl",		WD,				15, 0, 10 }, /* ed6a */
+	{ "ld hl,(%s)",		ADDR|WD|MR,		20, 0, 18 }, /* ed6b */
 	{ "neg",			UNDOC|BT,		 8 }, /* ed6c */
 	{ "retn",			UNDOC|WD|UNBR,	14 }, /* ed6d */
 	{ "im 0",			UNDOC,			 8 }, /* ed6e */
-	{ "rld",			BT,				18 }, /* ed6f */
+	{ "rld",			BT,				18, 0, 16 }, /* ed6f */
 
 	{ "in (c)",			UNDOC|IN,		12 }, /* ed70 */
 	{ "out (c),0",		UNDOC|OT,		12 }, /* ed71 */
-	{ "sbc hl,sp",		WD,				15 }, /* ed72 */
-	{ "ld (%s),sp",		ADDR|WD|MW,		20 }, /* ed73 */
+	{ "sbc hl,sp",		WD,				15, 0, 10 }, /* ed72 */
+	{ "ld (%s),sp",		ADDR|WD|MW,		20, 0, 19 }, /* ed73 */
 	{ "neg",			UNDOC|BT,		 8 }, /* ed74 */
 	{ "retn",			UNDOC|WD|UNBR,	14 }, /* ed75 */
 	{ "im 1",			UNDOC,			 8 }, /* ed76 */
 	{ ednop,			UNDOC,			 8 }, /* ed77 */
 
-	{ "in a,(c)",		IN,				12 }, /* ed78 */
-	{ "out (c),a",		OT,				12 }, /* ed79 */
-	{ "adc hl,sp",		WD,				15 }, /* ed7a */
-	{ "ld sp,(%s)",		ADDR|WD|MR,		20 }, /* ed7b */
+	{ "in a,(c)",		IN,				12, 0,  9 }, /* ed78 */
+	{ "out (c),a",		OT,				12, 0, 10 }, /* ed79 */
+	{ "adc hl,sp",		WD,				15, 0, 10 }, /* ed7a */
+	{ "ld sp,(%s)",		ADDR|WD|MR,		20, 0, 18 }, /* ed7b */
 	{ "neg",			UNDOC|BT,		 8 }, /* ed7c */
 	{ "retn",			UNDOC|WD|UNBR,	14 }, /* ed7d */
 	{ "im 2",			UNDOC,			 8 }, /* ed7e */
@@ -1114,37 +1119,37 @@ static Opcode z_minor[3][256] = {
 	{ ednop,			UNDOC,			 8 }, /* ed9e */
 	{ ednop,			UNDOC,			 8 }, /* ed9f */
 
-	{ "ldi",			BT|MR|MW,		16 }, /* eda0 */
-	{ "cpi",			BT|MR,			16 }, /* eda1 */
-	{ "ini",			BT|MW|IN,		16 }, /* eda2 */
-	{ "outi",			BT|MR|OT,		16 }, /* eda3 */
+	{ "ldi",			BT|MR|MW,		16, 0, 12 }, /* eda0 */
+	{ "cpi",			BT|MR,			16, 0, 12 }, /* eda1 */
+	{ "ini",			BT|MW|IN,		16, 0, 12 }, /* eda2 */
+	{ "outi",			BT|MR|OT,		16, 0, 12 }, /* eda3 */
 	{ ednop,			UNDOC,			 8 }, /* eda4 */
 	{ ednop,			UNDOC,			 8 }, /* eda5 */
 	{ ednop,			UNDOC,			 8 }, /* eda6 */
 	{ ednop,			UNDOC,			 8 }, /* eda7 */
 
-	{ "ldd",			BT|MR|MW,		16 }, /* eda8 */
-	{ "cpd",			BT|MR,			16 }, /* eda9 */
-	{ "ind",			BT|MW|IN,		16 }, /* edaa */
-	{ "outd",			BT|MR|OT,		16 }, /* edab */
+	{ "ldd",			BT|MR|MW,		16, 0, 12 }, /* eda8 */
+	{ "cpd",			BT|MR,			16, 0, 12 }, /* eda9 */
+	{ "ind",			BT|MW|IN,		16, 0, 12 }, /* edaa */
+	{ "outd",			BT|MR|OT,		16, 0, 12 }, /* edab */
 	{ ednop,			UNDOC,			 8 }, /* edac */
 	{ ednop,			UNDOC,			 8 }, /* edad */
 	{ ednop,			UNDOC,			 8 }, /* edae */
 	{ ednop,			UNDOC,			 8 }, /* edaf */
 
-	{ "ldir",			BT|MR|MW,VT(16, 21)}, /* edb0 */
-	{ "cpir",			BT|MR,	 VT(16, 21)}, /* edb1 */
-	{ "inir",			BT|MR|IN,VT(16, 21)}, /* edb2 */
-	{ "otir",			BT|MR|OT,VT(16, 21)}, /* edb3 */
+	{ "ldir",			BT|MR|MW,VT(16, 21), 0, VT(14, 16) }, /* edb0 */
+	{ "cpir",			BT|MR,	 VT(16, 21), 0, VT(14, 16) }, /* edb1 */
+	{ "inir",			BT|MR|IN,VT(16, 21), 0, VT(12, 14) }, /* edb2 */
+	{ "otir",			BT|MR|OT,VT(16, 21), 0, VT(12, 14) }, /* edb3 */
 	{ ednop,			UNDOC,			 8 }, /* edb4 */
 	{ ednop,			UNDOC,			 8 }, /* edb5 */
 	{ ednop,			UNDOC,			 8 }, /* edb6 */
 	{ ednop,			UNDOC,			 8 }, /* edb7 */
 
-	{ "lddr",			BT|MR|MW,VT(16, 21)}, /* edb8 */
-	{ "cpdr",			BT|MR,	 VT(16, 21)}, /* edb9 */
-	{ "indr",			BT|MW|IN,VT(16, 21)}, /* edba */
-	{ "otdr",			BT|MR|OT,VT(16, 21)}, /* edbb */
+	{ "lddr",			BT|MR|MW,VT(16, 21), 0, VT(14, 16) }, /* edb8 */
+	{ "cpdr",			BT|MR,	 VT(16, 21), 0, VT(14, 16) }, /* edb9 */
+	{ "indr",			BT|MW|IN,VT(16, 21), 0, VT(12, 14) }, /* edba */
+	{ "otdr",			BT|MR|OT,VT(16, 21), 0, VT(12, 14) }, /* edbb */
 	{ ednop,			UNDOC,			 8 }, /* edbc */
 	{ ednop,			UNDOC,			 8 }, /* edbd */
 	{ ednop,			UNDOC,			 8 }, /* edbe */
@@ -1249,6 +1254,48 @@ static OpcodePatch change8080[] = {
 };
 #endif
 
+static OpcodePatch change180[] = {
+	{ 0x00, { "in0 b,(%s)",		PORT | IN,		0, 0, 12 } },
+	{ 0x08, { "in0 c,(%s)",		PORT | IN,		0, 0, 12 } },
+	{ 0x10, { "in0 d,(%s)",		PORT | IN,		0, 0, 12 } },
+	{ 0x18, { "in0 e,(%s)",		PORT | IN,		0, 0, 12 } },
+	{ 0x20, { "in0 h,(%s)",		PORT | IN,		0, 0, 12 } },
+	{ 0x28, { "in0 l,(%s)",		PORT | IN,		0, 0, 12 } },
+	{ 0x30, { "in0 (%s)", 		PORT | IN,		0, 0, 12 } },
+	{ 0x38, { "in0 a,(%s)",		PORT | IN,		0, 0, 12 } },
+
+	{ 0x01, { "out0 (%s),b",	PORT | OT,		0, 0, 13 } },
+	{ 0x09, { "out0 (%s),c",	PORT | OT,		0, 0, 13 } },
+	{ 0x11, { "out0 (%s),d",	PORT | OT,		0, 0, 13 } },
+	{ 0x19, { "out0 (%s),e",	PORT | OT,		0, 0, 13 } },
+	{ 0x21, { "out0 (%s),h",	PORT | OT,		0, 0, 13 } },
+	{ 0x29, { "out0 (%s),l",	PORT | OT,		0, 0, 13 } },
+	{ 0x39, { "out0 (%s),a",	PORT | OT,		0, 0, 13 } },
+
+	{ 0x04, { "tst b",			BT,				0, 0,  7 } },
+	{ 0x0c, { "tst c",			BT,				0, 0,  7 } },
+	{ 0x14, { "tst d",			BT,				0, 0,  7 } },
+	{ 0x1c, { "tst e",			BT,				0, 0,  7 } },
+	{ 0x24, { "tst h",			BT,				0, 0,  7 } },
+	{ 0x2c, { "tst l",			BT,				0, 0,  7 } },
+	{ 0x34, { "tst (hl)",		BT | MR,		0, 0, 10 } },
+	{ 0x3c, { "tst a",			BT,				0, 0,  7 } },
+	{ 0x64, { "tst %s",			BC | BT,		0, 0,  9 } },
+
+	{ 0x4c, { "mlt bc",			BT,				0, 0, 17 } },
+	{ 0x5c, { "mlt de",			BT,				0, 0, 17 } },
+	{ 0x6c, { "mlt hl",			BT,				0, 0, 17 } },
+
+	{ 0x74, { "tstio (%s)",		PORT | IN,		0, 0, 12 } },
+	
+	{ 0x76, { "slp",			0,				0, 0,  8 } },
+
+	{ 0x83, { "otim",			BT | MR | OT,	0, 0, 14 } },
+	{ 0x8b, { "otdm",			BT | MR | OT,	0, 0, 14 } },
+	{ 0x93, { "otimr",			BT | MR | OT,	0, 0, VT(14, 16) } },
+	{ 0x9b, { "otdmr",			BT | MR | OT,	0, 0, VT(14, 16) } },
+};
+
 Zi80dis::Zi80dis()
 {
 	m_processor = procZ80;
@@ -1293,6 +1340,8 @@ void Zi80dis::Disassemble(const unsigned char *mem, int pc, bool memPointsToInst
 	m_ocf = 0;
 	m_min8080T = 0;
 	m_max8080T = 0;
+	m_min180T = 0;
+	m_max180T = 0;
 	m_length = 0;
 
 #define FETCH_TO(var) var = memPointsToInstruction	\
@@ -1336,23 +1385,43 @@ void Zi80dis::Disassemble(const unsigned char *mem, int pc, bool memPointsToInst
 	}
 	else if (!z_major[op].name)
 	{
-		args = z_major[op0].args;
-		FETCH_TO(op);
-		// Check DD/FD prefix specially for no effect.
-		if (args == 1 && (z_minor[args][op].args & NOEFF))
+		if (op == 0xED && m_processor == procZ180)
 		{
-			m_length--;
-			code = &z_minor[args][op];
+			FETCH_TO(op);
+
+			code = &z_minor[2][op];
+
+			// Check if there are replacements for Z-180 instructions.
+			for (int i = 0; i < int(sizeof(change180) / sizeof(change180[0])); i++)
+			{
+				if (op == change180[i].op)
+				{
+					code = &change180[i].code;
+					break;
+				}
+			}
+			args = code->args;
 		}
 		else
 		{
-			m_ocf++; // book says at most 2 op code fetches even for DDCB (TODO: really?)
-			while (!z_minor[args][op].name)
+			args = z_major[op0].args;
+			FETCH_TO(op);
+			// Check DD/FD prefix specially for no effect.
+			if (args == 1 && (z_minor[args][op].args & NOEFF))
 			{
-				args = z_minor[args][op].args;
-				FETCH_TO(op);
+				m_length--;
+				code = &z_minor[args][op];
 			}
-			code = &z_minor[args][op];
+			else
+			{
+				m_ocf++; // book says at most 2 op code fetches even for DDCB (TODO: really?)
+				while (!z_minor[args][op].name)
+				{
+					args = z_minor[args][op].args;
+					FETCH_TO(op);
+				}
+				code = &z_minor[args][op];
+			}
 		}
 	}
 
@@ -1363,7 +1432,7 @@ void Zi80dis::Disassemble(const unsigned char *mem, int pc, bool memPointsToInst
 
 	if (!m_undoc && (code->args & UNDOC))
 	{
-		strcpy(m_format, undefined);
+		strcpy(m_format, m_processor == procZ180 ? "illegal" : undefined);
 		return;
 	}
 
@@ -1394,7 +1463,7 @@ void Zi80dis::Disassemble(const unsigned char *mem, int pc, bool memPointsToInst
 			// Find (hl) in normal instruction description.
 			const char *left = strchr(code->name, '(');
 			if (!left) {
-				if (!m_undoc)
+				if (!m_undoc || m_processor == procZ180)
 				{
 					strcpy(m_format, undefined); // No (hl), don't want undocumented instructions.
 				}
@@ -1414,6 +1483,8 @@ void Zi80dis::Disassemble(const unsigned char *mem, int pc, bool memPointsToInst
 					}
 					m_minT = 8;
 					m_maxT = 8;
+					m_min180T = 6;
+					m_max180T = 6;
 			}
 		}
 		break;
@@ -1518,6 +1589,17 @@ void Zi80dis::Disassemble(const unsigned char *mem, int pc, bool memPointsToInst
 		m_minT += code->tstates;
 		m_maxT = m_minT;
 	}
+
+	if (code->tstates180 > 256)
+	{
+		m_min180T += code->tstates180 >> 8;
+		m_max180T += code->tstates180 & 0xff;
+	}
+	else
+	{
+		m_min180T += code->tstates180;
+		m_max180T = m_min180T;
+	}
 }
 
 void Zi80dis::Format(char *output)
@@ -1574,19 +1656,38 @@ void Zi80dis::Format(char *output)
 	sprintf(output, m_format, arg[0], arg[1]);
 }
 
-extern "C" int zi_tstates(const unsigned char *inst,
-	int *low, int *high, int *ocf, int *low8080, int *high8080)
+extern "C" int zi_tstates(const unsigned char *inst, int proc,
+	int *low, int *high, int *ocf, char *disasm)
 {
 	Zi80dis dis;
 
+	dis.SetProcessor((Zi80dis::Processor)proc);
 	dis.SetUndocumented(true);
+	dis.SetDollarHex(true);
 	dis.Disassemble(inst, 0, true);
 
-	if (low) *low = dis.m_minT;
-	if (high) *high = dis.m_maxT;
 	if (ocf) *ocf = dis.m_ocf;
-	if (low8080) *low8080 = dis.m_min8080T;
-	if (high8080) *high8080 = dis.m_max8080T;
+
+	// proc corresponds to  Zi80dis::Processor
+	switch (proc) {
+	case Zi80dis::procZ80:
+		if (low) *low = dis.m_minT;
+		if (high) *high = dis.m_maxT;
+		break;
+	case Zi80dis::proc8080:
+		if (low) *low = dis.m_min8080T;
+		if (high) *high = dis.m_max8080T;
+		break;
+	case Zi80dis::procZ180:
+		if (low) *low = dis.m_min180T;
+		if (high) *high = dis.m_max180T;
+		break;
+	default:
+		break;
+	}
+
+	if (disasm)
+		dis.Format(disasm);
 
 	return dis.m_length;
 }

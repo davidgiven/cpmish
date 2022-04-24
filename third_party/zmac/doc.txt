@@ -14,7 +14,8 @@ and so on.  For more friendly usage in make files and integrated development
 environments the _-o_, _--oo_, _--xo_ and _--xd_ options may be used to select
 sepcific output file formats and where they are written.
 
-Undocumented@undoc Z-80 instructions are supported as well as 8080 code.
+Undocumented@undoc Z-80 instructions are supported as well as 8080 and
+Z-180 (aka HD64180).
 
 zmac strives to be a powerful assembler with expressions familiar to C
 programmers while providing good backward compatibility with original
@@ -29,12 +30,19 @@ zmac
 [ --od dir ]
 [ --oo sfx1,sfx2 ]
 [ --xo sfx1,sfx2 ]
+[ --dri ]
 [ --rel ]
 [ --rel7 ]
+[ --nmnv ]
+[ --z180 ]
+[ --fcal ]
 [ --doc ]
 [ --zmac ]
 [ -8bcefghijJlLmnopstz ]
 [ filename[.z] ]
+
+Space-separated arguments in the ZMAC__ARGS environment variable are added to
+the end of the command line.
 
 .Options
 
@@ -60,7 +68,17 @@ zmac
  
  --xo tap,wav
   Do not output the file type types listed by suffix.
-  
+ 
+ --dri
+  Enable compatibility with Digital Research (CP/M) assemblers:
+  Ignores dollar signs in constants and symbols.
+  Silences a warning when using Z80.LIB.
+  Allows the use of '*' in first column for comment lines.
+  Accepts $-MACRO directives.
+ 
+ --nmnv
+  Do not interpret Z-80 or 8080 mnemonics as values in expressions.
+ 
  --rel
   Output ".rel" (relocatable object file) format only.  Exported symbols are
   truncated to length 6.
@@ -79,6 +97,11 @@ zmac
   are local to their file thus avoid multiple definition when brought in
   with _include_.
  
+ --z180
+  Use Z-180 timings and extended instructions.  Undocumented Z-80 instructions
+  will generate errors as the Z-180 (or H64810) does not support them.
+  Equivalent to _.z180_ pseudo-op.
+ 
  --dep
   Print all files read by _include_, _incbin_ and _import_.
  
@@ -90,6 +113,14 @@ zmac
   can be set from 0 though 9.  _-Pk_ is shorthand for _-Pk=-1_.
   For example, _P4=$123_ effectively puts _@@4 equ $123_ at the top of the
   first file.
+ 
+ -Dsymbol
+  Define _symbol_ to be 1 before assembly.
+ 
+ --fcal
+  Always treat an indentifier in the first column as a label.  zmac uses
+  various heuristics in the case of ambiguity when a label does not have
+  a colon.  This option turns heuristics off.
  
  -8
   Accept 8080 mnemonics preferentially and use 8080 instruction timings.
@@ -178,6 +209,13 @@ d for decimal.
 _'LH'_ (any length 2 string) can be treated as a number whose value
 is _'H'_ * 256 + _'L'_.
 
+For compatibility and to ease writing code that generates code, any
+mnemonic can be used as a data value.  For example, _mvi a,xra_ will
+load A register with $A8.  And _dw ldir_ will output the same data a _ldir_
+by itself (_ldir_ evaluates to $B0ED).
+A full table@mneval of mnemonics and their values is in Mnemonic Values.
+The --nmnv command line option turns off this feature.
+
 Labels are declared with _label:_ or just _label_ - indentation is unimportant.
 Labels can be up to 40 chars long.  They can start with and contain 
 letters, digits, _$_, _._, _?_, _@_ and __.  Ambiguous identifiers like
@@ -207,6 +245,9 @@ _defw 2112_
 
 _defw $123,0x456_
 |A word (16 bits).  _word_ and _dw_ are synonyms.
+
+_def3 $123456_
+|A 3 byte word (24 bits). _d3_ is a synonym.
 
 _defd $12345678_
 |A double word (32 bits). _dword_ is a synonym.
@@ -258,6 +299,11 @@ _min_
 _max_
 |Same as _defl_ except that the symbol is defined as the
 |smaller or bigger of two comma-separated expressions.
+
+_name equ register_
+|Define a symbol to be an alias of a register.  _count equ bc_ lets _count_
+|stand for register _bc_ so _push count_ and _dec count_ will both operate on
+|register _bc_.
 
 _*mod_
 |Increment the internal module name string.  The first time this results
@@ -380,6 +426,12 @@ _8080_
 _z80_
 |Make cycle counting operators return Z-80 cycle counts and
 |interpret any ambiguous assembly statements as Zilog Z-80 mnemonics.
+|_CP_ will be interpreted as "compare accumulator" and _JP_ as "jump unconditionally".
+
+_z180_
+|Allow assembly of Z-180 instructions.
+|Make cycle counting operators return Z-180 cycle counts and
+|interpret any ambiguous assembly statements as Zilog Z-180 mnemonics.
 |_CP_ will be interpreted as "compare accumulator" and _JP_ as "jump unconditionally".
 
 _jperror enable_
@@ -551,7 +603,7 @@ Expressions\mrasord change significantly in _--mras_ mode:
 |MRAS operators (_.and._ _.eq._ _.ge._ _.gt._ _.high._ _.le._ _.low._
 |_.lt._ _.mod._ _.ne._ _.not._ _.or._ _.shl._ _.shr._ _.xor._)
 |are recognized even if apparently in identifers.  (e.g., _a.or.b_ is
-|seen as _a .or. _b).
+|seen as _a .or. b_).
 
 |Logical operators return -1 for true and 0 for false.  Normally
 |zmac, like C, uses 1 for true.
@@ -692,7 +744,7 @@ _nop_ instructions:
   
  _endm_
 
-_irpc_ runs through a string of letters assigned them to a variable and
+_irpc_ runs through a string of letters assigning them to a variable and
 expanding the macro block each time.  For example, this will load 7 into
 registers _b_, _d_ and _h_:
 
@@ -835,10 +887,13 @@ and message appear just after the line containing the error.
   A invalid register was given to an instruction.  For example, _LD B,(DE)_
   or _ADD HL,IX_.
  Z
-  Z-80 instruction in 8080 mode error
+  Invalid instruction.
  ##
-  An instruction was assembled that is only valid on the Z-80 but _.8080_
-  (or _-8_) mode is in effect.  However, use use of Z-80 mnemonics that
+  The instruction is not valid for the current architecture.  For example,
+  a Z-80@zmn instruction in 8080 mode (_.8080_ or _-8_ mode is in effect).
+  Or a Z-180@zzmn instruction in 8080 or Z-80 mode.
+  Or an undocumented Z-80 instruction in Z-180 mode.
+  However, use use of Z-80 mnemonics that
   output valid 8080 instructions is always OK.
  H
   $hex constant interpreted as symbol warning
@@ -852,6 +907,10 @@ and message appear just after the line containing the error.
   For statements that have been added as parse rules but have no effect.
   The only current example is _subttl_ which sets the sub title of a listing
   in certain assemblers.
+ W
+  Generic warning
+ ##
+  Higher-level warning; see text of warning for explanation.
 
 ---
 .Output Formats\format
@@ -872,7 +931,8 @@ _--oo rel_ or _-o file.rel_ then all other output formats are suppressed
  .ams
   AMSDOS executable format for Amstrad computers.
  .bds
-  For source-level debugging in trs80gp@http://www.48k.ca/trs80gp.html
+  For source-level debugging and automatic memory protecttion in
+  trs80gp@http://www.48k.ca/trs80gp.html
  .1500.cas
   TRS-80 high-speed (1500 baud) cassette SYSTEM file.  The internal name of the
   file is the source file name shortened to 6 characters with suffixes
@@ -917,8 +977,9 @@ _--oo rel_ or _-o file.rel_ then all other output formats are suppressed
 
 ---
 .Miscellaneous
-In the symbol table listing, the _=_ prefix is given for those symbols
-defined by _equ_ or _defl_.  The _/_ prefix is shown for common blocks.
+In the symbol table listing, the _=_ separator is given for those symbols
+defined by _equ_ or _defl_.  The _/_ separator is shown for common blocks.
+Aliases are distinguished by their double-quoted strings.
 
 The _.rel_ file format can store symbol names of up to 7 characters in length.
 However, MACRO-80 truncates symbols to 6 characters so that it has one
@@ -945,7 +1006,7 @@ register usage.  Consider the following code fragment:
   
  _ex    af,af'_
   
- _ld    a',(hl')
+ _ld    a',(hl')_
   
  _rra'_
   
@@ -958,9 +1019,326 @@ register usage.  Consider the following code fragment:
  _exx_
 
 Although zmac does nothing but ignore the single quotes they are useful for
-indicating which register we're talking using.  A more advanced mode
-where zmac pays attention to the trailing quotes and emits exchange instrucitons
-as needed has been considered.
+indicating which register is currently active.  A more advanced mode
+where zmac pays attention to the trailing quotes and emits exchange
+instructions as needed has been considered.
+
+---
+.Official Zilog\zsyn Syntax
+
+The official Zilog syntax for Z-80 has some rather arbitrary restrictions
+that zmac ignores.  For instance, _add a,b_ is the only correct form but
+_sub a,b_ is invalid as _sub b_ must be used.
+Here is a list of
+the official and alternate forms of the various affected instructions.
+_rmn_ refers to _a_, _b_, _c_, _d_, _e_, _h_, _l_, _(hl)_, _(ix+d)_, _(iy+d)_
+or 8 bit immediate value.
+
+ _   Official        Accepted Variant _
+  
+ _ add   a,rmn         add   rmn_
+  
+ _ adc   a,rmn         adc   rmn_
+  
+ _ sub   rmn           sub   a,rmn_
+  
+ _ sbc   a,rmn         sbc   rmn_
+  
+ _ cp    rmn           cp    a,rmn_
+  
+ _ and   rmn           and   a,rmn_
+  
+ _ xor   rmn           xor   a,rmn_
+  
+ _ or    rmn           or    a,rmn_
+  
+ _ jp    (hl)          jp    hl_
+  
+ _ jp    (ix)          jp    ix_
+  
+ _ jp    (iy)          jp    iy_
+  
+ _ ex    de,hl         ex    hl,de_
+  
+ _ ex    hl,(sp)       ex    (sp),hl_
+  
+ _ ex    ix,(sp)       ex    (sp),ix_
+  
+ _ ex    iy,(sp)       ex    (sp),iy_
+  
+ _ in    a,(n)         in    a,n_
+  
+ _ out   (n),a         out   n,a_
+  
+ _ in    r,(c)         in    r,(bc)_
+  
+ _ out   (c),r         out   (bc),r_
+  
+ _ rst   8             rst   1_
+  
+ _ rst   16            rst   2_
+  
+ _ rst   24            rst   3_
+  
+ _ rst   32            rst   4_
+  
+ _ rst   40            rst   5_
+  
+ _ rst   48            rst   6_
+  
+ _ rst   56            rst   7_
+
+---
+.Mnemonic Values\mneval
+
+Values for 8080 mnemonics.  Note that _cpi_ and _jp_ are interpreted as
+"compare immediate" and "jump if positive" in 8080 mode.
+
+ _ aci $CE    dad $09   ldax $0A    rnz $C0_
+  
+ _ adc $88    dcr $05   lhld $2A     rp $F0_
+  
+ _ add $80    dcx $0B    lxi $01    rpe $E8_
+  
+ _ adi $C6    dec $01    mov $40    rpo $E0_
+  
+ _ ana $A0     di $F3    mvi $06    rrc $0F_
+  
+ _ ani $E6     ei $FB    nop $00    rst $C7_
+  
+ _call $CD    hlt $76    ora $B0     rz $C8_
+  
+ _  cc $DC     in $DB    ori $F6    sbb $98_
+  
+ _  cm $FC    inr $04    out $D3    sbi $DE_
+  
+ _ cma $2F    inx $03   pchl $E9   shld $22_
+  
+ _ cmc $3F     jc $DA    pop $C1   sphl $F9_
+  
+ _ cmp $B8     jm $FA   push $C5    sta $32_
+  
+ _ cnc $D4    jmp $C3    ral $17   stax $02_
+  
+ _ cnz $C4    jnc $D2    rar $1F    stc $37_
+  
+ _  cp $B8    jnz $C2     rc $D8    sub $90_
+  
+ _ cpe $EC     jp $F2    ret $C9    sui $D6_
+  
+ _ cpi $FE    jpe $EA    rlc $07   xchg $EB_
+  
+ _ cpo $E4    jpo $E2   rlcr $07    xra $A8_
+  
+ _  cz $CC     jz $CA     rm $F8    xri $EE_
+  
+ _ daa $27    lda $3A    rnc $D0   xthl $E3_
+
+Values for Z-80\zmn mnemonics.
+Ambiguous mnemonics such as _ld_ and _inc_ evaluate to the 8 bit register
+operation base value.  _ex_ is arbitrarily mapped to _ex de,hl_.
+Bit and shift operations on _(IX+d)_ and _(IY+d)_
+evaluate to 32 bit values and the offset goes into the third byte.
+_and_, _or_ and _xor_ can be used in data statements but parsing ambiguity
+prevents their use in operations.
+
+ _adc      $88            otir     $B3ED_
+  
+ _adcx     $8EDD          out      $D3_
+  
+ _adcy     $8EFD          outd     $ABED_
+  
+ _add      $80            outdr    $BBED_
+  
+ _addx     $86DD          outi     $A3ED_
+  
+ _addy     $86FD          outir    $B3ED_
+  
+ _and      $A0            outp     $41ED_
+  
+ _andx     $A6DD          pcix     $E9DD_
+  
+ _andy     $A6FD          pciy     $E9FD_
+  
+ _bit      $40CB          pfix     $DD_
+  
+ _bitx     $4600CBDD      pfiy     $FD_
+  
+ _bity     $4600CBFD      pop      $C1_
+  
+ _call     $CD            popix    $E1DD_
+  
+ _ccd      $A9ED          popiy    $E1FD_
+  
+ _ccdr     $B9ED          push     $C5_
+  
+ _ccf      $3F            pushix   $E5DD_
+  
+ _cci      $A1ED          pushiy   $E5FD_
+  
+ _ccir     $B1ED          ralr     $10CB_
+  
+ _cmpx     $BEDD          ralx     $1600CBDD_
+  
+ _cmpy     $BEFD          raly     $1600CBFD_
+  
+ _cp       $B8            rarr     $18CB_
+  
+ _cpd      $A9ED          rarx     $1E00CBDD_
+  
+ _cpdr     $B9ED          rary     $1E00CBFD_
+  
+ _cpi      $A1ED          res      $80CB_
+  
+ _cpir     $B1ED          resx     $8600CBDD_
+  
+ _cpl      $2F            resy     $8600CBFD_
+  
+ _daa      $27            ret      $C9_
+  
+ _dadc     $4AED          reti     $4DED_
+  
+ _dadx     $9DD           retn     $45ED_
+  
+ _dady     $9FD           rl       $10CB_
+  
+ _dcrx     $35DD          rla      $17_
+  
+ _dcry     $35FD          rlc      $CB_
+  
+ _dcxix    $2BDD          rlca     $7_
+  
+ _dcxiy    $2BFD          rlcr     $CB_
+  
+ _dec      $5             rlcx     $600CBDD_
+  
+ _di       $F3            rlcy     $600CBFD_
+  
+ _djnz     $10            rld      $6FED_
+  
+ _dsbc     $42ED          rr       $18CB_
+  
+ _ei       $FB            rra      $1F_
+  
+ _ex       $EB            rrc      $8CB_
+  
+ _exaf     $8             rrca     $F_
+  
+ _exx      $D9            rrcr     $8CB_
+  
+ _halt     $76            rrcx     $E00CBDD_
+  
+ _im       $46ED          rrcy     $E00CBFD_
+  
+ _im0      $46ED          rrd      $67ED_
+  
+ _im1      $56ED          rst      $C7_
+  
+ _im2      $5EED          sbc      $98_
+  
+ _in       $DB            sbcd     $43ED_
+  
+ _inc      $4             sbcx     $9EDD_
+  
+ _ind      $AAED          sbcy     $9EFD_
+  
+ _indr     $BAED          scf      $37_
+  
+ _ini      $A2ED          sded     $53ED_
+  
+ _inir     $B2ED          set      $C0CB_
+  
+ _inp      $40ED          setb     $C0CB_
+  
+ _inrx     $34DD          setx     $C600CBDD_
+  
+ _inry     $34FD          sety     $C600CBFD_
+  
+ _inxix    $23DD          sixd     $22DD_
+  
+ _inxiy    $23FD          siyd     $22FD_
+  
+ _jp       $F2            sl1      $30CB_
+  
+ _jr       $18            sla      $20CB_
+  
+ _jrc      $38            slar     $20CB_
+  
+ _jrnc     $30            slax     $2600CBDD_
+  
+ _jrnz     $20            slay     $2600CBFD_
+  
+ _jrz      $28            sll      $30CB_
+  
+ _lbcd     $4BED          spix     $F9DD_
+  
+ _ld       $40            spiy     $F9FD_
+  
+ _ldai     $57ED          sra      $28CB_
+  
+ _ldar     $5FED          srar     $28CB_
+  
+ _ldd      $A8ED          srax     $2E00CBDD_
+  
+ _lddr     $B8ED          sray     $2E00CBFD_
+  
+ _lded     $5BED          srl      $38CB_
+  
+ _ldi      $A0ED          srlr     $38CB_
+  
+ _ldir     $B0ED          srlx     $3E00CBDD_
+  
+ _ldx      $46DD          srly     $3E00CBFD_
+  
+ _ldy      $46FD          sspd     $73ED_
+  
+ _lixd     $2ADD          stai     $47ED_
+  
+ _liyd     $2AFD          star     $4FED_
+  
+ _lspd     $7BED          stx      $70DD_
+  
+ _lxix     $21DD          sty      $70FD_
+  
+ _lxiy     $21FD          sub      $90_
+  
+ _mvix     $36DD          subx     $96DD_
+  
+ _mviy     $36FD          suby     $96FD_
+  
+ _neg      $44ED          xor      $A8_
+  
+ _nop      $0             xorx     $AEDD_
+  
+ _or       $B0            xory     $AEFD_
+  
+ _orx      $B6DD          xtix     $E3DD_
+  
+ _ory      $B6FD          xtiy     $E3FD_
+  
+ _otdr     $BBED_
+
+Values for Z-180\zzmn mnemonics.
+
+ _in0      $00ED_
+  
+ _mlt      $4CED_
+  
+ _otdm     $8BED_
+  
+ _otdmr    $9BED_
+  
+ _otim     $83ED_
+  
+ _otimr    $93ED_
+  
+ _out0     $01ED_
+  
+ _slp      $76ED_
+  
+ _tst      $04ED_
+  
+ _tstio    $74ED_
 
 ---
 .Exit Status

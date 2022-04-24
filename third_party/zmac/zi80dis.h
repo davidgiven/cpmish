@@ -20,9 +20,11 @@ class Zi80dis
 public:
 	Zi80dis();
 
+	// Don't re-order these or you'l break zmac.
 	enum Processor {
+		proc8080,
 		procZ80,
-		proc8080
+		procZ180
 	};
 
 	void SetProcessor(Processor proc);	// default is procZ80
@@ -53,6 +55,8 @@ public:
 	int m_minT;				// minimum number of T states to execute on z80
 	int m_max8080T;			// maximum number of T states to execute on 8080
 	int m_min8080T;			// minimum number of T states to execute on 8080
+	int m_max180T;			// maximum number of T states to execute on z180
+	int m_min180T;			// minimum number of T states to execute on z180
 	int m_ocf;				// number of opcode fetches (M1 states)
 	char m_format[16];		// format string for disassembly
 	int m_numArg;			// number of arguments
@@ -88,7 +92,6 @@ public:
 
 // For the one holdout still using C (zmac).
 
-int zi_tstates(const unsigned char *inst, int *low, int *high, int *ocf,
-	int *low8080, int *high8080);
+int zi_tstates(const unsigned char *inst, int proc, int *low, int *high, int *ocf, char *disasm);
 
 #endif /* defined(__cplusplus) */

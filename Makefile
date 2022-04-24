@@ -1,4 +1,4 @@
-OBJDIR = .obj
+OBJDIR = $(PWD)/.obj
 LUA_5_1 = lua5.1
 
 all: $(OBJDIR)/build.ninja
