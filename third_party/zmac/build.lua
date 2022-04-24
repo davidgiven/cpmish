@@ -6,15 +6,35 @@ yacc {
 }
 
 cprogram {
+	name = "doc",
+	srcs = { "./doc.c" },
+	vars = {
+		["+cflags"] = { "-DDOC_DEBUG", "-Ddoc=main" }
+	}
+}
+
+normalrule {
+	name = "doc_inl",
+	ins = {
+		"+doc",
+		"./doc.txt"
+	},
+	outleaves = { "doc.inl" },
+	commands = { "cd %{dirname(ins[2])} && (%{abspath(ins[1])} > /dev/null) && mv doc.inl %{outs}" }
+}
+
+cprogram {
     name = "zmac",
     srcs = {
         "./mio.c",
         "./zi80dis.cpp",
+		"./doc.c",
         matching(filenamesof("+zmacparser"), "%.c$"),
     },
     deps = {
         "./zi80dis.h",
-        "+zmacparser"
+        "+zmacparser",
+		"+doc_inl",
     }
 }
 
