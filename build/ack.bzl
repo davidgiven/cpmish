@@ -20,10 +20,11 @@ def _compile_ack_files(ctx, srcfiles, headers):
 
         ctx.actions.run_shell(
             mnemonic = "AckCompile",
-            command = "$@",
-            arguments = ["ack", args],
+            command = "ack $@",
+            arguments = [args],
             inputs = [src] + headers,
-            outputs = [o]
+            outputs = [o],
+            use_default_shell_env = True,
         )
 
         ofiles += [o]
@@ -54,10 +55,11 @@ def _ack_library_impl(ctx):
 
     ctx.actions.run_shell(
         mnemonic = "AckLibrary",
-        command = "$@",
-        arguments = ["aal", args],
+        command = "aal $@",
+        arguments = [args],
         inputs = ofiles,
         outputs = [output_file],
+        use_default_shell_env = True,
     )
 
     return [
@@ -103,10 +105,11 @@ def _ack_binary_impl(ctx):
 
     ctx.actions.run_shell(
         mnemonic = "AckBinary",
-        command = "$@",
-        arguments = ["ack", args],
+        command = "ack $@",
+        arguments = [args],
         inputs = ofiles + files_to_link,
         outputs = [output_file],
+        use_default_shell_env = True,
     )
 
     return [
