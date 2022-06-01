@@ -15,6 +15,7 @@ genrule(
 
 zmac(
     name = "boot_o",
+	z180 = True,
     srcs = [
 		"boot.z80",
 		"//arch/brotherop2/include:brotherop2.lib",
@@ -36,6 +37,7 @@ ld80(
 [
 	zmac(
 		name = n,
+		z180 = True,
 		srcs = [
 			n + ".z80",
 			"//arch/brotherop2/include:brotherop2.lib",
@@ -67,6 +69,7 @@ ld80(
 # Produces the FAT bit of the disk image.
 zmac(
 	name = "fat",
+	z180 = True,
 	srcs = [
 		"fat.z80",
 		":boot",

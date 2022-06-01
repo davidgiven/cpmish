@@ -23,12 +23,13 @@ top_of_memory = 0x9000
 
 zmac(
     name = "boot_img",
+    relocatable = False,
+	z180 = True,
     srcs = [
         "boot.z80",
         "//include:z180.lib",
         ":addresses",
     ],
-    relocatable = False
 )
 
 # BIOS ----------------------------------------------------------------------
@@ -43,6 +44,7 @@ BIOS_SRCS = [
 [
     zmac(
         name = name + "_o",
+        z180 = True,
         srcs = [
             name + ".z80",
             "//include:cpm.lib",
@@ -106,6 +108,7 @@ binslice(
 
 zmac(
 	name = "bootfile_img",
+	z180 = True,
 	srcs = [
         "fs.z80",
 		":boot_img",

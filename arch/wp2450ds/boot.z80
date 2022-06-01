@@ -27,17 +27,17 @@ entry:
     di                  ; The Brother OS is not at home
 
     xor a
-    out0a CBAR          ; now the entire address space is RAM
+    out0 (CBAR), a          ; now the entire address space is RAM
     ld sp, stack        ; startup stack
 
     ; Clear the screen
 
     ld b, a
-    out0b PORT_VIDEO_ADDR_LO
-    out0b PORT_VIDEO_ADDR_HI
+    out0 (PORT_VIDEO_ADDR_LO), b
+    out0 (PORT_VIDEO_ADDR_HI), b
     ld hl, SCREEN_WIDTH * SCREEN_HEIGHT * 8
 .2
-    out0b PORT_VIDEO_DATA_W
+    out0 (PORT_VIDEO_DATA_W), b
     dec hl
     ld a, h
     or l
@@ -46,9 +46,9 @@ entry:
     ; Configure the serial port.
 
     ld a, 01110100b     ; RE, TE, CKA1D, MOD2(8n1)
-    out0a CNTLA1
+    out0 (CNTLA1), a
     ld a, 00000010b     ; SS1(/4 clock divider)
-    out0a CNTLB1
+    out0 (CNTLB1), a
 
     ; Set up the disk system.
 

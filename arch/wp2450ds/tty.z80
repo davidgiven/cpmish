@@ -73,33 +73,33 @@ not_reverse_video
     
     ; Write one blank line.
 
-    out0l PORT_VIDEO_ADDR_LO
-    out0h PORT_VIDEO_ADDR_HI
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
     nop
-    out0c PORT_VIDEO_DATA_W
+    out0 (PORT_VIDEO_DATA_W), c
     call add_91
 
     ; Write the character data.
 
     ld b, 7
 .2
-    out0l PORT_VIDEO_ADDR_LO
-    out0h PORT_VIDEO_ADDR_HI
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
     nop
     ld a, (de)
     xor c
     inc de
-    out0a PORT_VIDEO_DATA_W
+    out0 (PORT_VIDEO_DATA_W), a
 
     call add_91
     djnz .2
 
     ; Now write another blank line.
 
-    out0l PORT_VIDEO_ADDR_LO
-    out0h PORT_VIDEO_ADDR_HI
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
     nop
-    out0c PORT_VIDEO_DATA_W
+    out0 (PORT_VIDEO_DATA_W), c
 
     ret
 
@@ -160,12 +160,12 @@ tty_clear_to_eos:
     ; fall through
 ; Clear HL bytes from video memory address DE
 clear_bytes:
-    out0e PORT_VIDEO_ADDR_LO
-    out0d PORT_VIDEO_ADDR_HI
+    out0 (PORT_VIDEO_ADDR_LO), e
+    out0 (PORT_VIDEO_ADDR_HI), d
     
     ld b, 0
 .1
-    out0b PORT_VIDEO_DATA_W
+    out0 (PORT_VIDEO_DATA_W), b
     dec hl
     ld a, h
     or l
@@ -258,11 +258,11 @@ read_chunk:
     ld a, PORT_VIDEO_DATA_R
     call setup_dma
     ld a, 01000110b         ; One memory wait state, 0 I/O wait state, I/O->memory
-    out0a DCNTL
+    out0 (DCNTL), a
     ld a, 10010000b         ; DE1 enable, DWE0 disable
-    out0a DSTAT             ; perform the transfer
+    out0 (DSTAT), a             ; perform the transfer
 wait_for_dma_end:
-    in0a DSTAT
+    in0 a, (DSTAT)
     and 10000000b           ; test for DMA completion
     jr nz, wait_for_dma_end
     ret
@@ -272,16 +272,16 @@ write_chunk:
     ld a, PORT_VIDEO_DATA_W
     call setup_dma
     ld a, 01000100b         ; One memory wait state, 0 I/O wait state, memory->I/O
-    out0a DCNTL
+    out0 (DCNTL), a
     ld a, 10010000b         ; DE1 enable, DWE0 disable
-    out0a DSTAT             ; perform the transfer
+    out0 (DSTAT), a             ; perform the transfer
     jr wait_for_dma_end
 
 ; On entry: HL is the video memory address, and A is the I/O port.
 setup_dma:
     ld (scanline_dma + IAR1L - MAR1L), a
-    out0l PORT_VIDEO_ADDR_LO
-    out0h PORT_VIDEO_ADDR_HI
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
     push hl
     ld b, scanline_dma.end - scanline_dma
     ld c, MAR1L
@@ -303,15 +303,15 @@ toggle_cursor:
 
     ld b, 9
 .1
-    out0l PORT_VIDEO_ADDR_LO
-    out0h PORT_VIDEO_ADDR_HI
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
     nop
-    in0a PORT_VIDEO_DATA_R
+    in0 a, (PORT_VIDEO_DATA_R)
     xra 0xff
-    out0l PORT_VIDEO_ADDR_LO
-    out0h PORT_VIDEO_ADDR_HI
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
     nop
-    out0a PORT_VIDEO_DATA_W
+    out0 (PORT_VIDEO_DATA_W), a
 
     call add_91
     djnz .1

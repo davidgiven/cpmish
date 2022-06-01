@@ -71,7 +71,7 @@ CURSTOGG:
     ld c, a
     call goto_cursor
     nop
-    out0c PORT_VIDEO_DATA
+    out0 (PORT_VIDEO_DATA), c
     pop bc
     pop af
     ret
@@ -85,14 +85,14 @@ tty_delete_line
     ld l, 0                 ; char
 .2
     inc h                   ; switch to source line
-    out0l PORT_VIDEO_LO
-    out0h PORT_VIDEO_HI
+    out0 (PORT_VIDEO_LO), l
+    out0 (PORT_VIDEO_HI), h
     dec h                   ; move back to dest
     nop
     nop
     in a, (PORT_VIDEO_DATA)
-    out0l PORT_VIDEO_LO
-    out0h PORT_VIDEO_HI
+    out0 (PORT_VIDEO_LO), l
+    out0 (PORT_VIDEO_HI), h
     inc l                   ; next char
     out (PORT_VIDEO_DATA), a
     ld a, 160
@@ -111,7 +111,7 @@ blank_bottom_line:
     ld a, SCREEN_HEIGHT - 1
 blank_line_a:
     ld b, 0
-    out0b PORT_VIDEO_LO
+    out0 (PORT_VIDEO_LO), b
     out (PORT_VIDEO_HI), a
     ld b, 160
     xor a
@@ -130,14 +130,14 @@ tty_insert_line:
 .1
     ld l, 0                 ; char
 .2
-    out0l PORT_VIDEO_LO
-    out0h PORT_VIDEO_HI
+    out0 (PORT_VIDEO_LO), l
+    out0 (PORT_VIDEO_HI), h
     inc h                   ; move to dest line
     nop
     nop
     in a, (PORT_VIDEO_DATA)
-    out0l PORT_VIDEO_LO
-    out0h PORT_VIDEO_HI
+    out0 (PORT_VIDEO_LO), l
+    out0 (PORT_VIDEO_HI), h
     dec h                   ; move back to src line
     out (PORT_VIDEO_DATA), a
     inc l                   ; next char

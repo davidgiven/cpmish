@@ -72,16 +72,16 @@ BOOTE:
     di
     ld sp, 0x0100           ; ephemeral user stack
     ld c, 0xe0              ; map RAM in everywhere
-    out0c CBAR
+    out0 (CBAR), c
 
     ld a, 10
-    out0a VIDEO_ADDR
+    out0 (VIDEO_ADDR), a
     ld a, 0x60
-    out0a VIDEO_DATA
+    out0 (VIDEO_DATA), a
     ld a, 11
-    out0a VIDEO_ADDR
+    out0 (VIDEO_ADDR), a
     ld a, 0xff
-    out0a VIDEO_DATA
+    out0 (VIDEO_DATA), a
 
     call TTYINIT
     call TTYPUTSI
@@ -131,9 +131,9 @@ loadloop:
     ld hl, bios_load_dma_buffer
     otimr
     ld a, 2             ; start DMA
-    out0a DMODE
+    out0 (DMODE), a
     ld a, $40
-    out0a DSTAT
+    out0 (DSTAT), a
     call DMAWAIT
 
     pop hl
@@ -178,11 +178,11 @@ ADDAHL:
 DMAMEM:
     otimr
     ld a, 2             ; start DMA
-    out0a DMODE
+    out0 (DMODE), a
     ld a, $40
-    out0a DSTAT
+    out0 (DSTAT), a
 DMAWAIT:
-    in0a DSTAT
+    in0 a, (DSTAT)
     and 10000000b           ; test for DMA completion
     ret z
     jr DMAWAIT
@@ -209,7 +209,7 @@ SYSIN:
     pop hl                  ; return address
     ld (saved_stack), sp    ; save the CP/M stack pointer
     ld c, 0xe7              ; expose the Brother ROM
-    out0c CBAR
+    out0 (CBAR), c
     ld sp, 0x0000           ; switch to the Brother stack
     push hl
     exx
@@ -224,7 +224,7 @@ SYSOUT:
     exx
     pop hl                  ; return address
     ld c, 0xe0              ; map RAM in everywhere
-    out0c CBAR
+    out0 (CBAR), c
     ld sp, (saved_stack)
     push hl
     exx

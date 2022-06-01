@@ -12,12 +12,12 @@ VIDEO_DATA = 0x81
 
 SCREENON macro
     ld a, $02
-    out0a CBR
+    out0 (CBR), a
 	endm
 
 SCREENOFF macro
     ld a, $16
-    out0a CBR
+    out0 (CBR), a
 	endm
 
 ; vim: ts=4 sw=4 et ft=asm

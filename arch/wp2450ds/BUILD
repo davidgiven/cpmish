@@ -40,6 +40,7 @@ genrule(
 
 zmac(
     name = "tty_o",
+	z180 = True,
     srcs = [
 		"tty.z80",
 		"//include:cpm.lib",
@@ -54,6 +55,7 @@ zmac(
 
 zmac(
     name = "upd765_o",
+	z180 = True,
     srcs = [
 		"upd765.z80",
 		"//include:cpm.lib",
@@ -67,6 +69,7 @@ zmac(
 
 zmac(
     name = "keyboard_o",
+	z180 = True,
     srcs = [
 		"keyboard.z80",
 		"//include:cpm.lib",
@@ -85,6 +88,7 @@ zmac(
 
 zmac(
     name = "boot_o",
+	z180 = True,
     srcs = [
 		"boot.z80",
 		"//include:cpm.lib",
@@ -109,6 +113,7 @@ ld80(
 
 zmac(
     name = "bios_o",
+	z180 = True,
     srcs = [
 		"bios.z80",
 		"//include:cpm.lib",
@@ -165,7 +170,8 @@ zmac(
 		":bios_img",
 		":systemtrack_img",
 	],
-	relocatable = False
+	relocatable = False,
+	z180 = True,
 )
 
 # Disk image ----------------------------------------------------------------

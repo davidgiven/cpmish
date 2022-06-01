@@ -1,4 +1,4 @@
-def zmac(name, srcs, relocatable=True):
+def zmac(name, srcs, relocatable=True, z180=False):
     srcfiles = [f for f in srcs if f.endswith(".z80") or f.endswith(".asm") or f.endswith(".mac")]
     if len(srcfiles) != 1:
         fail("you may only have one .z80 or .asm file")
@@ -7,6 +7,8 @@ def zmac(name, srcs, relocatable=True):
     ext = ".rel" if relocatable else ".cim"
     relflag = "--rel7" if relocatable else ""
     archflag = "-z" if srcfiles[0].endswith(".z80") else "-8"
+    if z180:
+        archflag += " --z180"
     outfile = name + ext
 
     hdrflags = ""
