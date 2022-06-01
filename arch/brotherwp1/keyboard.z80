@@ -24,14 +24,14 @@ MODIFIER_BIT_CAPS = 2
 
 KBDINIT:
     ld a, 0xff
-    out0a 0xd8
+    out0 (0xd8), a
 
-    in0a 0x88               ; enable keyboard?
+    in0 a, (0x88)           ; enable keyboard?
     and 0x02
-    out0a 0x88
+    out0 (0x88), a
 
     ld a, 00100111b         ; RE enable, external clock
-    out0a CNTR
+    out0 (CNTR), a
 
     ret
 
@@ -60,14 +60,14 @@ KBDGET:
 ; Returns the ASCII keycode in A, or 0 if nothing is pending.
 kbdpoll:
     xor a
-    in0c CNTR
+    in0 c, (CNTR)
     bit 5, c                ; test RE clear
     ret nz                  ; do nothing if no key waiting
 
-    in0a TRDR
+    in0 a, (TRDR)
 
     ld c, 00100111b         ; RE enable, external clock
-    out0c CNTR
+    out0 (CNTR), c
 
     ; We now have a keyboard scancode in A, so use the keyboard map to convert
     ; it to ASCII.

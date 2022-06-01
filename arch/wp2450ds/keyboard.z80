@@ -26,7 +26,7 @@ kbd_scan:
     ld hl, keyboard_bitmap  ; hl points to current bitmap byte
     ld d, 0                 ; matrix probe counter
 x_loop:
-    out0d PORT_KB
+    out0 (PORT_KB), d
 
     ; Delay loop to wait for the keyboard.
     ; 4 is not enough, 128 is too much.
@@ -35,7 +35,7 @@ x_loop:
 .1
     djnz .1                 ; 13*(B-1) + 8
 
-    in0a PORT_KB            ; read the matrix
+    in0 a, (PORT_KB)        ; read the matrix
     cpl                     ; bits are set to 0 when a key is pressed
     ld c, a
     xor (hl)                ; test for changed keys

@@ -62,29 +62,29 @@ entry:
     ld sp, $0000
 
     xor a
-    out0a ITC
+    out0 (ITC), a
     ld c, $0f
-    out0c CNTR
-    out0a $d8
+    out0 (CNTR), c
+    out0 ($d8), a
 
     ld a, 30
-    out0a $80
+    out0 ($80), a
     ld a, 00101000b
-    out0a $81
+    out0 ($81), a
 
     ; Switch to sys mode.
 
     ld c, $e7
-    out0c CBAR
+    out0 (CBAR), c
     ld c, $16
-    out0c CBR
+    out0 (CBR), c
     ld c, $27
-    out0c BBR
+    out0 (BBR), c
 
     ; Clear the screen.
 
     ld a, $02
-    out0a CBR
+    out0 (CBR), a
 
     ld bc, $0fff
     ld hl, $e000
@@ -96,7 +96,7 @@ entry:
     ldir
 
     ld a, $16
-    out0a CBR
+    out0 (CBR), a
 
     call putsi
     db 'Boot'
@@ -125,28 +125,28 @@ loadloop:
     ; DMA the read sector out of the temporary buffer and into user RAM.
 
     xor a
-    out0a SAR0L         ; SAR0 = temp buffer phys @ 0x25800
+    out0 (SAR0L), a         ; SAR0 = temp buffer phys @ 0x25800
     ld a, $58
-    out0a SAR0H
+    out0 (SAR0H), a
     ld a, $02
-    out0a SAR0B
+    out0 (SAR0B), a
 
     xor a
-    out0a DAR0L         ; DAR0 = target phys @ 0x2xx00
+    out0 (DAR0L), a         ; DAR0 = target phys @ 0x2xx00
     ld a, d
-    out0a DAR0H
+    out0 (DAR0H), a
     ld a, $02
-    out0a DAR0B
+    out0 (DAR0B), a
 
     xor a               ; BCR0 = 0x100, one sector
-    out0a BCR0L
+    out0 (BCR0L), a
     inc a
-    out0a BCR0H
+    out0 (BCR0H), a
 
     ld a, 2             ; start DMA
-    out0a DMODE
+    out0 (DMODE), a
     ld a, $40
-    out0a DSTAT
+    out0 (DSTAT), a
     
     inc bc              ; advance to next sector
     inc d               ; ...and next address
@@ -172,7 +172,7 @@ error:
 
 putbyte:
     ld c, $02
-    out0c CBR
+    out0 (CBR), c
 
     ld de, (cursor)
     ld (de), a
@@ -180,7 +180,7 @@ putbyte:
     ld (cursor), de
 
     ld c, $16
-    out0c CBR
+    out0 (CBR), c
     ret
 
 ; Writes the string at de to hl

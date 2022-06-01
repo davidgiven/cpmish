@@ -151,17 +151,17 @@ CONOUTE:
     jp TTYPUTC
 
 PUNCHE:
-    in0a STAT1
+    in0 a, (STAT1)
     and 00000010b       ; TDRE
     jr z, PUNCHE        ; loop until ready to transmit
-    out0c TDR1
+    out0 (TDR1), c
     ret
 
 READERE:
-    in0a STAT1
+    in0 a, (STAT1)
     and 10000000b       ; RDRF
     jr z, READERE       ; loop until data received
-    in0a RDR1
+    in0 a, (RDR1)
     ret
 
 ; List device unsupported.

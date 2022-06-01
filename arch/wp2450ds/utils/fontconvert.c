@@ -28,29 +28,31 @@ int main(int argc, const char* argv[])
     if (argc != 2)
         fatal("fontconvert <inputfile>");
 
-	BDF* bdf = bdf_load(argv[1]);
-	if (bdf->height != CHAR_HEIGHT)
-		fatal("font is not 6x7");
+    BDF* bdf = bdf_load(argv[1]);
+    if (bdf->height != CHAR_HEIGHT)
+        fatal("font is not 6x7");
 
-	for (int c=32; c<128; c++)
-	{
-		Glyph* glyph = bdf->glyphs[c];
+    for (int c=32; c<128; c++)
+    {
+        Glyph* glyph = bdf->glyphs[c];
 
-		/* The glyph data is a 7-element array of bytes. Each byte contains
-		 * one scanline, left justified. */
+        /* The glyph data is a 7-element array of bytes. Each byte contains
+         * one scanline, left justified. */
 
-		printf("\tdb ");
-		for (int yy=0; yy<CHAR_HEIGHT; yy++)
-		{
-			if (yy != 0)
-				printf(", ");
+        printf("\tdb ");
+        for (int yy=0; yy<CHAR_HEIGHT; yy++)
+        {
+            if (yy != 0)
+                printf(", ");
 
-			printf("0x%02x", glyph->data[yy] >> 2);
-		}
+            printf("0x%02x", glyph->data[yy] >> 2);
+        }
 
-		printf(" ; char %d\n", c);
+        printf(" ; char %d\n", c);
     }
 
     return 0;
 }
+
+// vim: ts=4 sw=4 et
 

@@ -20,12 +20,12 @@
 
 fd765_motor_on:
     ld a, 0xe1          ; motor on
-    out0a PORT_HD63266_STATUS
+    out0 (PORT_HD63266_STATUS), a
     ret
 
 fd765_motor_off:
     ld a, 0xd1          ; motor off
-    out0a PORT_HD63266_STATUS
+    out0 (PORT_HD63266_STATUS), a
     ret
 
 fd765_nudge_tc:
@@ -46,13 +46,13 @@ fd765_read_sector:
     ld hl, read_sector_dma
     otimr
     ld a, 00001100b         ; IO -> memory++
-    out0a DMODE
+    out0 (DMODE), a
     ld a, 01000100b         ; One memory wait state, 0 I/O wait state, DMS0 level sense, 
-    out0a DCNTL
+    out0 (DCNTL), a
     ld a, 01100000b         ; DE0 enable, DWE1 disable
-    out0a DSTAT             ; start the transfer
+    out0 (DSTAT), a             ; start the transfer
 wait_for_fdc_completion:
-    in0a PORT_HD63266_SR2
+    in0 a, (PORT_HD63266_SR2)
     and 0x40                ; 0x40 seems to mirror the 'IRQ happened' flag
     jr z, wait_for_fdc_completion
     ld a, 00100000b         ; DE0 disable, stop any pending DMA
@@ -75,11 +75,11 @@ fd765_write_sector:
     ld hl, write_sector_dma
     otimr
     ld a, 00110000b         ; memory++ -> IO
-    out0a DMODE
+    out0 (DMODE), a
     ld a, 01000100b         ; One memory wait state, 0 I/O wait state, DMS0 level sense, 
-    out0a DCNTL
+    out0 (DCNTL), a
     ld a, 01100000b         ; DE0 enable, DWE1 disable
-    out0a DSTAT             ; perform the transfer
+    out0 (DSTAT), a             ; perform the transfer
     jr wait_for_fdc_completion
 write_sector_dma:
     dw 0                    ; SAR0
@@ -94,19 +94,19 @@ DBS_WANT_DB_CAP = 0
     maclib deblocker
 
 fd765_read_st_a macro
-    in0a PORT_HD63266_STATUS
+    in0 a, (PORT_HD63266_STATUS)
     endm
 
 fd765_write_st_a macro
-    out0a PORT_HD63266_STATUS
+    out0 (PORT_HD63266_STATUS), a
     endm
 
 fd765_read_dt_a macro
-    in0a PORT_HD63266_DATA
+    in0 a, (PORT_HD63266_DATA)
     endm
 
 fd765_write_dt_a macro
-    out0a PORT_HD63266_DATA
+    out0 (PORT_HD63266_DATA), a
     endm
 
 FD765_DRIVE_READY_COUNTS = 0

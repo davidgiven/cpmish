@@ -193,7 +193,7 @@ SYSIN:
     pop hl                  ; return address
     ld (saved_stack), sp    ; save the CP/M stack pointer
     ld c, 0x88              ; expose the Brother ROM
-    out0c CBAR
+    out0 (CBAR), c
     ld sp, 0x31ad           ; switch to the Brother stack
     push hl
     exx
@@ -208,7 +208,7 @@ SYSOUT:
     exx
     pop hl                  ; return address
     ld c, 0x00              ; map RAM in everywhere
-    out0c CBAR
+    out0 (CBAR), c
     ld sp, (saved_stack)
     push hl
     exx

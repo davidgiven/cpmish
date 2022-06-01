@@ -21,8 +21,8 @@ start:
     ld bc, SCREEN_HEIGHT * 256
     xor a
 .1
-    out0c PORT_VIDEO_LO
-    out0b PORT_VIDEO_HI
+    out0 (PORT_VIDEO_LO), c
+    out0 (PORT_VIDEO_HI), b
     nop
     xor a
     out (PORT_VIDEO_DATA), a
@@ -52,14 +52,14 @@ load_again:
     di
     
     ld a, 0x50              ; C boundary at 0x5000, B at 0x0000
-    out0a CBAR
+    out0 (CBAR), a
     ld a, 0x65              ; B block starts at 0x65
-    out0a BBR
+    out0 (BBR), a
     jp remapped - 0x5000    ; jump to code visible in the B block
 remapped:
-    out0a CBR               ; C block now starts at 0x5b too
+    out0 (CBR), a               ; C block now starts at 0x5b too
     ld a, 0x00              ; C and B blocks both start at 0x0000
-    out0a CBAR
+    out0 (CBAR), a
     jp 0xa900               ; Start BIOS
 
 disk_error:

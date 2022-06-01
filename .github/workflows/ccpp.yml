@@ -4,20 +4,20 @@ on: [push]
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v1
       with:
         fetch-depth: 1
     - name: apt
-      run: sudo apt install cpmtools lua5.1 ninja-build flex bison libreadline-dev
+      run: sudo apt install cpmtools bazel-bootstrap flex bison libreadline-dev
     - name: build-ack
       run: |
         git clone --depth=1 https://github.com/davidgiven/ack.git
         make -C ack PREFIX=$HOME +ack-cpm
         make -C ack PREFIX=$HOME install
     - name: make
-      run: PATH=$PATH:$HOME/bin make
+      run: PATH=$PATH:$HOME/bin make verbose
 
   build-macos:
     runs-on: macos-latest
@@ -26,7 +26,7 @@ jobs:
       with:
         fetch-depth: 1
     - name: brew
-      run: brew install pkg-config ninja cpmtools lua@5.1 truncate
+      run: brew install pkg-config bazelisk cpmtools truncate
     - name: build-ack
       run: |
         git clone --depth=1 https://github.com/davidgiven/ack.git
