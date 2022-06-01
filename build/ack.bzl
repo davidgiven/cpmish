@@ -14,13 +14,14 @@ def _compile_ack_files(ctx, srcfiles, headers):
         args.add_all(ctx.attr.cflags)
         args.add_all(h, format_each="-I%s")
         args.add("-c")
+        args.add("-O3")
         args.add("-o", o)
         args.add(src)
 
-        ctx.actions.run(
+        ctx.actions.run_shell(
             mnemonic = "AckCompile",
-            executable = "/usr/local/bin/ack",
-            arguments = [args],
+            command = "$@",
+            arguments = ["ack", args],
             inputs = [src] + headers,
             outputs = [o]
         )
@@ -51,10 +52,10 @@ def _ack_library_impl(ctx):
     args.add(output_file)
     args.add_all(ofiles)
 
-    ctx.actions.run(
+    ctx.actions.run_shell(
         mnemonic = "AckLibrary",
-        executable = "/usr/local/bin/aal",
-        arguments = [args],
+        command = "$@",
+        arguments = ["aal", args],
         inputs = ofiles,
         outputs = [output_file],
     )
@@ -100,10 +101,10 @@ def _ack_binary_impl(ctx):
     args.add_all(ofiles)
     args.add_all(files_to_link)
 
-    ctx.actions.run(
+    ctx.actions.run_shell(
         mnemonic = "AckBinary",
-        executable = "/usr/local/bin/ack",
-        arguments = [args],
+        command = "$@",
+        arguments = ["ack", args],
         inputs = ofiles + files_to_link,
         outputs = [output_file],
     )
