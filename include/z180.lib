@@ -143,13 +143,5 @@ otimr	macro
 		dw 0x93ed
 		endm
 
-tsthl	macro
-		db 0xed, 0x34
-		endm
-
-tstio	macro const
-		db 0xed, 0x24, const
-		endm
-
 ; vim: ts=4 sw=4 et ft=asm
 
