@@ -17,7 +17,13 @@ cp16 macro VAR, VAL
     endm
 
     jp main
-    include "../deblocker.z80"
+
+DBS_BLOCK_SHIFT = 9
+DBS_WANT_DB_CAP = 0
+DPB_SPT = 0
+DPB_BSH = 2
+DPB_DSM = 5
+    include "deblocker.lib"
 main:
     ; Change to currently loaded sector.
 
@@ -25,7 +31,7 @@ main:
         call reset
         ld bc, 0
         ld de, 0
-        call change_block
+        call dbs_i_change_block
         jp z, fail
         
         cp8 r512_count, 0
@@ -43,7 +49,7 @@ main:
         ld (dirty), a
         ld bc, 0
         ld de, 0
-        call change_block
+        call dbs_i_change_block
         jp z, fail
         
         cp8 r512_count, 0
@@ -58,10 +64,10 @@ main:
     if 1
         call reset
         ld a, 1
-        ld (changed), a
+        ld (dbs_i_changed), a
         ld bc, 1
         ld de, 0
-        call change_block
+        call dbs_i_change_block
         jp z, fail
         
         cp8 r512_count, 1
@@ -76,11 +82,11 @@ main:
     if 1
         call reset
         ld a, 1
-        ld (changed), a
+        ld (dbs_i_changed), a
         ld (dirty), a
         ld bc, 1
         ld de, 0
-        call change_block
+        call dbs_i_change_block
         jp z, fail
         
         cp8 r512_count, 1
@@ -101,8 +107,8 @@ reset:
     ld (r512_count), a
     ld (w512_count), a
     ld (dirty), a
-    ld (changed), a
-    ld (mode), a
+    ld (dbs_i_changed), a
+    ld (dbs_i_mode), a
     ret
     
 ; Mock R512 which always succeeds.

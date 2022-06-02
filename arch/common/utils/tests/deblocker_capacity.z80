@@ -27,7 +27,13 @@ cp16 macro VAR, VAL
     endm
 
     jp main
-    include "../deblocker.z80"
+
+DBS_BLOCK_SHIFT = 9
+DBS_WANT_DB_CAP = 1
+DPB_SPT = 0
+DPB_BSH = 2
+DPB_DSM = 5
+    include "deblocker.lib"
 main:
 
     ; 1kB blocks

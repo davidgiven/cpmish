@@ -1,3 +1,69 @@
+load("//third_party/zmac:build.bzl", "zmac")
+load("//third_party/ld80:build.bzl", "ld80")
+
+def z80test(name, srcs, deps=[]):
+    zmac(
+        name = name + "_zmac",
+        srcs = srcs
+    )
+
+    ld80(
+        name = name + "_cim",
+        address = 0x0100,
+        objs = {
+            0x0100: [ ":" + name + "_zmac" ] + deps
+        }
+    )
+
+    native.sh_test(
+        name = name + "_test",
+        size = "small",
+        srcs = [ "//build:cpmtest.sh" ],
+        data = [
+            "//utils/emu",
+            ":" + name + "_cim"
+        ],
+        args = [ "$(location //utils/emu)", "$(location :" + name + "_cim)" ],
+    )
+
+
+#definerule("z80test",
+#	{
+#		srcs = { type="targets" },
+#		deps = { type="targets", default={} },
+#    },
+#    function (e)
+#        local rel = zmac {
+#            name = e.name.."_zmac",
+#            srcs = e.srcs,
+#            deps = e.deps,
+#        }
+#
+#        local cim = ld80 {
+#            name = e.name.."_cim",
+#            srcs = { "-P0x0100", rel }
+#        }
+#
+#        local com = bintocom {
+#            name = e.name.."_com",
+#            srcs = { cim }
+#        }
+#
+#        normalrule {
+#            name = e.name.."_test",
+#            ins = {
+#                "utils/emu+emu",
+#                com
+#            },
+#            outleaves = { "log" },
+#            commands = {
+#                "%{ins[1]} %{ins[2]} > %{outs} && test ! -s %{outs}"
+#            }
+#        }
+#    end
+#)
+
+
 def cpm_addresses(name, top_of_memory=0x10000, bios_size=None):
     bdos_size = 3584 # fixed
     ccp_size = 2048  # fixed

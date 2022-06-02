@@ -6,14 +6,20 @@ PHYSICAL_SECTORS = 10
 PHYSICAL_TRACKS = 5
 
     jp main
-    include "../deblocker.z80"
+
+DBS_BLOCK_SHIFT = 9
+DBS_WANT_DB_CAP = 0
+DPB_SPT = 0
+DPB_BSH = 2
+DPB_DSM = 5
+    include "deblocker.lib"
 main:
     ; Successful bounds check
     if 1
         ld ix, disk_dat
         ld bc, 0
         ld de, 0
-        call calculate_physical
+        call dbs_i_calculate_physical
         jp z, fail
     endif
 
@@ -23,7 +29,7 @@ main:
         ld ix, disk_dat
         ld bc, 256 * 4              ; high byte of physical count set
         ld de, 0
-        call calculate_physical
+        call dbs_i_calculate_physical
         jp nz, fail                 ; must fail
     endif
 
@@ -31,7 +37,7 @@ main:
         ld ix, disk_dat
         ld bc, 255 * 4              ; high byte of physical count not set
         ld de, 0
-        call calculate_physical
+        call dbs_i_calculate_physical
         jp nz, fail                 ; must fail
     endif
 
@@ -41,7 +47,7 @@ main:
         ld ix, disk_dat
         ld bc, PHYSICAL_SECTORS*4
         ld de, 0
-        call calculate_physical
+        call dbs_i_calculate_physical
         jp nz, fail                 ; must fail
     endif
 
@@ -51,7 +57,7 @@ main:
         ld ix, disk_dat
         ld bc, 0
         ld de, 256                  ; high byte of count set
-        call calculate_physical
+        call dbs_i_calculate_physical
         jp nz, fail                 ; must fail
     endif
 
@@ -59,7 +65,7 @@ main:
         ld ix, disk_dat
         ld bc, 0
         ld de, 255                  ; high byte of count not set
-        call calculate_physical
+        call dbs_i_calculate_physical
         jp nz, fail                 ; must fail
     endif
 
@@ -69,7 +75,7 @@ main:
         ld ix, disk_dat
         ld bc, 0
         ld de, PHYSICAL_TRACKS
-        call calculate_physical
+        call dbs_i_calculate_physical
         jp nz, fail                 ; must fail
     endif
 
@@ -79,8 +85,8 @@ main:
         ld ix, disk_dat
         ld bc, 3                    ; = physical sector 0
         ld de, 0
-        call calculate_physical
-        ld a, (changed)
+        call dbs_i_calculate_physical
+        ld a, (dbs_i_changed)
         or a
         jp nz, fail
     ret
@@ -91,8 +97,8 @@ main:
         ld ix, disk_dat
         ld bc, 4                    ; = physical sector 1
         ld de, 0
-        call calculate_physical
-        ld a, (changed)
+        call dbs_i_calculate_physical
+        ld a, (dbs_i_changed)
         cp 1
         jp nz, fail
     ret
@@ -101,8 +107,8 @@ main:
         ld ix, disk_dat
         ld bc, 256*4                ; = physical sector 256
         ld de, 0
-        call calculate_physical
-        ld a, (changed)
+        call dbs_i_calculate_physical
+        ld a, (dbs_i_changed)
         cp 1
         jp nz, fail
     ret
@@ -113,8 +119,8 @@ main:
         ld ix, disk_dat
         ld bc, 0
         ld de, 0
-        call calculate_physical
-        ld a, (changed)
+        call dbs_i_calculate_physical
+        ld a, (dbs_i_changed)
         or a
         jp nz, fail
     ret
@@ -125,8 +131,8 @@ main:
         ld ix, disk_dat
         ld bc, 0
         ld de, 1
-        call calculate_physical
-        ld a, (changed)
+        call dbs_i_calculate_physical
+        ld a, (dbs_i_changed)
         cp 1
         jp nz, fail
     ret
@@ -135,8 +141,8 @@ main:
         ld ix, disk_dat
         ld bc, 0
         ld de, 256
-        call calculate_physical
-        ld a, (changed)
+        call dbs_i_calculate_physical
+        ld a, (dbs_i_changed)
         cp 1
         jp nz, fail
     ret
