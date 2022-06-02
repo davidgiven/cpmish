@@ -83,5 +83,40 @@ ld80(
     }
 )
 
+# Repackages the memory image as a boot track.
+
+genrule(
+    name = "bootfile",
+	srcs = [ ":memory_img" ],
+	outs = [ "bootfile.img" ],
+	cmd = " && ".join([
+        "dd if=$< of=$@ status=none bs=256 count=36",
+        "dd if=$< of=$@ status=none bs=256 seek=36 skip=231 count=25"
+    ])
+)
+
+unix2cpm(
+    name = "readme",
+    src = "README.md"
+)
+
+diskimage(
+    name = "diskimage",
+    format = "nc200cpm",
+    bootfile = ":bootfile",
+    map = {
+        "-readme.txt": ":readme",
+        "dump.com": "//cpmtools:dump",
+        "stat.com": "//cpmtools:stat",
+        "asm.com": "//cpmtools:asm",
+        "copy.com": "//cpmtools:copy",
+        "submit.com": "//cpmtools:submit",
+        "bbcbasic.com": "//third_party/bbcbasic:bbcbasic_ADM3A",
+        "camel80.com": "//third_party/camelforth",
+        "qe.com": "//cpmtools:qe_NC200",
+		"z8e.com": "//third_party/z8e:z8e_NC200",
+		"ted.com": "//third_party/ted:ted_NC200",
+    },
+)
 
 

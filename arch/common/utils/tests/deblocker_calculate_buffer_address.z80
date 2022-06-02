@@ -3,13 +3,20 @@
 ; See COPYING.cpmish in the distribution root directory for more information.
 
     jp main
-    include "../deblocker.z80"
+
+DBS_BLOCK_SHIFT = 9
+DBS_WANT_DB_CAP = 0
+DPB_SPT = 0
+DPB_BSH = 2
+DPB_DSM = 5
+    include "deblocker.lib"
+
 main:
     if 1
         ld ix, 0x1234
         ld a, 3
-        ld (offset), a
-        call calculate_buffer_address
+        ld (dbs_i_offset), a
+        call dbs_i_calculate_buffer_address
 
         ld bc, 0x1234 + DBS_BUFFER + (3*128)
         or a

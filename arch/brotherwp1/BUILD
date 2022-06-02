@@ -1,3 +1,5 @@
+package(default_visibility = ["//visibility:public"])
+
 load("//build:cpm.bzl", "cpm_addresses", "binslice", "diskimage")
 load("//third_party/zmac:build.bzl", "zmac")
 load("//third_party/ld80:build.bzl", "ld80")
