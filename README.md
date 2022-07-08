@@ -190,3 +190,10 @@ Specifically:
 	by B. J. Rodriguez. It is distributable under the terms of the General
 	Public License version 3. See `third_party/camelforth/COPYING` for the full
 	text.
+
+  - `third_party/dr` contains a variety of software, all by Digital Research.
+	It is distributable under a rather complicated license which kind of
+	accreted over the years but is mostly a do-what-thou-wilt license
+	equivalent to 2-clause BSD. See `third_party/dr/COPYING.md` for more
+	information.
+
