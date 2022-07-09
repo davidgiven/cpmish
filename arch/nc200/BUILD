@@ -113,6 +113,7 @@ diskimage(
         "submit.com": "//cpmtools:submit",
         "bbcbasic.com": "//third_party/bbcbasic:bbcbasic_ADM3A",
         "camel80.com": "//third_party/camelforth",
+	"asm80.com": "//third_party/dr/asm80",
         "qe.com": "//cpmtools:qe_NC200",
 		"z8e.com": "//third_party/z8e:z8e_NC200",
 		"ted.com": "//third_party/ted:ted_NC200",
