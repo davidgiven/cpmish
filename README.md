@@ -4,19 +4,20 @@ CP/Mish
 What?
 -----
 
-CP/Mish is an open source sort-of-CP/M distribution for the 8080 and Z80
-architectures (although for technical reasons currently it only works on the
-Z80).
+CP/Mish is an open source CP/M distribution for the 8080 and Z80
+architectures.
 
-It contains no actual Digital Research code. Instead, it's a collection of
-third party modules which replicate it, all with proper open source licenses,
-integrated with a build system that should make it easy to work with.
+It contains a collection of software, some from Digital Research and some not,
+all with proper open source licenses, integrated into a build system which lets
+you build everything into proper disk images at a moment's notice.
 
 What you get is a working CP/M 2.2 clone consisting of:
 
-  - ZSDOS as the BDOS replacement
-  - ZCPR1 as the CCP replacement
+  - ZSDOS as the BDOS
+  - ZCPR1 as the CCP
   - open source BIOSes for the supported platforms
+  - various Digital Research programs from the original CP/M (I'm slowly
+    importing them and integrating them into the build system)
   - various tools copying the functionality of the standard CP/M tools (some
     of them [written by me](http://cowlark.com/2019-06-01-cpm-asm)
   - [R.T. Russell's superb BBC Basic](http://www.bbcbasic.co.uk/bbcbasic.html),
@@ -30,6 +31,7 @@ What you get is a working CP/M 2.2 clone consisting of:
   - a simple but useful vi-adjacent editor called qe (written by myself)
   - an emulator for testing CP/M binaries
   - source for _everything_; no binaries are in this distribution
+  - other things which I may well have forgotten to document
   - bugs
 
 Currently it supports these platforms:
@@ -60,16 +62,10 @@ Don't believe me? Watch this:
 
 [![Video of me doing stuff on an NC200](http://img.youtube.com/vi/FGWshrMZcCc/0.jpg)](https://www.youtube.com/watch?v=FGWshrMZcCc)
 
-However, while you can get the source and binaries today, the [license it's
-released](http://www.gaby.de/cpm/license.html) with is encumbered and it
-can't be distributed outside (the amazing) [Unofficial CP/M Web
-Site](http://www.gaby.de/cpm/); so it's useful as a reference, but you can't
-distribute CP/M images with, e.g., emulators.
-
-CP/Mish is not CP/M, but it's enough like CP/M to run CP/M programs and do
-CP/M things. And, if you want the real CP/M, CP/Mish uses the standard
-interaces so you can just drop in a Digital Research BDOS and CCP and it'll
-work.
+The source and binaries have long been available via the (the amazing)
+[Unofficial CP/M Web Site](http://www.gaby.de/cpm/), but the license had a bug
+in it which meant they couldn't be distributed anywhere else; this was
+[recently fixed](third_party/dr/COPYING.md) so it's now properly open source.
 
 
 How?
@@ -190,3 +186,10 @@ Specifically:
 	by B. J. Rodriguez. It is distributable under the terms of the General
 	Public License version 3. See `third_party/camelforth/COPYING` for the full
 	text.
+
+  - `third_party/dr` contains a variety of software, all by Digital Research.
+	It is distributable under a rather complicated license which kind of
+	accreted over the years but is mostly a do-what-thou-wilt license
+	equivalent to 2-clause BSD. See `third_party/dr/COPYING.md` for more
+	information.
+
