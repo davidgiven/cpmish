@@ -1,0 +1,11 @@
+Building asm80 is weird: it's a multimodule file, but each module is assembled
+standalone at a fixed address and then all the binaries are concatenated
+together. Each module starts with a jump to the next module and then a jump table.
+
+This is so that the whole assembler can be rebuilt with itself (asm80 doesn't
+produce relocatable output files which can be fed to a linker, remember). I've
+opted not to rework it to use normal modules as this seems valuable.
+
+--- dtrg
+
+
