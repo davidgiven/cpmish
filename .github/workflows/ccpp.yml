@@ -14,7 +14,7 @@ jobs:
       with:
         fetch-depth: 1
     - name: apt
-      run: sudo apt install cpmtools bazel-bootstrap flex bison libreadline-dev libz80ex-dev lua5.2
+      run: sudo apt install cpmtools bazel-bootstrap flex bison libreadline-dev libz80ex-dev lua5.1 lua-posix ninja-build
     - name: build-ack
       run: |
         git clone --depth=1 https://github.com/davidgiven/ack.git
@@ -30,12 +30,16 @@ jobs:
       with:
         fetch-depth: 1
     - name: brew
-      run: brew install pkg-config bazelisk cpmtools truncate lua
+      run: brew install pkg-config bazelisk cpmtools truncate lua@5.1 luarocks ninja
+    - name: luarocks
+      run: |
+        luarocks install --lua-version 5.1 luaposix 33.0.0-1
     - name: build-ack
       run: |
         git clone --depth=1 https://github.com/davidgiven/ack.git
-        make -C ack PREFIX=$HOME +ack-cpm
-        make -C ack PREFIX=$HOME install
+        eval $(luarocks --lua-version 5.1 path)
+        make LUA=/usr/local/bin/lua5.1 -C ack PREFIX=$HOME +ack-cpm
+        make LUA=/usr/local/bin/lua5.1 -C ack PREFIX=$HOME install
     - name: make
       run: PATH=$PATH:$HOME/bin make
 
