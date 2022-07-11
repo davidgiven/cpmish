@@ -13,13 +13,9 @@ true	equ	not false
 testing	equ	false	;true if debugging
 ;
 ;
-	if	testing
-	org	3400h
-bdosl	equ	$+800h		;bdos location
-	else
-	org	000h
-bdosl	equ	$+800h		;bdos location
-	endif
+	public CBASE
+	extern FBASE
+
 tran	equ	100h
 tranm	equ	$
 ccploc	equ	$
@@ -44,6 +40,7 @@ ccploc	equ	$
 ;	* ables the automatic command execution.               *
 ;	********************************************************
 ;
+CBASE:
 	jmp	ccpstart	;start ccp with possible initial command
 	jmp	ccpclear	;clear the command buffer
 maxlen:	db	127	;max buffer length
@@ -269,7 +266,7 @@ del$sub:
 ;
 serialize:
 	;check serialization
-	lxi d,serial! lxi h,bdosl! mvi b,6 ;check six bytes
+	lxi d,serial! lxi h,FBASE! mvi b,6 ;check six bytes
 	ser0:	ldax d! cmp m! jnz badserial
 		inx d! inx h! dcr b! jnz ser0
 		ret ;serial number is ok
