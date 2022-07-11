@@ -21,11 +21,9 @@ on	equ	0ffffh
 off	equ	00000h
 test	equ	off
 ;
-	if	test
-	org	0dc00h
-	else
-	org	0800h
-	endif
+	public FBASE
+FBASE:
+
 ;	bios value defined at end of module
 ;
 ssize	equ	24		;24 level stack
@@ -36,23 +34,23 @@ ioloc	equ	0003h		;i/o byte location
 bdosa	equ	0006h		;address field of jmp BDOS
 ;
 ;	bios access constants
-bootf	set	bios+3*0	;cold boot function
-wbootf	set	bios+3*1	;warm boot function
-constf	set	bios+3*2	;console status function
-coninf	set	bios+3*3	;console input function
-conoutf	set	bios+3*4	;console output function
-listf	set	bios+3*5	;list output function
-punchf	set	bios+3*6	;punch output function
-readerf	set	bios+3*7	;reader input function
-homef	set	bios+3*8	;disk home function
-seldskf	set	bios+3*9	;select disk function
-settrkf	set	bios+3*10	;set track function
-setsecf	set	bios+3*11	;set sector function
-setdmaf	set	bios+3*12	;set dma function
-readf	set	bios+3*13	;read disk function
-writef	set	bios+3*14	;write disk function
-liststf	set	bios+3*15	;list status function
-sectran	set	bios+3*16	;sector translate
+bootf	equ	bios+3*0	;cold boot function
+wbootf	equ	bios+3*1	;warm boot function
+constf	equ	bios+3*2	;console status function
+coninf	equ	bios+3*3	;console input function
+conoutf	equ	bios+3*4	;console output function
+listf	equ	bios+3*5	;list output function
+punchf	equ	bios+3*6	;punch output function
+readerf	equ	bios+3*7	;reader input function
+homef	equ	bios+3*8	;disk home function
+seldskf	equ	bios+3*9	;select disk function
+settrkf	equ	bios+3*10	;set track function
+setsecf	equ	bios+3*11	;set sector function
+setdmaf	equ	bios+3*12	;set dma function
+readf	equ	bios+3*13	;read disk function
+writef	equ	bios+3*14	;write disk function
+liststf	equ	bios+3*15	;list status function
+sectran	equ	bios+3*16	;sector translate
 ;
 ;	equates for non graphic characters
 ctlc	equ	03h	;control c
@@ -1683,7 +1681,7 @@ diskwrite:	;(may enter here from seqdiskwrite above)
 		call wrbuff	;write fill record	;
 		lhld arecord!	;restore last record     
 		mvi c,0		;change  allocate flag   
-		lda blkmsk! mov b,a! ana l! cmp b!inx h	;
+		lda blkmsk! mov b,a! ana l! cmp b! inx h ;
 		jnz fill1	;cont until cluster is zeroed
 		pop h! shld arecord! call setdata
 	diskwr11:					;
