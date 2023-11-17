@@ -104,14 +104,16 @@ def binslice(name, src, start, length=None):
             cmd = "tail -c+%d $< | head -c%d > $@" % (start, length)
         )
         
-def diskimage(name, format, bootfile, map):
+def diskimage(name, format, map, bootfile=None):
     out = name + ".img"
     native.genrule(
         name = name,
-        srcs = [ bootfile, "//:diskdefs" ] + map.values(),
+        srcs = [ "//:diskdefs" ] + map.values() + ([bootfile] if bootfile else []),
         outs = [ out ],
         cmd = " && ".join([
             "mkfs.cpm -f {} -b $(location {}) $@".format(format, bootfile)
+            if bootfile else
+            "mkfs.cpm -f {} $@".format(format)
         ] + [
             "cpmcp -f {} $@ $(location {}) 0:{}".format(format, map[name], name)
             for name in map

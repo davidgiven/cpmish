@@ -43,6 +43,15 @@ void con_goto(uint16_t x, uint16_t y)
 			cpm_printstring0(buffer);
 			cpm_bios_conout('H');
 		}
+	#elif defined LIBCUSS_AGONLIGHTH
+		if (!x && !y)
+			cpm_bios_conout(30);
+		else
+		{
+			cpm_bios_conout(31);
+			cpm_bios_conout(x);
+			cpm_bios_conout(y);
+		}
 	#else
         #error "No libcuss configuration specified."
     #endif

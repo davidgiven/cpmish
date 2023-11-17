@@ -49,6 +49,9 @@ extern void con_revoff(void);
 	#define SCREENWIDTH 91
 	#define SCREENHEIGHT 15
 	#define LIBCUSS_ADM3
+#elif defined LIBCUSS_AGONLIGHTH
+	#define SCREENWIDTH 64
+	#define SCREENHEIGHT 46
 #else
     #error "No libcuss configuration specified."
 #endif
@@ -96,6 +99,18 @@ extern void con_revoff(void);
     #define LIBCUSS_KEY_DOWN "\012"
     #define LIBCUSS_KEY_UP "\013"
     #define LIBCUSS_KEY_RIGHT "\014"
+#endif
+
+#if defined LIBCUSS_AGONLIGHTH
+	#define LIBCUSS_CLEAR "\014"
+	#define LIBCUSS_NEWLINE "\r\n"
+	//#define LIBCUSS_REVON "\021\207\021\000"
+	//#define LIBCUSS_REVOFF "\021\200\021\007"
+
+    #define LIBCUSS_KEY_LEFT "\001"
+    #define LIBCUSS_KEY_DOWN "\001"
+    #define LIBCUSS_KEY_UP "\001"
+    #define LIBCUSS_KEY_RIGHT "\001"
 #endif
 
 #endif

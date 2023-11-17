@@ -8,6 +8,7 @@ libcuss_terminals = [
     "BROTHER_WP2450DS",
     "SPECTRUM_PLUS_THREE",
     "SPECTRUM_NEXT",
+    "AGONLIGHTH",
 ]
 
 def libcuss_ack_binary(**kwargs):

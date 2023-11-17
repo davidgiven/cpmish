@@ -78,5 +78,16 @@ diskdef brother-wp2450ds
 	os 2.2
 end
 
+# Agon Light hosted CP/M
+diskdef agonlighth
+	seclen 128
+	tracks 100
+	sectrk 64
+	blocksize 1024
+	maxdir 128
+	boottrk 0
+	os 2.2
+end
+
 # vim: set ts=4 sw=4 expandtab
 

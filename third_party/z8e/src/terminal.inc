@@ -24,6 +24,7 @@ d8227	equ	3
 vt52	equ	4
 soroc	equ	4		; Soroc is a synonym for adm3a
 tvi	equ	4		; Televideo also
+agonlighth equ   5              ; Acorn VDU with a custom screen size
 
 ;-----------------------------------------------------------------------------
 
@@ -54,6 +55,9 @@ termdef	defl	false		; Don't touch this
 	include	vt52.tty
       endif
 
+      if        conterm eq agonlighth
+        include agonlighth.tty
+      endif
     endif ; console
 ;-----------------------------------------------------------------------------
 ; Include auxiliary terminal code or data upon request
@@ -74,6 +78,10 @@ termdef	defl	false		; Don't touch this
 
       if	auxterm eq vt52
 	include	vt52.tty
+      endif
+
+      if        conterm eq agonlighth
+        include agonlighth.tty
       endif
     endif ;terminal eq auxiliary
   endif	  ; slr or zasmb
