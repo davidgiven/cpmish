@@ -1,0 +1,66 @@
+; Brother Super PowerNote cpmish BIOS © 2023 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This file produces the FAT filesystem image which the Brother word processor
+; loads the bootstrap executable from. It occupies tracks 0-3. Two sectors of
+; file data starts on track 1, followed by the CP/M boot image.
+
+    aseg
+    org 0x0000
+    db 0xeb, 0xfe, 0x90
+
+    ; BPB
+    org 0x000b
+    dw 512      ; bytes per sector
+    db 1        ; sectors per cluster (512 byte clusters)
+    dw 1        ; reserved sectors (this one)
+    db 2        ; FAT count
+    dw 0xe0     ; number of root directory entries
+    dw 2880     ; filesystem size, in sectors, not including reserved ones
+    db 0xf0     ; standard DOS
+    dw 9        ; sectors per FAT
+    dw 18       ; number of sectors per track
+    dw 2        ; number of heads
+    dw 0        ; number of hidden sectors
+
+    ; FAT 1
+    org 0x0200
+    db 0xf0, 0xff, 0xff
+	db 0x03, 0xf0, 0xff ; two clusters (2 and 3)
+
+    ; FAT 2
+    org 0x1400
+    db 0xf0, 0xff, 0xff
+	db 0x03, 0xf0, 0xff ; two clusters (2 and 3)
+
+    ; Directory
+    org 0x2600
+    db "CPMISH  APL", 0 ; normal file
+    db 0x00     ; unused flags
+    db 0x00     ; 10ms time unit creation time
+    dw 0x0000   ; creation time
+    dw 0x0000   ; creation date
+    dw 0x0000   ; last access date
+    dw 0        ; high bytes of cluster number
+    dw 0x0000   ; last modified time
+    dw 0x0000   ; last modified date
+    dw 2        ; low bytes of cluster number
+    dw 1024, 0  ; file size (two clusters)
+
+    ; Bootstrap program
+    org 0x4200
+    incbin "boot_img.cim"
+
+    ; BIOS (loaded once on startup, and spans tracks 0 and 1)
+    org 0x2000
+    ;incbin "bios_img.img"
+
+    ; CP/M boot image
+    org 0x3200
+    ;incbin "systemtrack_img.img"
+
+    ; End of boot image
+    org 0x4800
+; vim: ts=4 sw=4 et ft=asm
+

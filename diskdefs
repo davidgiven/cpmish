@@ -78,5 +78,18 @@ diskdef brother-wp2450ds
 	os 2.2
 end
 
+# Brother Super PowerNote 1440kB disk image
+# This is just a 1440kB DOS disk with enough reserved sectors to allow
+# the CCP/BDOS/BIOS to live in the first two tracks.
+diskdef brother-powernote
+	seclen 512
+	tracks 160
+	sectrk 18
+	blocksize 2048
+	maxdir 128
+	boottrk 2
+	os 2.2
+end
+
 # vim: set ts=4 sw=4 expandtab
 

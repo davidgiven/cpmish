@@ -5,6 +5,9 @@
 ; This is the executable which is loaded and run by the Brother's OS. It
 ; gets loaded at 0x8000 with BBR=0x20, CBR=0x61 and CBAR=0x88. This puts
 ; common 1 at logical 0x8000, physical 0x69000.
+;
+; Physical memory extends from 0x60000 to 0x80000. There is also RAM at 0x02000
+; to 0x06000, which is probably an alias to the main memory (I haven't looked).
 
     maclib cpmish
     maclib cpm
@@ -37,53 +40,25 @@ start:
     dw 0x0000
     db "BR"
 
-    di
-    ld a, 0x61
-    out0 (BBR), a
-    ld a, 0xf8
-    out0 (CBAR), a
-    ei
-
     di                  ; The Brother OS is not at home.
-
+    
     call TTYINIT
 
     call TTYPUTSI
-    db "Boot loader!", 13, 10, 0
+    db "CP/M boot", 13, 10, 0
 
-scan_keys:
-    ld c, 8                     ; column
-    ld hl, keyboard_bitmap
+    ; Adjust MMU so that our own memory is being provided by B, rather than C.
 
-keyboard_column_loop:
-    out0 (PORT_KEYBOARD), c
+    ld a, 0x61
+    out0 (BBR), a
+    ld a, 0xe8
+    out0 (CBAR), a
 
-    ld a, 0x80
-.1
-    dec a
-    jr nz, .1
+    ; Make C point at the area from 0x70000 to 0x80000. The top 0x2000 of this
+    ; will be visible from 0xe000 to 0x10000.
 
-    in0 d, (PORT_KEYBOARD)
-    ld a, d
-    xor (hl)                    ; find which keys have changed
-;    jr z, no_keys_pressed
-
-    ; Some keys have changed.
-
-    ld (hl), d                  ; update bitmap
-    ld b, 7                     ; row
-.2:
-    rlca                        ; has this key changed?
-    call c, key_up_down
-    rlc d
-    dec b
-    jp p, .2
-;no_keys_pressed:
-
-    inc hl
-    dec c
-    jp p, keyboard_column_loop
-    jr scan_keys
+    ld a, 0x70
+    out0 (CBR), a
 
     ; Motor on.
 
@@ -96,9 +71,6 @@ keyboard_column_loop:
     ld hl, fdc_seek
     call send_command
     call wait_for_command_end
-
-    call TTYPUTSI
-    db "done seek", 13, 10, 0
 
     ; Issue FDC command.
 
@@ -114,7 +86,6 @@ keyboard_column_loop:
     otimr
 
     ; Perform transfer.
-
 
     ld a, 00010000b
     out0 (CNTLA1), a
@@ -141,7 +112,7 @@ keyboard_column_loop:
     call TTYPUTSI
     db 13, 10, 0
     
-    ld hl, buffer
+    ld hl, 0xe000
     ld bc, 0x20
 print_loop:
     ld a, (hl)
@@ -253,28 +224,25 @@ ADDAHL:
 fdc_seek:
     db 0x0f     ; 0: SEEK
     db 0        ; 1: drive 0
-    db 0        ; 2: track 0
+    db 1        ; 2: track 0
 fdc_seek_end:
 
 fdc_read:
-    db 0x66     ; 0: READ SECTORS
-    db 0        ; 1: physical head 0, drive 0
-    db 0        ; 2: track 0
-    db 0        ; 3: logical head 0
-    db 1        ; 4: first sector
-    db 2        ; 5: bytes per sector: 512
-    db 1        ; 6: last sector (*inclusive*)
-    db 27       ; 7: gap 3 length (27 is standard for 3.5" drives)
-    db 0        ; 8: sector length (unused)
+    db 0x66      ; 0: READ SECTORS
+    db 0         ; 1: physical head 0, drive 0
+    db 1         ; 2: track 0
+    db 0         ; 3: logical head 1
+    db 1         ; 4: first sector
+    db 2         ; 5: bytes per sector: 512
+    db (CPM_SIZE/0x200)+1 ; 6: last sector (*inclusive*)
+    db 27        ; 7: gap 3 length (27 is standard for 3.5" drives)
+    db 0         ; 8: sector length (unused)
 fdc_read.end:
   
 fdc_dma:
-    dw buffer+0x1000    ; MAR1 low
-    db 0x06             ; MAR1 high
+    dw 0x10000-CPM_SIZE ; MAR1 low
+    db 0x07             ; MAR1 high
     dw 0x86             ; IAR1
     db 0                ; unused
-    dw 0x200            ; BCR1
+    dw CPM_SIZE         ; BCR1
 fdc_dma.end:
-
-buffer: ds 512, 0x55
-keyboard_bitmap: ds 8*9, 0xff

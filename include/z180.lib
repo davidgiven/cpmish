@@ -16,6 +16,8 @@ TMDR0H: equ 0x0d
 RLDR0L: equ 0x0e
 RLDR0H: equ 0x0f
 TCR:	equ 0x10
+ASEXT0: equ 0x12
+ASEXT1: equ 0x13
 TMDR1L:	equ 0x14
 TMDR1H: equ 0x15
 RLDR1L:	equ 0x16
@@ -56,6 +58,9 @@ CBAR:   equ 0x3a
 
 OMCR:	equ 0x3e
 ICR:	equ 0x3f
+
+; Serial port constants
+
 
 ; vim: ts=4 sw=4 et ft=asm
 
