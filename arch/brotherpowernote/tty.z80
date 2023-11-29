@@ -1,0 +1,100 @@
+; Brother SuperPowerNote cpmish BIOS © 2023 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib brotherpowernote
+
+    extrn SYSIN
+    extrn SYSOUT
+    extrn ADDAHL
+
+    public TTYINIT
+    public TTYPUTC
+    public TTYPUT8
+    public TTYPUT16
+    public TTYPUTSI
+    public TTYGOTO
+
+    cseg
+
+SCREEN_WIDTH = 80
+SCREEN_HEIGHT = 22
+
+CURSOR_UPDATES = 0
+CLEAR_SCREEN_ON_INIT = 1
+EMULATE_CLEAR_TO_EOL = 1
+EMULATE_CLEAR_TO_EOS = 1
+    maclib tty
+    maclib print
+
+TTYINIT equ tty_init
+TTYPUTC equ tty_putc
+TTYPUT8 equ tty_puthex8
+TTYPUT16 equ tty_puthex16
+TTYPUTSI equ tty_putsi
+TTYGOTO equ tty_goto_xy
+
+label CURON
+label CUROFF
+    ret
+
+label KBGET
+label KBTEST
+    ret
+
+tty_rawwrite:
+    sub $20
+    ld hl, character_map_table
+    call ADDAHL
+    ld c, (hl)
+
+    ld de, (tty_cursorx)    ; d=Y, e=X
+    call calc_cursor
+
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
+    xor a
+    out0 (PORT_VIDEO_DATA), a
+    nop
+    nop
+    nop
+    nop
+
+    inc hl
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
+    out0 (PORT_VIDEO_DATA), c
+    ret
+
+; DE is YX on entry. Returns the video memory address in HL.
+
+calc_cursor:
+    ld h, d
+    ld l, e
+    sla l
+    ret
+
+tty_delete_line:
+tty_insert_line:
+    ret
+
+; Maps from ASCII (minus $20) to the Brother character set.
+
+character_map_table:
+    db 0,   '!', '"', '#', '$', '%', '&', $27
+    db '(', ')', '*', '+', ',', '-', '.', '/'
+    db '0', '1', '2', '3', '4', '5', '6', '7'
+    db '8', '9', ':', ';', '<', '=', '>', '?'
+    db '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G'
+    db 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'
+    db 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W'
+    db 'X', 'Y', 'Z', '[', $eb, ']', $8b, '_'
+    db $8d, 'a', 'b', 'c', 'd', 'e', 'f', 'g'
+    db 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o'
+    db 'p', 'q', 'r', 's', 't', 'u', 'v', 'w'
+    db 'x', 'y', 'z', $cc, $9b, $cd, $8f, $0d
+
+; vim: ts=4 sw=4 et ft=asm
+

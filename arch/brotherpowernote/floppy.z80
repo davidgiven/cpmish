@@ -1,0 +1,177 @@
+; Brother Super PowerNote cpmish BIOS © 2023 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib brotherpowernote
+
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+    
+label FDMTICK
+    ld hl, disk_off_count
+    ld a, (hl)
+    or a
+    ret z                   ; already zero? Do nothing.
+    inc (hl)                ; increment drive motor count and...
+    ret nz                  ; ...return if not rollover.
+label FDMOFF
+    ld a, 00011101b
+    out0 (PORT_765_OPERATIONS), a
+    
+    xor a
+set_disk_off_count:
+    ld (disk_off_count), a
+    ret
+
+label FMON
+    ld a, 00011100b
+    out0 (PORT_765_OPERATIONS), a
+
+    ld a, 1
+    jr set_disk_off_count
+
+; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
+; error).
+label SELDSKE
+    ld hl, 0
+    ld a, c
+    or a
+    ret nz                  ; return 0 if not drive 0
+    ld hl, drive_a_dph
+    ret
+
+label HOMEE
+    ld c, 0
+    ; fall through
+label SETTRKE
+    ld a, c
+    ld (BTRACK), a
+    ret
+
+label SETSECE
+    ld a, c
+    ld (BSECTOR), a
+    ret
+
+label SETDMAE
+    ld (BDMA), bc
+    ret
+
+label SECTRANE
+    ld h, b
+    ld l, c
+    ret
+
+return_bios_error:
+    ld a, 0xff
+    ret
+
+label READE
+    push ix
+    call setup_bc_de_and_ix
+    call db_get
+    pop ix
+    jr z, return_bios_error
+
+    ld de, (BDMA)
+    ld bc, 128
+    ldir
+    or a
+    ret
+
+label WRITEE
+    ld a, c
+    push ix
+    push af
+    call setup_bc_de_and_ix
+    pop af
+    call db_get
+    ld (ix+DBS_DIRTY), 1
+    pop ix
+    jr z, return_bios_error
+
+    ld de, (BDMA)
+    ex de, hl
+    ld bc, 128
+    ldir
+
+deblock_mode: equ $ + 1
+    ld a, 0
+    cp 1                    ; if deblock mode 1, flush the block now
+    jr nz, .1
+    call db_flush
+    ret z
+.1
+    or 1                    ; set nz
+    ret
+
+fd_read512:
+fd_write512:
+    ret
+
+setup_bc_de_and_ix:
+    ld hl, disk_off_count
+    ld (hl), 1
+
+    xor a
+    ld bc, (BSECTOR)
+    ld b, a
+    ld de, (BTRACK)
+    ld d, a
+    ld ix, fd765_deblock
+    ret
+
+drive_a_dph:
+    dw 0                    ; Sector translation vector
+    dw 0, 0, 0              ; BDOS scratchpad
+    dw dirbuf               ; Directory scratchpad
+    dw drive_a_dpd          ; Drive parameter block
+    dw drive_a_check_vector ; Disk change check vector
+    dw drive_a_bitmap       ; Allocation bitmap
+
+RESERVED_TRACKS = 3
+DRIVE_A_SIZE = 1440 ; kB
+DRIVE_A_BLOCKS = (DRIVE_A_SIZE - (RESERVED_TRACKS*9)) / 2 ; 2kB blocks
+
+drive_a_dpd:
+    dw 18*4                 ; Number of CP/M sectors per track
+    db 4, 15                ; BSH/BLM for 2048-byte blocks
+    db 0                    ; EXM for 2048-byte allocation units and >255 blocks
+    dw DRIVE_A_BLOCKS-1     ; DSM
+    dw 127                  ; DRM, one fewer than the number of directory entries
+    db 0xc0, 0x00           ; Initial allocation vector for two directory blocks
+    dw 32                   ; Size of disk change check vector: (DRM+1)/4
+    dw RESERVED_TRACKS      ; Number of reserved tracks
+
+drive_a_bitmap:
+    ds (DRIVE_A_BLOCKS+7) / 8
+drive_a_check_vector:
+    ds 32
+dirbuf:
+    ds 128
+
+disk_off_count: db 0         ; cheap and nasty drive motor timer
+
+DBS_BLOCK_SHIFT = 9
+DBS_WANT_DB_CAP = 0
+    maclib deblocker
+
+fd765_deblock:
+    dw 18          ; number of sectors
+    dw 160         ; number of tracks
+    dw fd_read512  ; read callback
+    dw fd_write512 ; write callback
+    dw 0xffff      ; current sector
+    dw 0           ; current track
+    db 0           ; dirty flag
+    ds 512         ; buffer
+
+label BSECTOR
+    db 0
+label BTRACK
+    db 0
+label BDMA
+    dw 0
+

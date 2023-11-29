@@ -7,25 +7,54 @@
     maclib brotherpowernote
     maclib addresses
 
-    extrn TTYINIT
-    extrn TTYPUTC
-    extrn TTYPUT8
-    extrn TTYPUT16
-    extrn TTYPUTSI
-    extrn TTYNL
-    extrn TTYHOME
-    extrn CURON
-    extrn CUROFF
-    extrn SETCURS
-    extrn FDR512
-    extrn FDW128
-    extrn FDR128
-    extrn FDMOFF
-    extrn BSECTOR
-    extrn BTRACK
-    extrn BDMA
-    extrn KBGET
-    extrn KBTEST
+    extern BDMA
+    extern BSECTOR
+    extern BTRACK
+    extern CUROFF
+    extern CURON
+    extern FDMOFF
+    extern FDMTICK
+    extern KBGET
+    extern KBTEST
+    extern SETCURS
+    extern TTYHOME
+    extern TTYINIT
+    extern TTYNL
+    extern TTYPUT16
+    extern TTYPUT8
+    extern TTYPUTC
+    extern TTYPUTSI
+    extern READE
+    extern WRITEE
+    extern SECTRANE
+    extern HOMEE
+    extern SELDSKE
+    extern SETTRKE
+    extern SETSECE
+    extern SETDMAE
+
+    public ADDAHL
+    
+; BIOS jump table.
+
+; BBASE is here
+    jp BOOTE
+    jp WBOOTE
+    jp CONSTE
+    jp CONINE
+    jp CONOUTE
+    jp LISTE
+    jp PUNCHE
+    jp READERE
+    jp HOMEE
+    jp SELDSKE
+    jp SETTRKE
+    jp SETSECE
+    jp SETDMAE
+    jp READE
+    jp WRITEE
+    jp LISTSTE
+    jp SECTRANE
 
 ; Cold boot on system startup. At this point the BIOS is loaded, but the CCP
 ; and BDOS aren't.
@@ -42,13 +71,91 @@ BOOTE:
     cpmish_banner "Brother Super PowerNote"
     db 0
 
-.1
-    jr .1
+    xor a
+    ld (IOBYTE), a          ; reset iobyte and current disk
+    ld (CDISK), a
+    jr start_ccp
 
-label ADDAHL
+; Warm boot on application exit.
+WBOOTE:
+    ld sp, 0x0100           ; ephemeral user stack
+
+    ; Reload the and CCP and BDOS.
+
+LOADABLE_SECTORS = (BDOS_SIZE + CCP_SIZE) / 128
+    ld b, LOADABLE_SECTORS
+    ld a, 2
+    sta (BTRACK)            ; current CP/M track
+    ld a, 0
+    sta (BSECTOR)           ; current CP/M sector
+    ld hl, CBASE
+    ld (BDMA), hl           ; destination address
+.1
+    call READE              ; go via the main entrypoint because of the buffer
+
+    ld bc, 128
+    ld hl, (BDMA)
+    add hl, bc
+    ld (BDMA), hl
+
+    ld a, (BSECTOR)
+    inc a
+    ld (BSECTOR), a
+    cp 72
+    jr nz, .1
+
+    ; Perform configuration and start the CCP.
+
+start_ccp:
+    ld a, 0xc3
+    ld hl, BBASE + 3        ; init BIOS entrypoint
+    ld (0x0000), a
+    ld (0x0001), hl
+
+    ld hl, FBASE + 6        ; init BDOS entrypoint
+    ld (0x0005), a
+    ld (0x0006), hl
+
+    ld a, (CDISK)
+    ld c, a                 ; c = current disk
+    jp CBASE                ; pass control to CCP
+
+CONSTE:
+    call CURON
+
+    call FDMTICK
+    call KBTEST
+    ld a, 0
+    ret z                   ; no key pressed
+    dec a                   ; key pressed
+    ret
+
+CONINE:
+    call CURON
+    call FDMOFF
+    jp KBGET
+
+ADDAHL
     add a, l
     ld l, a
     ret nc
     inc h
     ret
+
+CONOUTE:
+    push bc
+    call CUROFF
+    pop bc
+    ld a, c
+    jp TTYPUTC
+
+; List, punch and reader are unsupported.
+LISTSTE:
+    ld a, 0xff
+LISTE:
+PUNCHE:
+READERE:
+    ret
+
+; vim: ts=4 sw=4 et ft=asm
 
