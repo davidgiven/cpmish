@@ -87,7 +87,7 @@ diskdef brother-powernote
 	sectrk 18
 	blocksize 2048
 	maxdir 128
-	boottrk 2
+	boottrk 3
 	os 2.2
 end
 

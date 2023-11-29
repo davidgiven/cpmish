@@ -112,7 +112,7 @@ start:
     call TTYPUTSI
     db 13, 10, 0
     
-    ld hl, 0xe000
+    ld hl, BBASE
     ld bc, 0x20
 print_loop:
     ld a, (hl)
@@ -131,8 +131,7 @@ print_loop:
     or c
     jr nz, print_loop
 
-.1
-    jr .1
+    jp BBASE
 
 wait_for_fdc_writable:
     in a, (PORT_765_STATUS)

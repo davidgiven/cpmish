@@ -1,0 +1,54 @@
+; Brother Super PowerNote cpmish BIOS © 2023 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib brotherpowernote
+    maclib addresses
+
+    extrn TTYINIT
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+    extrn TTYPUTSI
+    extrn TTYNL
+    extrn TTYHOME
+    extrn CURON
+    extrn CUROFF
+    extrn SETCURS
+    extrn FDR512
+    extrn FDW128
+    extrn FDR128
+    extrn FDMOFF
+    extrn BSECTOR
+    extrn BTRACK
+    extrn BDMA
+    extrn KBGET
+    extrn KBTEST
+
+; Cold boot on system startup. At this point the BIOS is loaded, but the CCP
+; and BDOS aren't.
+BOOTE:
+    ; Map the entire 0x70000 to 0x80000 space to 0x0000-0x10000.
+
+    ld a, 0x00
+    out0 (CBAR), a
+
+    ld sp, 0x0100           ; ephemeral user stack
+
+    call TTYINIT
+    call TTYPUTSI
+    cpmish_banner "Brother Super PowerNote"
+    db 0
+
+.1
+    jr .1
+
+label ADDAHL
+    add a, l
+    ld l, a
+    ret nc
+    inc h
+    ret
+

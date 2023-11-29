@@ -52,15 +52,11 @@
     org 0x4200
     incbin "boot_img.cim"
 
-    ; BIOS (loaded once on startup, and spans tracks 0 and 1)
-    org 0x2000
-    ;incbin "bios_img.img"
-
     ; CP/M boot image
-    org 0x3200
-    ;incbin "systemtrack_img.img"
+    org 0x4800
+    incbin "systemtrack_img.img"
 
     ; End of boot image
-    org 0x4800
+    org 0x6c00
 ; vim: ts=4 sw=4 et ft=asm
 
