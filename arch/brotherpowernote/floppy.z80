@@ -8,6 +8,7 @@
     extrn TTYPUTC
     extrn TTYPUT8
     extrn TTYPUT16
+    extrn TTYPUTSI
     
 label FDMTICK
     ld hl, disk_off_count
@@ -65,63 +66,227 @@ label SECTRANE
     ret
 
 return_bios_error:
-    ld a, 0xff
+    ld a, 1
     ret
 
 label READE
-    push ix
-    call setup_bc_de_and_ix
-    call db_get
-    pop ix
-    jr z, return_bios_error
+    call change_track
+    jr nz, return_bios_error
 
-    ld de, (BDMA)
-    ld bc, 128
-    ldir
-    or a
+    ld a, (BSECTOR)
+    ld l, 0
+    srl a
+    rr l
+    out0 (SAR0L), l
+    out0 (SAR0H), a
+
+    ld a, 6
+    out0 (SAR0B), a
+
+    ld hl, (BDMA)
+    out0 (DAR0L), l
+    out0 (DAR0H), h
+    ld a, 7
+    out0 (DAR0B), a
+
+    ld hl, 128
+    out0 (BCR0L), l
+    out0 (BCR0H), h
+
+    ld a, 00000010b     ; bust mode
+    out0 (DMODE), a
+    ld a, 01000000b
+    out0 (DSTAT), a
+
+    call wait_for_memory_dma
+
+    xor a
     ret
 
 label WRITEE
     ld a, c
-    push ix
-    push af
-    call setup_bc_de_and_ix
-    pop af
-    call db_get
-    ld (ix+DBS_DIRTY), 1
-    pop ix
-    jr z, return_bios_error
+    ld (deblock_flag), a
 
-    ld de, (BDMA)
-    ex de, hl
-    ld bc, 128
-    ldir
+    call change_track
+    jp nz, return_bios_error
 
-deblock_mode: equ $ + 1
+    ld a, 1
+    ld (track_dirty), a
+    xor a
+
+    ld hl, (BDMA)
+    out0 (SAR0L), l
+    out0 (SAR0H), h
+    ld a, USER_BANK
+    out0 (SAR0B), a
+
+    ld a, (BSECTOR)
+    ld l, 0
+    sra a
+    rr l
+    out0 (DAR0L), l
+    out0 (DAR0H), a
+    ld a, CACHE_BANK
+    out0 (DAR0B), a
+
+    ld hl, 128
+    out0 (BCR0L), l
+    out0 (BCR0H), h
+
+    ld a, 00000010b     ; burst mode
+    out0 (DMODE), a
+    ld a, 01000000b
+    out0 (DSTAT), a
+
+    call wait_for_memory_dma
+
+deblock_flag equ $+1
     ld a, 0
-    cp 1                    ; if deblock mode 1, flush the block now
-    jr nz, .1
-    call db_flush
-    ret z
-.1
-    or 1                    ; set nz
+    cp 1
+    jp z, flush_track
+    ; fall through
+return_bios_success:
+    xor a
     ret
 
-fd_read512:
-fd_write512:
-    ret
+change_track:
+    ld a, (BTRACK)
+current_track equ $+1
+    cp 0xff
+    ret z                   ; already on the desired track
 
-setup_bc_de_and_ix:
-    ld hl, disk_off_count
-    ld (hl), 1
+track_dirty equ $ + 1
+    ld a, 0
+    or a
+    call nz, flush_track
+
+    ; Switch to the new track.
+    
+    ld a, (BTRACK)
+    ld (current_track), a
+    
+    ; Seek to new track.
+
+    ld a, 0x0f              ; SEEK
+    call send_fdc_byte
+    ld a, 4                 ; drive 0
+    call send_fdc_byte
+    ld a, (current_track)
+    srl a
+    ld (fdc_readwrite.logtrack), a
+    call send_fdc_byte
+    call wait_for_command_end
+
+    ; Setup for read.
+    
+    ld a, 0x66              ; READ SECTORS
+    ld (fdc_readwrite), a
+
+    ld a, (current_track)
+    and 0x01
+    ld (fdc_readwrite.loghead), a
+    add a
+    add a
+    ld (fdc_readwrite.phyhead), a
+
+    ld hl, fdc_readwrite
+    ld b, fdc_readwrite.end - fdc_readwrite
+    call send_fdc_command
+
+    ; Do DMA to read data.
+
+    ld d, 1010b
+    call perform_fdc_dma_readwrite
+    call read_status
 
     xor a
-    ld bc, (BSECTOR)
-    ld b, a
-    ld de, (BTRACK)
-    ld d, a
-    ld ix, fd765_deblock
     ret
+
+flush_track:
+    xor a
+    ld (track_dirty), a
+
+    call TTYPUTSI
+    db "flush.", 0
+
+    xor a
+    ret
+
+; Low four bits of DCNTL should be in d.
+perform_fdc_dma_readwrite:
+    ld hl, fdc_dma
+    ld b, fdc_dma.end - fdc_dma
+    ld c, MAR1L
+    otimr
+    
+    ld a, 00010000b
+    out0 (CNTLA1), a
+    in0 a, (DCNTL)
+    and 0xf0
+    or d
+    out0 (DCNTL), a
+    ld a, 10010000b
+    out0 (DSTAT), a
+
+    call wait_for_command_end
+
+    ld a, 00010000b
+    out0 (DSTAT), a
+    ret
+
+; Returns a=0 and z on exit.
+wait_for_memory_dma:
+    in0 a, (DSTAT)
+    and 10000000b           ; test for DMA completion
+    ret z
+    jr wait_for_memory_dma
+
+wait_for_fdc_writable:
+    in a, (PORT_765_STATUS)
+    rla
+    jr nc, wait_for_fdc_writable
+    ret
+
+wait_for_command_end:
+    in a, (PORT_DISK_STATUS)
+    and DISK_STATUS_BUSY
+    jr z, wait_for_command_end
+    ret
+
+; Command ptr in HL, length in B.
+send_fdc_command:
+    call wait_for_fdc_writable
+    ld c, PORT_765_DATA
+    outi
+    jr nz, send_fdc_command
+    ret
+
+; Command byte in A.
+send_fdc_byte:
+    push af
+    call wait_for_fdc_writable
+    pop af
+    out0 (PORT_765_DATA), a
+    ret
+
+read_status:
+    push hl
+	ld hl, data.fd765_status
+read_status_loop:
+    in a, (PORT_765_STATUS)
+	rla							; RQM...
+	jr nc, read_status_loop		; ...low, keep waiting 
+	rla							; DIO...
+	jr nc, .1	        		; ...low, no more data
+    in a, (PORT_765_DATA)
+	ld (hl), a
+	inc hl
+	jr read_status_loop
+.1
+    pop hl
+    ret
+data.fd765_status:
+	ds 8						; 8 bytes of status data
 
 drive_a_dph:
     dw 0                    ; Sector translation vector
@@ -145,6 +310,29 @@ drive_a_dpd:
     dw 32                   ; Size of disk change check vector: (DRM+1)/4
     dw RESERVED_TRACKS      ; Number of reserved tracks
 
+fdc_readwrite:
+    db 0x66      ; 0: READ SECTORS
+fdc_readwrite.phyhead:
+    db 0         ; 1: physical head 0, drive 0
+fdc_readwrite.logtrack:
+    db 1         ; 2: track 0
+fdc_readwrite.loghead:
+    db 0         ; 3: logical head 1
+    db 1         ; 4: first sector
+    db 2         ; 5: bytes per sector: 512
+    db 18        ; 6: last sector (*inclusive*)
+    db 27        ; 7: gap 3 length (27 is standard for 3.5" drives)
+    db 0         ; 8: sector length (unused)
+fdc_readwrite.end:
+  
+fdc_dma:
+    dw 0                ; MAR1 low
+    db CACHE_BANK       ; MAR1 high
+    dw PORT_765_DMA     ; IAR1
+    db 0                ; unused
+    dw TRACK_BUFFER_LEN ; BCR1
+fdc_dma.end:
+
 drive_a_bitmap:
     ds (DRIVE_A_BLOCKS+7) / 8
 drive_a_check_vector:
@@ -153,20 +341,6 @@ dirbuf:
     ds 128
 
 disk_off_count: db 0         ; cheap and nasty drive motor timer
-
-DBS_BLOCK_SHIFT = 9
-DBS_WANT_DB_CAP = 0
-    maclib deblocker
-
-fd765_deblock:
-    dw 18          ; number of sectors
-    dw 160         ; number of tracks
-    dw fd_read512  ; read callback
-    dw fd_write512 ; write callback
-    dw 0xffff      ; current sector
-    dw 0           ; current track
-    db 0           ; dirty flag
-    ds 512         ; buffer
 
 label BSECTOR
     db 0

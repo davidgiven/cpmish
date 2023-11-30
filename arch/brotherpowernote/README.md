@@ -1,0 +1,8 @@
+Physical memory map:
+
+0x000000
+    0x03000 - 0x06000         RAM mirror of 0x63000 - 0x66000
+    0x60000 - 0x80000      RAM
+        0x60000 - 0x62400   Drive 0 track buffer
+        0x70000 - 0x80000   CP/M userspace
+0xffffff

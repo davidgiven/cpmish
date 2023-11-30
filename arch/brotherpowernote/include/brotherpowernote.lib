@@ -16,6 +16,10 @@ DISK_STATUS_DISKCHANGED = 0x01
 DISK_STATUS_INDEX       = 0x02
 DISK_STATUS_BUSY        = 0x04
 
+CACHE_BANK           = 6
+USER_BANK            = 7
+TRACK_BUFFER_LEN     = 18 * 512
+
 ; vim: ts=4 sw=4 et ft=asm
 
 

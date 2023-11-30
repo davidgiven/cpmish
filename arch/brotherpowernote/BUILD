@@ -14,7 +14,7 @@ top_of_memory = 0x10000
 (cbase, fbase, bbase) = cpm_addresses(
     name = "addresses",
     top_of_memory = top_of_memory,
-    bios_size = 0x0800
+    bios_size = 0x0900
 )
 
 # Object files --------------------------------------------------------------
@@ -37,8 +37,6 @@ BIOS_SRCS = [
             "//arch/brotherpowernote/include:brotherpowernote.lib",
             "//arch/common/utils:tty.lib",
             "//arch/common/utils:print.lib",
-            "//arch/common/utils:upd765.lib",
-            "//arch/common/utils:deblocker.lib",
             ":addresses",
         ]
     )
@@ -135,6 +133,13 @@ diskimage(
 	format = "brother-powernote",
 	bootfile = ":bootfile_img",
 	map = {
+        "dump.com": "//cpmtools:dump",
+        "stat.com": "//cpmtools:stat",
+        "asm.com": "//cpmtools:asm",
+        "copy.com": "//cpmtools:copy",
+        "submit.com": "//cpmtools:submit",
+        "asm80.com": "//third_party/dr/asm80",
+        "camel80.com": "//third_party/camelforth",
 	},
 )
 # vim: ts=4 sw=4 et

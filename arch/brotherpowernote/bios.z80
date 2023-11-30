@@ -63,7 +63,7 @@ BOOTE:
 
     ld a, 0x00
     out0 (CBAR), a
-
+    
     ld sp, 0x0100           ; ephemeral user stack
 
     call TTYINIT
@@ -74,7 +74,6 @@ BOOTE:
     xor a
     ld (IOBYTE), a          ; reset iobyte and current disk
     ld (CDISK), a
-    jr start_ccp
 
 ; Warm boot on application exit.
 WBOOTE:
@@ -98,10 +97,10 @@ LOADABLE_SECTORS = (BDOS_SIZE + CCP_SIZE) / 128
     add hl, bc
     ld (BDMA), hl
 
-    ld a, (BSECTOR)
-    inc a
-    ld (BSECTOR), a
-    cp 72
+    ld hl, BSECTOR
+    inc (hl)
+    ld a, (hl)
+    cp LOADABLE_SECTORS
     jr nz, .1
 
     ; Perform configuration and start the CCP.
