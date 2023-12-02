@@ -152,6 +152,10 @@ diskimage(
         "submit.com": "//cpmtools:submit",
         "asm80.com": "//third_party/dr/asm80",
         "camel80.com": "//third_party/camelforth",
+        "bbcbasic.com": "//third_party/bbcbasic:bbcbasic_ADM3A",
+        "mkfs.com": "//cpmtools:mkfs",
+        "rawdisk.com": "//cpmtools:rawdisk",
+        "startrek.com": "//third_party/startrek",
 	},
 )
 # vim: ts=4 sw=4 et
