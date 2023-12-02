@@ -41,13 +41,14 @@ label CUROFF
     ret
 
 tty_rawwrite:
-    sub $20
+    and 0x7f
+    sub 0x20
     ld hl, character_map_table
     call ADDAHL
     ld c, (hl)
 
-    ld de, (tty_cursorx)    ; d=Y, e=X
-    call calc_cursor
+    ld hl, (tty_cursorx)    ; h=Y, l=X
+    sla l
 
     out0 (PORT_VIDEO_ADDR_LO), l
     out0 (PORT_VIDEO_ADDR_HI), h
@@ -64,15 +65,53 @@ tty_rawwrite:
     out0 (PORT_VIDEO_DATA), c
     ret
 
-; DE is YX on entry. Returns the video memory address in HL.
+tty_delete_line:
+    ld a, (tty_cursory)
+    ld h, a
+    cp SCREEN_HEIGHT - 1
+    jr z, on_last_line      ; skip scroll if there's nothing to do
 
-calc_cursor:
-    ld h, d
-    ld l, e
-    sla l
+    ld b, a
+    ld a, SCREEN_HEIGHT - 1
+    sub b                   ; calculate number of text lines to move
+    ld b, a
+
+    xor a
+.1
+    inc h
+    out0 (PORT_VIDEO_ADDR_LO), a
+    out0 (PORT_VIDEO_ADDR_HI), h
+    in0 e, (PORT_VIDEO_DATA)
+    dec h
+    nop
+    nop
+    out0 (PORT_VIDEO_ADDR_HI), h
+    out0 (PORT_VIDEO_DATA), e
+    inc a
+    cp SCREEN_WIDTH*2
+    jr nz, .1
+
+    inc h
+    djnz .1
+
+on_last_line:
+    ld a, SCREEN_HEIGHT-1
+    out0 (PORT_VIDEO_ADDR_HI), a
+    
+    ld a, 0                 ; X position
+    ld e, SCREEN_HEIGHT-1   ; Y position
+    ld d, 0                 ; fill character
+.1
+    out0 (PORT_VIDEO_ADDR_LO), a
+    out0 (PORT_VIDEO_DATA), d
+    inc a
+    out0 (PORT_VIDEO_ADDR_LO), a
+    out0 (PORT_VIDEO_DATA), d
+    inc a
+    cp SCREEN_WIDTH*2
+    jr nz, .1
     ret
 
-tty_delete_line:
 tty_insert_line:
     ret
 
