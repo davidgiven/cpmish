@@ -1,0 +1,165 @@
+; Brother Super PowerNote cpmish BIOS © 2023 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib brotherpowernote
+
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+    extrn TTYPUTSI
+    
+label KBGET
+    call KBTEST
+    jr z, KBGET
+
+    keyboard_rdptr equ $ + 1
+    ld bc, 0
+    ld hl, keyboard_buffer
+    add hl, bc
+    
+    ld a, c
+    inc a
+    and 0x0f
+    ld (keyboard_rdptr), a
+
+    ld a, (hl)
+    ret
+
+; Returns Z if no key is pending.
+label KBTEST
+    call scan_keys
+    ld a, (keyboard_rdptr)
+    keyboard_wrptr equ $ + 1
+    cp 0
+    ret
+
+scan_keys:
+    ld c, 8                     ; column
+    ld hl, keyboard_bitmap
+
+keyboard_column_loop:
+    out0 (PORT_KEYBOARD), c
+
+    ld a, 0x80
+.1
+    dec a
+    jr nz, .1
+
+    in0 d, (PORT_KEYBOARD)
+    ld a, d
+    xor (hl)                    ; find which keys have changed
+    jr z, no_keys_pressed
+
+    ; Some keys have changed.
+
+    ld (hl), d                  ; update bitmap
+    ld b, 7                     ; row
+.2:
+    rlca                        ; has this key changed?
+    call c, key_up_down
+
+    rlc d
+    dec b
+    jp p, .2
+no_keys_pressed:
+
+    inc hl
+    dec c
+    jp p, keyboard_column_loop
+    ret
+
+; b: row
+; c: column
+; d bit 7: key state
+
+key_up_down:
+    push af
+    push bc
+    push de
+    push hl
+
+    ; Compute keycode.
+    
+    ld a, c
+    add a
+    add a
+    add a
+    or b
+
+    ld hl, keyboard_modifiers
+    bit 7, d
+    jr nz, key_up
+key_down:
+    or a
+    jr nz, .1           ; jump if not shift
+    set 0, (hl)
+    jr key_return
+.1
+    cp 0x47
+    jr nz, .2           ; jump if not control
+    set 1, (hl)
+    jr key_return
+.2
+    cp 0x45
+    jr nz, .3           ; jump if not caps lock
+    bit 2, (hl)
+    res 2, (hl)
+    jr nz, key_return
+    set 2, (hl)
+    jr key_return
+.3
+
+    ld c, a
+    ld b, 0
+    ld a, (hl)
+    ld hl, keyboard_normal_map
+    bit 0, a
+    jr z, .4
+    ld hl, keyboard_shifted_map
+.4
+    add hl, bc
+    ld a, (hl)
+    or a
+    jr z, key_return    ; key has no mapping
+
+    ; The key has been decoded into A. Push it into the keyboard buffer.
+
+    ld bc, (keyboard_wrptr)
+    ld b, 0
+    ld hl, keyboard_buffer
+    add hl, bc
+    ld (hl), a
+
+    ld a, c
+    inc a
+    and 0x0f
+    ld hl, keyboard_rdptr
+    cp (hl)
+    jr z, key_return    ; keyboard buffer is full
+    ld (keyboard_wrptr), a
+    jr key_return
+
+key_up:
+    or a
+    jr nz, .1           ; jump if not shift
+    res 0, (hl)
+.1
+    cp 0x47
+    jr nz, key_return   ; jump if not control
+    res 1, (hl)
+    ; fall through
+key_return:
+
+    pop hl
+    pop de
+    pop bc
+    pop af
+    ret
+
+include 'keytab.inc'
+
+keyboard_modifiers: db 0
+keyboard_buffer: ds 16
+keyboard_bitmap: ds 9, 0xff

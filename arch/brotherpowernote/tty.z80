@@ -40,10 +40,6 @@ label CURON
 label CUROFF
     ret
 
-label KBGET
-label KBTEST
-    ret
-
 tty_rawwrite:
     sub $20
     ld hl, character_map_table
@@ -90,11 +86,11 @@ character_map_table:
     db '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G'
     db 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'
     db 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W'
-    db 'X', 'Y', 'Z', '[', $eb, ']', $8b, '_'
-    db $8d, 'a', 'b', 'c', 'd', 'e', 'f', 'g'
+    db 'X', 'Y', 'Z', '[', $57, ']', '^', '_'
+    db $60, 'a', 'b', 'c', 'd', 'e', 'f', 'g'
     db 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o'
     db 'p', 'q', 'r', 's', 't', 'u', 'v', 'w'
-    db 'x', 'y', 'z', $cc, $9b, $cd, $8f, $0d
+    db 'x', 'y', 'z', '{', '|', '}', '~', $0d
 
 ; vim: ts=4 sw=4 et ft=asm
 

@@ -17,12 +17,22 @@ top_of_memory = 0x10000
     bios_size = 0x0900
 )
 
+# Generated tables ----------------------------------------------------------
+
+genrule(
+    name = "keytab_inc",
+	tools = [ "//arch/brotherpowernote/utils:mkkeytab" ],
+    outs = [ "keytab.inc" ],
+	cmd = "$(location //arch/brotherpowernote/utils:mkkeytab) > $@"
+)
+
 # Object files --------------------------------------------------------------
 
 BIOS_SRCS = [
     "boot",
     "floppy",
     "tty",
+    "keyboard",
 ]
 
 [
@@ -34,6 +44,7 @@ BIOS_SRCS = [
             "//include:cpm.lib",
             "//include:cpmish.lib",
             "//include:z180.lib",
+            ":keytab_inc",
             "//arch/brotherpowernote/include:brotherpowernote.lib",
             "//arch/common/utils:tty.lib",
             "//arch/common/utils:print.lib",
@@ -89,6 +100,7 @@ ld80(
             ":bios_o",
             ":tty_o",
             ":floppy_o",
+            ":keyboard_o",
         ]
     }
 )
