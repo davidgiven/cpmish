@@ -31,8 +31,6 @@
     extrn TTYPUTSI
     extrn TTYGOTO
 
-    public ADDAHL
-
     org 0x8000
 start:
     dw 0xc185           ; Brother magic numbers
@@ -42,11 +40,6 @@ start:
 
     di                  ; The Brother OS is not at home.
     
-    call TTYINIT
-
-    call TTYPUTSI
-    db "CP/M boot", 13, 10, 0
-
     ; Adjust MMU so that our own memory is being provided by B, rather than C.
 
     ld a, 0x61
@@ -101,35 +94,7 @@ start:
     ld a, 00010000b
     out0 (DSTAT), a
 
-    call TTYPUTSI
-    db "done read", 13, 10, 0
-
     call read_status
-    ld a, (data.fd765_status+0)
-    call print_a
-    ld a, (data.fd765_status+1)
-    call print_a
-    call TTYPUTSI
-    db 13, 10, 0
-    
-    ld hl, BBASE
-    ld bc, 0x20
-print_loop:
-    ld a, (hl)
-    inc hl
-    dec bc
-
-    push hl
-    push bc
-    call TTYPUT8
-    ld a, ' '
-    call TTYPUTC
-    pop bc
-    pop hl
-
-    ld a, b
-    or c
-    jr nz, print_loop
 
     jp BBASE
 
@@ -164,60 +129,12 @@ wait_for_command_end:
     jr z, wait_for_command_end
     ret
 
-print_a:
-    push af
-    push bc
-    push de
-    push hl
-    call TTYPUT8
-    ld a, ' '
-    call TTYPUTC
-    pop hl
-    pop de
-    pop bc
-    pop af
-    ret
-
 ; Command ptr in HL, length in B.
 send_command:
     call wait_for_fdc_writable
     ld c, PORT_765_DATA
     outi
     jr nz, send_command
-    ret
-
-; b: row
-; c: column
-; d bit 7: key state
-
-key_up_down:
-    push af
-    push bc
-    push de
-    push hl
-
-    ld a, c
-    add a
-    add a
-    add a
-    or b        ; a = keycode
-    rla
-    ccf
-    rl d
-    rra
-    call print_a
-
-    pop hl
-    pop de
-    pop bc
-    pop af
-    ret
-
-ADDAHL:
-    add a, l
-    ld l, a
-    ret nc
-    inc h
     ret
 
 fdc_seek:

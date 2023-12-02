@@ -64,10 +64,7 @@ ld80(
     name = "boot_img",
     address = 0x8000,
     objs = {
-        0: [
-            ":boot_o",
-            ":tty_o",
-        ]
+        0: [ ":boot_o", ]
     }
 )
 

@@ -27,12 +27,12 @@
     ; FAT 1
     org 0x0200
     db 0xf0, 0xff, 0xff
-	db 0x03, 0xf0, 0xff ; two clusters (2 and 3)
+	db 0xff, 0x0f       ; one cluster (2)
 
     ; FAT 2
     org 0x1400
     db 0xf0, 0xff, 0xff
-	db 0x03, 0xf0, 0xff ; two clusters (2 and 3)
+	db 0xff, 0x0f       ; one cluster (2)
 
     ; Directory
     org 0x2600
@@ -46,7 +46,7 @@
     dw 0x0000   ; last modified time
     dw 0x0000   ; last modified date
     dw 2        ; low bytes of cluster number
-    dw 1024, 0  ; file size (two clusters)
+    dw 512, 0   ; file size (one clusters)
 
     ; Bootstrap program
     org 0x4200
