@@ -12,7 +12,7 @@ jobs:
     - name: apt
       run: |
         sudo apt update
-        sudo apt install cpmtools bazel-bootstrap flex bison libreadline-dev libz80ex-dev
+        sudo apt install cpmtools bazel-bootstrap flex bison libreadline-dev libz80ex-dev lua5.2
     - name: build-ack
       run: |
         git clone --depth=1 https://github.com/davidgiven/ack.git
