@@ -18,7 +18,7 @@ label FDMTICK
     inc (hl)                ; increment drive motor count and...
     ret nz                  ; ...return if not rollover.
 label FDMOFF
-    ld a, 00011101b
+    ld a, 00001100b
     out0 (PORT_765_OPERATIONS), a
     
     xor a
@@ -167,15 +167,21 @@ track_dirty equ $ + 1
     
     ; Seek to new track.
 
+    call FMON
+
     ld a, 0x0f              ; SEEK
     call send_fdc_byte
-    ld a, 4                 ; drive 0
+    xor a                   ; drive 0
     call send_fdc_byte
     ld a, (current_track)
     srl a
     ld (fdc_readwrite.logtrack), a
     call send_fdc_byte
     call wait_for_command_end
+    
+    ld a, 0x08              ; GET INTERRUPT STATE
+    call send_fdc_byte
+    call read_status
 
     ; Setup for read.
     
@@ -199,13 +205,15 @@ track_dirty equ $ + 1
     call perform_fdc_dma_readwrite
     call read_status
 
-    xor a
+    ld a, (data.fd765_status+0)
+    and 0xf0
     ret
 
 flush_track:
     xor a
     ld (track_dirty), a
 
+    call FMON
     call TTYPUTSI
     db "flush.", 0
 
@@ -245,6 +253,12 @@ wait_for_fdc_writable:
     in a, (PORT_765_STATUS)
     rla
     jr nc, wait_for_fdc_writable
+    ret
+
+wait_for_fdc_not_busy:
+    in a, (PORT_765_STATUS)
+    and 0x1f
+    jr nz, wait_for_fdc_not_busy
     ret
 
 wait_for_command_end:
