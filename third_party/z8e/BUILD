@@ -8,6 +8,7 @@ package(default_visibility = ["//visibility:public"])
 VERSIONS = [
 	"NC200",
 	"WP2450DS",
+	"POWERNOTE",
 ]
 
 [

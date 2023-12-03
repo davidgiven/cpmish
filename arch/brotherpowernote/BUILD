@@ -152,8 +152,11 @@ diskimage(
         "bbcbasic.com": "//third_party/bbcbasic:bbcbasic_ADM3A",
         "mkfs.com": "//cpmtools:mkfs",
         "rawdisk.com": "//cpmtools:rawdisk",
-        "startrek.com": "//third_party/startrek",
+        "qe.com": "//cpmtools:qe_BROTHER_POWERNOTE",
+        "z8e.com": "//third_party/z8e:z8e_POWERNOTE",
+        "ted.com": "//third_party/ted:ted_POWERNOTE",
 	},
 )
+
 # vim: ts=4 sw=4 et
         
