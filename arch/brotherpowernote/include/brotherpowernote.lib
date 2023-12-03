@@ -1,8 +1,16 @@
         maclib z180
 
+PORT_VIDEO_CURSOR_LO = 0x70
+PORT_VIDEO_CURSOR_HI = 0x71
 PORT_VIDEO_ADDR_LO   = 0x72
 PORT_VIDEO_ADDR_HI   = 0x73
 PORT_VIDEO_DATA      = 0x74
+
+SCREEN_ON            = 0x01 ; enables screen output
+SCREEN_INVERSE       = 0x02 ; inverts screen
+SCREEN_BITMAP        = 0x08 ; controls text / bitmap mode
+SCREEN_SQUASHED      = 0x20 ; 80x25 vs 80x22
+PORT_VIDEO_SCREEN    = 0x75
 
 PORT_765_STATUS      = 0x80
 PORT_765_DATA        = 0x81
