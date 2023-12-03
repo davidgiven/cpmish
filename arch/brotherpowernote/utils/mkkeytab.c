@@ -42,7 +42,7 @@ int main(int argc, const char* argv[])
     key(0x1d, 'i', 'I');
     key(0x14, 'o', 'O');
     key(0x0d, 'p', 'P');
-	key(0x09, ']', ']');
+	key(0x09, ']', '[');
 	key(0x04, 13,  13); // return
 
     key(0x45, 0,   0); // caps lock
