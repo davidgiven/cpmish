@@ -137,11 +137,17 @@ zmac(
 
 # Assembles the bootable disk which you can actually run.
 
+unix2cpm(
+    name = "readme",
+    src = "README.md"
+)
+
 diskimage(
 	name = "diskimage",
 	format = "brother-powernote",
 	bootfile = ":bootfile_img",
 	map = {
+        "-readme.txt": ":readme",
         "dump.com": "//cpmtools:dump",
         "stat.com": "//cpmtools:stat",
         "asm.com": "//cpmtools:asm",
