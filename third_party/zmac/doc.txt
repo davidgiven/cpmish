@@ -384,6 +384,16 @@ _ifdef symbol_
 _ifndef symbol_
 |Like _if_, but tests if _symbol_ has not yet been defined.
 
+_ifeq expr1,expr2_
+
+_ifne expr1,expr2_
+
+_iflt expr1,expr2_
+
+_ifgt expr1,expr2_
+|Shorthand for _if expr1 == expr2_, !=, <, >.  For MRAS and MAC80
+|compatibility.
+
 _import file_
 |Like _include_ but will only bring in the file once.  File tracking is done
 |using only the file name so, for example, an _import file_ will stop
@@ -394,9 +404,11 @@ _include file_
 |Include a file. Like C's (well, cpp's) #include and follows the same
 |include path search rules, but the filename arg
 |lacks the angle brackets or quotes (though single or double quotes may be used).
-|_read_ is a synonym.  _*include file_ also works if started in the first
-|column.  In _--mras_ mode _".asm"_ will be added if _file_ has
-|no suffix.
+|_read_ is a synonym.  _*include file_ and _*get file_ work if started in the
+|first column.  In _--mras_ mode _".asm"_ will be added if _file_ has
+|no suffix and _file/ext_ will be changed to _file.ext_   Original MRAS
+|source uses TRS-80 file system names where _/_ is the extension
+|introducer.
 
 _maclib file_
 |Like _include_ but adds _.lib_ to the file name so includes _file.lib_.
@@ -474,8 +486,9 @@ _rlc/rrc/rl/rr/sla/sl1/sra/srl (iy+d),r_
 
 The upper and lower bytes of the _ix_ and _iy_ can be used in a number of
 instructions much in the same way as _d_ and _e_ correspond to the upper and
-lower bytes of _de_.  zmac names these _ixh_, _ixl_, _iyh_ and _iyl_ and
-are referred to generically as _ixylh_ here.
+lower bytes of _de_.  zmac names these _ixh_, _ixl_, _iyh_ and _iyl_.
+Also acceptable are _xh_, _xl_, _yh_, _yl_ and _hx_, _lx_, _hy_, _ly_.
+They are referred to generically as _ixylh_ here.
 
 _inc/dec/add/adc/sub/sbc/and/xor/or/cp ixylh_
 |Arithmetic or logical operation on _ix_ or _iy_ high or low byte.

@@ -1,6 +1,6 @@
 %{
 // GWP - keep track of version via hand-maintained date stamp.
-#define VERSION "9feb2022"
+#define VERSION "18oct2022"
 
 /*
  *  zmac -- macro cross-assembler for the Zilog Z80 microprocessor
@@ -224,6 +224,13 @@
  * gwp 10-4-21	Put code and data indications in .bds output.
  *
  * gwp 9-2-22	Fix --z180 and improve usage message on unknown -- flags.
+ *
+ * gwp 10-4-22	Much better symbol table hash function from Al Petrofsky as
+ *		used in gcc and gas.
+ *
+ * gwp 10-18-22	Added *GET, IFEQ, IFEQ, IFLT, IFGT to improved MRAS support.
+ *		Change FILE/EXT to FILE.EXT for includes in --mras mode.
+ *		xh, xl, yh, yl, hx, lx, hy, ly alternates for ixh, ixy, iyh, iyl.
  */
 
 #if defined(__GNUC__)
@@ -1956,7 +1963,7 @@ void do_defl(struct item *sym, struct expr *val, int call_list);
 %token <ival> MROP_SHIFT MROP_SHL MROP_SHR
 %token <ival> MROP_NOT MROP_LOW MROP_HIGH
 %token IF_TK
-%token <itemptr> IF_DEF_TK
+%token <itemptr> IF_DEF_TK IF_CP_TK
 %token ELSE_TK
 %token ENDIF_TK
 %token <itemptr> ARGPSEUDO
@@ -2321,6 +2328,22 @@ statement:
 		expr_free($2);
 	}
 |
+	IF_CP_TK expression ',' expression '\n' {
+		// Unpleasant duplication of IF_TK work.
+		struct expr *compare = expr_mk($2, $1->i_value , $4);
+		expr_number_check(compare);
+		if (ifptr >= ifstmax)
+			error("Too many ifs");
+		else
+			*++ifptr = !(compare->e_value);
+
+		saveopt = fopt;
+		fopt = 1;
+		list(compare->e_value);
+		fopt = saveopt;
+		expr_free(compare);
+	}
+|
 	// IF_DEF_TK UNDECLARED '\n' might work, but probably would define the symbol
 	IF_DEF_TK arg_on ARG arg_off '\n' {
 		struct item *ip = locate(tempbuf);
@@ -2450,8 +2473,19 @@ statement:
 			strcpy(writesyms, tempbuf);
 			break;
 		case PSINC:	/* include file */
-			if (mras && !strchr(tempbuf, '.')) {
-				strcat(tempbuf, ".asm");
+			if (mras) {
+				// Allow for FILE/EXT; TRS-80 used / for extension.
+				char *slash = strchr(tempbuf, '/');
+				// Must have only one slash and short extension.
+				if (slash && !strchr(slash + 1, '/') &&
+					strlen(slash + 1) <= 3)
+				{
+					*slash = '.';
+				}
+
+				// MRAS appends "asm" suffix if not present.
+				if (!strchr(tempbuf, '.'))
+					strcat(tempbuf, ".asm");
 			}
 			next_source(tempbuf, 1);
 			break ;
@@ -4392,6 +4426,7 @@ char	numpart[] = {
 #define Z180	(256)	/* used in Z180 (HD64180) instructions */
 
 struct	item	keytab[] = {
+	{"*get",	PSINC,	ARGPSEUDO,	VERB | COL0 },
 	{"*include",	PSINC,	ARGPSEUDO,	VERB | COL0 },
 	{"*list",	0,	LIST,		VERB | COL0 },
 	{"*mod",	0,	MRAS_MOD,	VERB },
@@ -4520,10 +4555,16 @@ struct	item	keytab[] = {
 	{".high.",	0,	MROP_HIGH,	TERM | MRASOP },
 	{"hl",		040,	HL,		Z80 },
 	{"hlt",		0166,	NOOPERAND,	VERB | I8080 },
+	{"hx",   	0x1DD04,IXYLH,		Z80 | UNDOC },
+	{"hy",   	0x1FD04,IXYLH,		Z80 | UNDOC },
 	{"i",		0,	MISCREG,	Z80 },
 	{".if",		0,	IF_TK,		VERB | COL0 },
 	{".ifdef",	1,	IF_DEF_TK,	VERB | COL0 },
+	{".ifeq",	'=',	IF_CP_TK,	VERB | COL0 },
+	{".ifgt",	'>',	IF_CP_TK,	VERB | COL0 },
+	{".iflt",	'<',	IF_CP_TK,	VERB | COL0 },
 	{".ifndef",	0,	IF_DEF_TK,	VERB | COL0 },
+	{".ifne",	NE,	IF_CP_TK,	VERB | COL0 },
 	{"im",		0166506,IM,		VERB | Z80 },
 	{"im0",		0xed46,	NOOPERAND,	VERB | Z80 | ZNONSTD },
 	{"im1",		0xed56,	NOOPERAND,	VERB | Z80 | ZNONSTD },
@@ -4595,9 +4636,11 @@ struct	item	keytab[] = {
 	{"lspd",	0xed7b,	LDST16,		VERB | Z80 | ZNONSTD },
 	{"lt",		0,	LT,		0 },
 	{".lt.",	0,	MROP_LT,	TERM | MRASOP },
+	{"lx",   	0x1DD05,IXYLH,		Z80 | UNDOC },
 	{"lxi",		1,	LXI,		VERB | I8080 },
 	{"lxix",	0xdd21,	LDST16,		VERB | Z80 | ZNONSTD },
 	{"lxiy",	0xfd21,	LDST16,		VERB | Z80 | ZNONSTD },
+	{"ly",   	0x1FD05,IXYLH,		Z80 | UNDOC },
 	{"m",		070,	COND,		I8080 | Z80 },
 	{".maclib",	PSMACLIB,ARGPSEUDO,	VERB },
 	{".macro",	0,	MACRO,		VERB },
@@ -4773,6 +4816,8 @@ struct	item	keytab[] = {
 	{".word",	0,	DEFW,		VERB },
 	{".wsym",	PSWSYM,	ARGPSEUDO,	VERB },
 	{"xchg",	0353,	NOOPERAND,	VERB | I8080 },
+	{"xh",   	0x1DD04,IXYLH,		Z80 | UNDOC },
+	{"xl",   	0x1DD05,IXYLH,		Z80 | UNDOC },
 	{"xor",		0250,	XOR,		VERB | Z80 | TERM },
 	{".xor.",	0,	MROP_XOR,	TERM | MRASOP },
 	{"xorx",	0xddae,	ALU_XY,		VERB | Z80 | ZNONSTD },
@@ -4782,6 +4827,8 @@ struct	item	keytab[] = {
 	{"xthl",	0343,	NOOPERAND,	VERB | I8080 },
 	{"xtix",	0xdde3,	NOOPERAND,	VERB | Z80 | ZNONSTD },
 	{"xtiy",	0xfde3,	NOOPERAND,	VERB | Z80 | ZNONSTD },
+	{"yh",   	0x1FD04,IXYLH,		Z80 | UNDOC },
+	{"yl",   	0x1FD05,IXYLH,		Z80 | UNDOC },
 	{"z",		010,	SPCOND,		Z80 },
 	{".z180",	2,	INSTSET,	VERB },
 	{".z80",	1,	INSTSET,	VERB },
@@ -5509,12 +5556,12 @@ struct item *item_lookup(char *name, struct item *table, int table_size)
 	/*
 	 *  hash into item table
 	 */
-	int hash = 0;
+	unsigned long hash = 0;
 	char *p = name;
 	while (*p) {
 		char ch = *p++;
 		if (ch >= 'A' && ch <= 'Z') ch += 'a' - 'A';
-		hash += ch;
+		hash += hash * 67 + ch - 113;
 	}
 	hash %= table_size;
 	ip = &table[hash];
@@ -5656,7 +5703,9 @@ found:
 				goto token_done;
 			}
 		}
-		if (ip->i_token == IF_TK || ip->i_token == IF_DEF_TK) {
+		if (ip->i_token == IF_TK || ip->i_token == IF_DEF_TK ||
+			ip->i_token == IF_CP_TK)
+		{
 			if (ifptr >= ifstmax)
 				error("Too many ifs");
 			else *++ifptr = 1;
