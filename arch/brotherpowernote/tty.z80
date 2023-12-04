@@ -22,7 +22,7 @@
 SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 25
 
-CURSOR_UPDATES = 1
+CURSOR_UPDATES = 0
 CLEAR_SCREEN_ON_INIT = 1
 EMULATE_CLEAR_TO_EOL = 1
 EMULATE_CLEAR_TO_EOS = 1
@@ -41,13 +41,39 @@ label TTYINIT
     jp tty_init
 
 label CURON
-label CUROFF
+    ld hl, cursor_state
+    bit 0, (hl)
+    ret nz
+    set 0, (hl)
+toggle_cursor:
+    ld hl, (tty_cursorx)
+    sla l
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
+    in0 a, (PORT_VIDEO_DATA)
+    nop
+    nop
+    nop
+    xor ATTR_BOTFLASH_BACK | ATTR_TOPFLASH_BACK
+    out0 (PORT_VIDEO_DATA), a
     ret
 
-tty_update_cursor:
-    ret
+label CUROFF
+    ld hl, cursor_state
+    bit 0, (hl)
+    ret z
+    res 0, (hl)
+    ld a, (cursor_state)
+    jr toggle_cursor
 
 tty_rawwrite:
+    ld d, 0
+    ld hl, tty_attributes
+    bit 0, (hl)
+    jr z, .1
+    ld d, ATTR_INVERSE
+.1
+
     and 0x7f
     sub 0x20
     ld hl, character_map_table
@@ -59,8 +85,7 @@ tty_rawwrite:
 
     out0 (PORT_VIDEO_ADDR_LO), l
     out0 (PORT_VIDEO_ADDR_HI), h
-    xor a
-    out0 (PORT_VIDEO_DATA), a
+    out0 (PORT_VIDEO_DATA), d
     nop
     nop
     nop
@@ -137,6 +162,8 @@ character_map_table:
     db 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o'
     db 'p', 'q', 'r', 's', 't', 'u', 'v', 'w'
     db 'x', 'y', 'z', $ae, $0e, $af, $be, $0d
+cursor_state:
+    db 0
 
 ; vim: ts=4 sw=4 et ft=asm
 

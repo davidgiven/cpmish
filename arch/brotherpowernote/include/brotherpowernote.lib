@@ -1,10 +1,16 @@
         maclib z180
 
-PORT_VIDEO_CURSOR_LO = 0x70
-PORT_VIDEO_CURSOR_HI = 0x71
 PORT_VIDEO_ADDR_LO   = 0x72
 PORT_VIDEO_ADDR_HI   = 0x73
 PORT_VIDEO_DATA      = 0x74
+
+ATTR_UNDERLINE       = 0x01
+ATTR_BOLD            = 0x04
+ATTR_RIGHTBAR        = 0x08
+ATTR_INVERSE         = 0x10
+ATTR_TOPFLASH_BACK   = 0x20
+ATTR_BOTFLASH_BACK   = 0x40
+ATTR_FLASH_FORE      = 0x80
 
 SCREEN_ON            = 0x01 ; enables screen output
 SCREEN_INVERSE       = 0x02 ; inverts screen
