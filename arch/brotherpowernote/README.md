@@ -18,7 +18,7 @@ What you get with this port:
 - about 1400kB of storage on a 1440kB MFM disk (I have to reserve two tracks for
   a FAT filesystem and the CP/M system track to boot from)
 - a massive single-track disk cache meaning disk accesses are really fast
-- most of an ADM-3a / Kaypro II terminal emulator supporting 91x26 text
+- most of an ADM-3a / Kaypro II terminal emulator supporting 80x25 text
 - a respectable 58kB TPA
 - a non-interrupt driven keyboard which drops keypresses if the machine's busy
 - bugs
