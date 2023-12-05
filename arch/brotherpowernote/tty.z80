@@ -97,6 +97,24 @@ tty_rawwrite:
     out0 (PORT_VIDEO_DATA), c
     ret
 
+; On entry, A is the Y offset.
+clear_line:
+    out0 (PORT_VIDEO_ADDR_HI), a
+    
+    xor a                   ; X position
+    ld e, SCREEN_HEIGHT-1   ; Y position
+    ld d, 0                 ; fill character
+.1
+    out0 (PORT_VIDEO_ADDR_LO), a
+    out0 (PORT_VIDEO_DATA), d
+    inc a
+    out0 (PORT_VIDEO_ADDR_LO), a
+    out0 (PORT_VIDEO_DATA), d
+    inc a
+    cp SCREEN_WIDTH*2
+    jr nz, .1
+    ret
+
 tty_delete_line:
     ld a, (tty_cursory)
     ld h, a
@@ -108,7 +126,7 @@ tty_delete_line:
     sub b                   ; calculate number of text lines to move
     ld b, a
 
-    xor a
+    xor a                   ; X position
 .1
     inc h
     out0 (PORT_VIDEO_ADDR_LO), a
@@ -128,24 +146,38 @@ tty_delete_line:
 
 on_last_line:
     ld a, SCREEN_HEIGHT-1
-    out0 (PORT_VIDEO_ADDR_HI), a
-    
-    ld a, 0                 ; X position
-    ld e, SCREEN_HEIGHT-1   ; Y position
-    ld d, 0                 ; fill character
+    jr clear_line
+
+tty_insert_line:
+    ld a, (tty_cursory)
+    ld h, a
+    cp SCREEN_HEIGHT - 1
+    jr z, on_last_line      ; skip scroll if there's nothing to do
+
+    ld b, a
+    ld a, SCREEN_HEIGHT - 1
+    sub b                   ; calculate number of text lines to move
+    xor a                   ; X position
+    dec h                   ; Y position (initially SCREEN_HEIGHT-2)
 .1
     out0 (PORT_VIDEO_ADDR_LO), a
-    out0 (PORT_VIDEO_DATA), d
-    inc a
-    out0 (PORT_VIDEO_ADDR_LO), a
-    out0 (PORT_VIDEO_DATA), d
+    out0 (PORT_VIDEO_ADDR_HI), h
+    in0 e, (PORT_VIDEO_DATA)
+    inc h
+    nop
+    nop
+    out0 (PORT_VIDEO_ADDR_HI), h
+    out0 (PORT_VIDEO_DATA), e
+    dec h
     inc a
     cp SCREEN_WIDTH*2
     jr nz, .1
-    ret
 
-tty_insert_line:
-    ret
+    dec h
+    djnz .1
+
+    ld a, (tty_cursory)
+    jr clear_line
 
 ; Maps from ASCII (minus $20) to the Brother character set.
 
