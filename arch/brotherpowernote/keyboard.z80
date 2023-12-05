@@ -10,6 +10,10 @@
     extrn TTYPUT16
     extrn TTYPUTSI
     
+KEYMOD_BIT_SHIFT = 0
+KEYMOD_BIT_CTRL = 1
+KEYMOD_BIT_CAPS = 2
+
 label KBGET
     call KBTEST
     jr z, KBGET
@@ -94,20 +98,20 @@ key_up_down:
 key_down:
     or a
     jr nz, .1           ; jump if not shift
-    set 0, (hl)
+    set KEYMOD_BIT_SHIFT, (hl)
     jr key_return
 .1
     cp 0x47
     jr nz, .2           ; jump if not control
-    set 1, (hl)
+    set KEYMOD_BIT_CTRL, (hl)
     jr key_return
 .2
     cp 0x45
     jr nz, .3           ; jump if not caps lock
-    bit 2, (hl)
-    res 2, (hl)
+    bit KEYMOD_BIT_CAPS, (hl)
+    res KEYMOD_BIT_CAPS, (hl)
     jr nz, key_return
-    set 2, (hl)
+    set KEYMOD_BIT_CAPS, (hl)
     jr key_return
 .3
 
@@ -115,7 +119,7 @@ key_down:
     ld b, 0
     ld a, (hl)
     ld hl, keyboard_normal_map
-    bit 0, a
+    bit KEYMOD_BIT_SHIFT, a
     jr z, .4
     ld hl, keyboard_shifted_map
 .4
@@ -123,6 +127,19 @@ key_down:
     ld a, (hl)
     or a
     jr z, key_return    ; key has no mapping
+
+    ; Adjust for CTRL.
+
+    ld hl, keyboard_modifiers
+    bit KEYMOD_BIT_CTRL, (hl)
+    jr z, .5            ; jump if not ctrl
+    and 0x1f
+.5
+
+    ; Adjust for caps lock.
+
+    bit KEYMOD_BIT_CAPS, (hl)
+    call nz, toupper
 
     ; The key has been decoded into A. Push it into the keyboard buffer.
 
@@ -144,11 +161,11 @@ key_down:
 key_up:
     or a
     jr nz, .1           ; jump if not shift
-    res 0, (hl)
+    res KEYMOD_BIT_SHIFT, (hl)
 .1
     cp 0x47
     jr nz, key_return   ; jump if not control
-    res 1, (hl)
+    res KEYMOD_BIT_CTRL, (hl)
     ; fall through
 key_return:
 
@@ -156,6 +173,14 @@ key_return:
     pop de
     pop bc
     pop af
+    ret
+
+toupper:
+    cp 'a'
+    ret c
+    cp 'z'+1
+    ret nc
+    and ~0x20
     ret
 
 include 'keytab.inc'
