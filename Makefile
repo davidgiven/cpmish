@@ -7,3 +7,5 @@ verbose:
 	bazel test -s -c dbg //...
 	bazel build -s -c opt //:diskimages
 
+clean:
+	bazel clean
