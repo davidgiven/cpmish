@@ -38,6 +38,9 @@ label FMON
 ; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
 ; error).
 label SELDSKE
+    bit 0, e
+    call z, flush_cache
+
     ld hl, 0
     ld a, c
     or a
@@ -199,6 +202,13 @@ flush_track:
 
     xor a
     ld (track_dirty), a
+    ret
+
+flush_cache:
+    xor a
+    ld (track_dirty), a
+    dec a
+    ld (current_track), a
     ret
 
 ; Command opcode in A.
