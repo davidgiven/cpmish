@@ -89,12 +89,13 @@ def cpm_addresses(name, top_of_memory=0x10000, bios_size=None):
     return (cbase, fbase, bbase)
 
 def binslice(name, src, start, length=None):
+    start = start + 1
     if length == None:
         native.genrule(
             name = name,
             srcs = [ src ],
             outs = [ name + ".img" ],
-            cmd = "tail -c+%d $< > $@" % start
+            cmd = "tail -c+%d $< > $@" % (start)
         )
     else:
         native.genrule(

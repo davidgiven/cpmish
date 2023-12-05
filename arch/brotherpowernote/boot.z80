@@ -1,0 +1,164 @@
+; Brother WP2450DS cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is the executable which is loaded and run by the Brother's OS. It
+; gets loaded at 0x8000 with BBR=0x20, CBR=0x61 and CBAR=0x88. This puts
+; common 1 at logical 0x8000, physical 0x69000.
+;
+; Physical memory extends from 0x60000 to 0x80000. There is also RAM at 0x02000
+; to 0x06000, which is probably an alias to the main memory (I haven't looked).
+
+    maclib cpmish
+    maclib cpm
+    maclib brotherpowernote
+    maclib addresses
+
+    extrn FDBUF
+    extrn FDCAL2
+    extrn FDDEBLK
+    extrn FDINIT
+    extrn FDR512
+    extrn FDRECAL
+    extrn FDRSTAT
+    extrn FDTX
+    extrn FDSTAT
+    
+    extrn TTYINIT
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+    extrn TTYPUTSI
+    extrn TTYGOTO
+
+    org 0x8000
+start:
+    dw 0xc185           ; Brother magic numbers
+    dw 0x0201
+    dw 0x0000
+    db "BR"
+
+    di                  ; The Brother OS is not at home.
+    
+    ; Adjust MMU so that our own memory is being provided by B, rather than C.
+
+    ld a, 0x61
+    out0 (BBR), a
+    ld a, 0xe8
+    out0 (CBAR), a
+
+    ; Make C point at the area from 0x70000 to 0x80000. The top 0x2000 of this
+    ; will be visible from 0xe000 to 0x10000.
+
+    ld a, 0x70
+    out0 (CBR), a
+
+    ; Motor on.
+
+    ld a, 00011100b
+    out0 (PORT_765_OPERATIONS), a
+
+    ; Seek.
+
+    ld b, fdc_seek_end - fdc_seek
+    ld hl, fdc_seek
+    call send_command
+    call wait_for_command_end
+
+    ; Issue FDC command.
+
+    ld b, fdc_read.end - fdc_read
+    ld hl, fdc_read
+    call send_command
+
+    ; Configure DMA.
+
+    ld b, fdc_dma.end - fdc_dma
+    ld hl, fdc_dma
+    ld c, MAR1L
+    otimr
+
+    ; Perform transfer.
+
+    ld a, 00010000b
+    out0 (CNTLA1), a
+    in0 a, (DCNTL)
+    and 0xf0
+    or 0x0a
+    out0 (DCNTL), a
+    ld a, 10010000b
+    out0 (DSTAT), a
+
+    call wait_for_command_end
+
+    ld a, 00010000b
+    out0 (DSTAT), a
+
+    call read_status
+
+    jp BBASE
+
+wait_for_fdc_writable:
+    in a, (PORT_765_STATUS)
+    rla
+    jr nc, wait_for_fdc_writable
+    ret
+
+read_status:
+    push hl
+	ld hl, data.fd765_status
+read_status_loop:
+    in a, (PORT_765_STATUS)
+	rla							; RQM...
+	jr nc, read_status_loop		; ...low, keep waiting 
+	rla							; DIO...
+	jr nc, .1	        		; ...low, no more data
+    in a, (PORT_765_DATA)
+	ld (hl), a
+	inc hl
+	jr read_status_loop
+.1
+    pop hl
+    ret
+data.fd765_status:
+	ds 8						; 8 bytes of status data
+
+wait_for_command_end:
+    in a, (PORT_DISK_STATUS)
+    and DISK_STATUS_BUSY
+    jr z, wait_for_command_end
+    ret
+
+; Command ptr in HL, length in B.
+send_command:
+    call wait_for_fdc_writable
+    ld c, PORT_765_DATA
+    outi
+    jr nz, send_command
+    ret
+
+fdc_seek:
+    db 0x0f     ; 0: SEEK
+    db 0        ; 1: drive 0
+    db 1        ; 2: track 0
+fdc_seek_end:
+
+fdc_read:
+    db 0x66      ; 0: READ SECTORS
+    db 0         ; 1: physical head 0, drive 0
+    db 1         ; 2: track 0
+    db 0         ; 3: logical head 1
+    db 1         ; 4: first sector
+    db 2         ; 5: bytes per sector: 512
+    db (CPM_SIZE/0x200)+1 ; 6: last sector (*inclusive*)
+    db 27        ; 7: gap 3 length (27 is standard for 3.5" drives)
+    db 0         ; 8: sector length (unused)
+fdc_read.end:
+  
+fdc_dma:
+    dw 0x10000-CPM_SIZE ; MAR1 low
+    db 0x07             ; MAR1 high
+    dw 0x86             ; IAR1
+    db 0                ; unused
+    dw CPM_SIZE         ; BCR1
+fdc_dma.end:

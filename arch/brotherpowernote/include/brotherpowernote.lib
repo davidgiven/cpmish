@@ -1,0 +1,40 @@
+        maclib z180
+
+PORT_VIDEO_ADDR_LO   = 0x72
+PORT_VIDEO_ADDR_HI   = 0x73
+PORT_VIDEO_DATA      = 0x74
+
+ATTR_UNDERLINE       = 0x01
+ATTR_BOLD            = 0x04
+ATTR_RIGHTBAR        = 0x08
+ATTR_INVERSE         = 0x10
+ATTR_TOPFLASH_BACK   = 0x20
+ATTR_BOTFLASH_BACK   = 0x40
+ATTR_FLASH_FORE      = 0x80
+
+SCREEN_ON            = 0x01 ; enables screen output
+SCREEN_INVERSE       = 0x02 ; inverts screen
+SCREEN_BITMAP        = 0x08 ; controls text / bitmap mode
+SCREEN_SQUASHED      = 0x20 ; 80x25 vs 80x22
+PORT_VIDEO_SCREEN    = 0x75
+
+PORT_765_STATUS      = 0x80
+PORT_765_DATA        = 0x81
+PORT_765_OPERATIONS  = 0x82
+PORT_765_DENSITY     = 0x84
+PORT_765_DMA         = 0x86
+PORT_DISK_STATUS     = 0xa8
+PORT_KEYBOARD        = 0xb8
+
+DISK_STATUS_DISKCHANGED = 0x01
+DISK_STATUS_INDEX       = 0x02
+DISK_STATUS_BUSY        = 0x04
+
+CACHE_BANK           = 6
+USER_BANK            = 7
+TRACK_BUFFER_LEN     = 18 * 512
+
+; vim: ts=4 sw=4 et ft=asm
+
+
+

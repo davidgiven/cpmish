@@ -6,6 +6,7 @@ libcuss_terminals = [
     "BROTHEROP2",
     "BROTHER_WP1",
     "BROTHER_WP2450DS",
+    "BROTHER_POWERNOTE",
     "SPECTRUM_PLUS_THREE",
     "SPECTRUM_NEXT",
 ]

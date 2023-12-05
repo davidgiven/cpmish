@@ -49,6 +49,10 @@ extern void con_revoff(void);
 	#define SCREENWIDTH 91
 	#define SCREENHEIGHT 15
 	#define LIBCUSS_ADM3
+#elif defined LIBCUSS_BROTHER_POWERNOTE
+	#define SCREENWIDTH 80
+	#define SCREENHEIGHT 25
+	#define LIBCUSS_ADM3
 #else
     #error "No libcuss configuration specified."
 #endif

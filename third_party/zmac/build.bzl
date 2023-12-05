@@ -22,7 +22,7 @@ def zmac(name, srcs, relocatable=True, z180=False, dri=False):
         srcs = srcfiles + depfiles,
         outs = [outfile],
         tools = ["//third_party/zmac"],
-        cmd = "$(execpath //third_party/zmac) --zmac -m {} {} {} -o $(execpath {}) $(execpath {})".format(
+        cmd = "$(execpath //third_party/zmac) --nmnv --zmac -m {} {} {} -o $(execpath {}) $(execpath {})".format(
             relflag, archflag, hdrflags, outfile, srcfiles[0])
     )
 
