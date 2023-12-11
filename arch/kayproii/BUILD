@@ -81,7 +81,6 @@ genrule(
 	cmd = " && ".join([
         "cp $(location :partialimg) $@",
 		"chmod +w $@",
-        "truncate -s 204800 $@",
         "dd if=$(location :bootfile_mem) of=$@ bs=128 seek=56 skip=495 count=9 conv=notrunc 2> /dev/null"
     ])
 )
