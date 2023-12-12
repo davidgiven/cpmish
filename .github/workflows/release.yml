@@ -1,0 +1,74 @@
+name: Autorelease
+
+on:
+  push:
+    branches:
+      - "master"
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: apt
+      run: |
+        sudo apt update
+        sudo apt install cpmtools bazel-bootstrap flex bison libreadline-dev libz80ex-dev lua5.2
+    - name: build-ack
+      run: |
+        git clone --depth=1 https://github.com/davidgiven/ack.git
+        make -C ack PREFIX=$HOME +ack-cpm
+        make -C ack PREFIX=$HOME install
+    - name: make
+      run: PATH=$PATH:$HOME/bin make
+
+    - name: date
+      run: |
+        echo "RELEASE_DATE=$(date --rfc-3339=date)" >> ${GITHUB_ENV}
+
+    - name: tag
+      run: |
+        cd cpm65
+        git config user.name "davidgiven"
+        git config user.email "dg@cowlark.com"
+        git tag -f dev
+        git push -f origin dev
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: export
+      run: >
+        for a in brotherpowernote brotherop2 brotherwp1 kayproii nc200 wp2450ds; do
+          ln bazel-bin/arch/$a/diskimage.img $a.img; done
+
+    - name: delete-old-assets
+      uses: mknejp/delete-release-assets@v1
+      with:
+        token: ${{ github.token }}
+        tag: dev
+        assets: | 
+          browerpowernote.img
+          brotherop2.img
+          brotherwp1.img
+          kayproii.img
+          nc200.img
+          wp2450ds.img
+        fail-if-no-assets: false
+
+    - name: release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Development build ${{ env.RELEASE_DATE }}
+        files: |
+          browerpowernote.img
+          brotherop2.img
+          brotherwp1.img
+          kayproii.img
+          nc200.img
+          wp2450ds.img
+        tag_name: dev
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
