@@ -43,11 +43,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: export
-      run: >
-        for a in brotherpowernote brotherop2 brotherwp1 kayproii nc200 wp2450ds; do
-          ln bazel-bin/arch/$a/diskimage.img $a.img; done
-
     - name: delete-old-assets
       uses: mknejp/delete-release-assets@v1
       with:
