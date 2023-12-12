@@ -95,14 +95,14 @@ def binslice(name, src, start, length=None):
             name = name,
             srcs = [ src ],
             outs = [ name + ".img" ],
-            cmd = "tail -c+%d $< > $@" % (start)
+            cmd = "dd status=none if=$< of=$@ bs=1 skip=%d" % (start)
         )
     else:
         native.genrule(
             name = name,
             srcs = [ src ],
             outs = [ name + ".img" ],
-            cmd = "tail -c+%d $< | head -c%d > $@" % (start, length)
+            cmd = "dd status=none if=$< of=$@ bs=1 skip=%d count=%d" % (start, length)
         )
         
 def diskimage(name, format, bootfile, map):
