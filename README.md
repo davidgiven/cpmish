@@ -72,8 +72,12 @@ in it which meant they couldn't be distributed anywhere else; this was
 How?
 ----
 
-You pretty much need a Unix --- I developed it on Linux. You'll need to
-install the dependencies. These are the names of the Debian packages:
+**From binaries:** precompiled disk images are available [as part of the current
+development release](https://github.com/davidgiven/cpmish/releases/tag/dev).
+This are built automatically and aren't tested in any way.
+
+**From source:** you pretty much need a Unix --- I developed it on Linux. You'll
+need to install the dependencies. These are the names of the Debian packages:
 
   - cpmtools
   - bazel-bootstrap

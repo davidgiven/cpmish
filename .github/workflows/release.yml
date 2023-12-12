@@ -49,7 +49,7 @@ jobs:
         token: ${{ github.token }}
         tag: dev
         assets: | 
-          browerpowernote.img
+          brotherpowernote.img
           brotherop2.img
           brotherwp1.img
           kayproii.img
@@ -62,7 +62,7 @@ jobs:
       with:
         name: Development build ${{ env.RELEASE_DATE }}
         files: |
-          browerpowernote.img
+          brotherpowernote.img
           brotherop2.img
           brotherwp1.img
           kayproii.img
