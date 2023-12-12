@@ -5,6 +5,10 @@ on:
     branches:
       - "master"
 
+concurrency: 
+  group: environment-release-${{ github.head_ref }}
+  cancel-in-progress: true
+        
 jobs:
   build-linux:
     runs-on: ubuntu-latest
