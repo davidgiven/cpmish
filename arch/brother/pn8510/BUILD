@@ -21,9 +21,9 @@ top_of_memory = 0x10000
 
 genrule(
     name = "keytab_inc",
-	tools = [ "//arch/brotherpowernote/utils:mkkeytab" ],
+	tools = [ "//arch/brother/pn8510/utils:mkkeytab" ],
     outs = [ "keytab.inc" ],
-	cmd = "$(location //arch/brotherpowernote/utils:mkkeytab) > $@"
+	cmd = "$(location //arch/brother/pn8510/utils:mkkeytab) > $@"
 )
 
 # Object files --------------------------------------------------------------
@@ -45,7 +45,7 @@ BIOS_SRCS = [
             "//include:cpmish.lib",
             "//include:z180.lib",
             ":keytab_inc",
-            "//arch/brotherpowernote/include:brotherpowernote.lib",
+            "//arch/brother/pn8510/include:brotherpowernote.lib",
             "//arch/common/utils:tty.lib",
             "//arch/common/utils:print.lib",
             ":addresses",
@@ -80,7 +80,7 @@ zmac(
         "//include:cpm.lib",
         "//include:cpmish.lib",
         "//include:z180.lib",
-        "//arch/brotherpowernote/include:brotherpowernote.lib",
+        "//arch/brother/pn8510/include:brotherpowernote.lib",
         ":addresses",
     ],
 )

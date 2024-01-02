@@ -5,7 +5,7 @@ exports_files([ "diskdefs" ])
 filegroup(
 	name = "diskimages",
 	srcs = [
-		"//arch/brotherpowernote:diskimage",
+		"//arch/brother/pn8510:diskimage",
 		"//arch/brotherop2:diskimage",
 		"//arch/brotherwp1:diskimage",
 		"//arch/kayproii:diskimage",
