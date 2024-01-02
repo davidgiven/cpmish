@@ -50,6 +50,7 @@ jobs:
         tag: dev
         assets: | 
           brotherpowernote.img
+          pn8510.img
           brotherop2.img
           brotherwp1.img
           kayproii.img
@@ -62,7 +63,7 @@ jobs:
       with:
         name: Development build ${{ env.RELEASE_DATE }}
         files: |
-          brotherpowernote.img
+          pn8510.img
           brotherop2.img
           brotherwp1.img
           kayproii.img
