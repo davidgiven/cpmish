@@ -34,61 +34,6 @@ fd765_nudge_tc:
 fd765_pause:
     ret
 
-; Reads a sector (512 bytes) from the FDC into HL.
-fd765_read_sector:
-    push hl
-;    ld a, '{'
-;    call TTYPUTC
-    pop hl
-    ld (read_sector_dma + DAR0L - SAR0L), hl
-    ld b, read_sector_dma.end - read_sector_dma
-    ld c, SAR0L
-    ld hl, read_sector_dma
-    otimr
-    ld a, 00001100b         ; IO -> memory++
-    out0 (DMODE), a
-    ld a, 01000100b         ; One memory wait state, 0 I/O wait state, DMS0 level sense, 
-    out0 (DCNTL), a
-    ld a, 01100000b         ; DE0 enable, DWE1 disable
-    out0 (DSTAT), a             ; start the transfer
-wait_for_fdc_completion:
-    in0 a, (PORT_HD63266_SR2)
-    and 0x40                ; 0x40 seems to mirror the 'IRQ happened' flag
-    jr z, wait_for_fdc_completion
-    ld a, 00100000b         ; DE0 disable, stop any pending DMA
-;    ld a, '}'
-;    call TTYPUTC
-    ret
-read_sector_dma:
-    dw PORT_HD63266_DATA    ; SAR0
-    db 0                    ; SAR0B
-    dw 0                    ; DAR0
-    db 0x06                 ; DAR0B
-    dw 512                  ; BCR0
-read_sector_dma.end:
-
-; Writes a sector (512 bytes) to the FDC from HL.
-fd765_write_sector:
-    ld (write_sector_dma), hl
-    ld b, write_sector_dma.end - write_sector_dma
-    ld c, SAR0L
-    ld hl, write_sector_dma
-    otimr
-    ld a, 00110000b         ; memory++ -> IO
-    out0 (DMODE), a
-    ld a, 01000100b         ; One memory wait state, 0 I/O wait state, DMS0 level sense, 
-    out0 (DCNTL), a
-    ld a, 01100000b         ; DE0 enable, DWE1 disable
-    out0 (DSTAT), a             ; perform the transfer
-    jr wait_for_fdc_completion
-write_sector_dma:
-    dw 0                    ; SAR0
-    db 0x06                 ; SAR0B
-    dw PORT_HD63266_DATA    ; DAR0
-    db 0                    ; DAR0B
-    dw 512                  ; BCR0
-write_sector_dma.end:
-
 DBS_BLOCK_SHIFT = 9
 DBS_WANT_DB_CAP = 0
     maclib deblocker
