@@ -1,0 +1,5 @@
+        maclib z180
+
+PORT_HD63266_STATUS  = 0x80
+PORT_HD63266_DATA    = 0x81
+PORT_HD63266_SR2     = 0x82

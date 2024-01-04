@@ -1,0 +1,192 @@
+; Brother WP2450DS cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is the executable which is loaded and run by the Brother's OS. It
+; gets loaded with BBR=CBR=0x60, CBAR=0x55, which means that DRAM from
+; physical addresses 0x65000 to 0x6ffff is mapped to logical 0x5000 to 0xffff.
+
+    maclib pn8800
+    maclib cpmish
+    maclib cpm
+
+    export FDTX, fd765_tx
+    export FDCAL2, fd765_recalibrate_twice
+    export FDRSTAT, fd765_read_status
+    export FDMOFF, fd765_motor_off
+    export DBGET, db_get
+
+    cseg
+
+fd765_motor_on:
+    ld a, 0xe1          ; motor on
+    out0 (PORT_HD63266_STATUS), a
+    ret
+
+fd765_motor_off:
+    ld a, 0xd1          ; motor off
+    out0 (PORT_HD63266_STATUS), a
+    ret
+
+fd765_nudge_tc:
+    ret
+
+fd765_pause:
+    ret
+
+; Reads a sector (512 bytes) from the FDC into HL.
+fd765_read_sector:
+    push hl
+;    ld a, '{'
+;    call TTYPUTC
+    pop hl
+    ld (read_sector_dma + DAR0L - SAR0L), hl
+    ld b, read_sector_dma.end - read_sector_dma
+    ld c, SAR0L
+    ld hl, read_sector_dma
+    otimr
+    ld a, 00001100b         ; IO -> memory++
+    out0 (DMODE), a
+    ld a, 01000100b         ; One memory wait state, 0 I/O wait state, DMS0 level sense, 
+    out0 (DCNTL), a
+    ld a, 01100000b         ; DE0 enable, DWE1 disable
+    out0 (DSTAT), a             ; start the transfer
+wait_for_fdc_completion:
+    in0 a, (PORT_HD63266_SR2)
+    and 0x40                ; 0x40 seems to mirror the 'IRQ happened' flag
+    jr z, wait_for_fdc_completion
+    ld a, 00100000b         ; DE0 disable, stop any pending DMA
+;    ld a, '}'
+;    call TTYPUTC
+    ret
+read_sector_dma:
+    dw PORT_HD63266_DATA    ; SAR0
+    db 0                    ; SAR0B
+    dw 0                    ; DAR0
+    db 0x06                 ; DAR0B
+    dw 512                  ; BCR0
+read_sector_dma.end:
+
+; Writes a sector (512 bytes) to the FDC from HL.
+fd765_write_sector:
+    ld (write_sector_dma), hl
+    ld b, write_sector_dma.end - write_sector_dma
+    ld c, SAR0L
+    ld hl, write_sector_dma
+    otimr
+    ld a, 00110000b         ; memory++ -> IO
+    out0 (DMODE), a
+    ld a, 01000100b         ; One memory wait state, 0 I/O wait state, DMS0 level sense, 
+    out0 (DCNTL), a
+    ld a, 01100000b         ; DE0 enable, DWE1 disable
+    out0 (DSTAT), a             ; perform the transfer
+    jr wait_for_fdc_completion
+write_sector_dma:
+    dw 0                    ; SAR0
+    db 0x06                 ; SAR0B
+    dw PORT_HD63266_DATA    ; DAR0
+    db 0                    ; DAR0B
+    dw 512                  ; BCR0
+write_sector_dma.end:
+
+DBS_BLOCK_SHIFT = 9
+DBS_WANT_DB_CAP = 0
+    maclib deblocker
+
+fd765_read_st_a macro
+    in0 a, (PORT_HD63266_STATUS)
+    endm
+
+fd765_write_st_a macro
+    out0 (PORT_HD63266_STATUS), a
+    endm
+
+fd765_read_dt_a macro
+    in0 a, (PORT_HD63266_DATA)
+    endm
+
+fd765_write_dt_a macro
+    out0 (PORT_HD63266_DATA), a
+    endm
+
+FD765_DRIVE_READY_COUNTS = 0
+FD765_DMA_TRANSFERS = 0
+    maclib upd765
+
+; Reads the physical sector at track=D, sector=E, and returns
+; a pointer to it in HL.
+
+label FDR512
+    ld ix, fd765_deblock
+    ld (ix+DBS_CUR_SECTOR), e
+    ld (ix+DBS_CUR_TRACK), d
+    call fd_read512
+    ret z
+    ld hl, fd765_deblock+DBS_BUFFER
+    ret
+
+setup_bc_de_and_ix:
+    xor a
+    ld bc, (BSECTOR)
+    ld b, a
+    ld de, (BTRACK)
+    ld d, a
+    ld ix, fd765_deblock
+    ret
+
+label FDR128
+    call setup_bc_de_and_ix
+    call db_get
+    ret z
+
+    ld de, (BDMA)
+    ld bc, 128
+    ldir
+    or a
+    ret
+
+; On entry, a is the deblock mode.
+label FDW128
+    sta (deblock_mode)
+    push af
+    call setup_bc_de_and_ix
+    pop af
+    call db_get
+    ret z
+
+    ld (ix+DBS_DIRTY), 1    ; mark this sector as dirty
+
+    ld de, (BDMA)
+    ex de, hl
+    ld bc, 128
+    ldir                    ; copy data into the buffer
+
+deblock_mode: equ $ + 1
+    ld a, 0
+    cp 1                    ; if deblock mode 1, flush the block now
+    jr nz, .1
+    call db_flush
+    ret z
+.1
+    or 1                    ; set nz
+    ret
+
+fd765_deblock:
+    dw 18          ; number of sectors
+    dw 80          ; number of tracks
+    dw fd_read512  ; read callback
+    dw fd_write512 ; write callback
+    dw 0xffff      ; current sector
+    dw 0           ; current track
+    db 0           ; dirty flag
+    ds 512         ; buffer
+
+label BSECTOR
+    db 0
+label BTRACK
+    db 0
+label BDMA
+    dw 0
+
+; vim: ts=4 sw=4 et ft=asm
+

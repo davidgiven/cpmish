@@ -1,0 +1,111 @@
+; Brother WP2450DS cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is the executable which is loaded and run by the Brother's OS. It
+; gets loaded at 0x8000 with BBR=0x20, CBR=0x61 and CBAR=0x88. This puts
+; common 1 at logical 0x8000, physical 0x69000.
+;
+; Physical memory extends from 0x60000 to 0x80000. There is also RAM at 0x02000
+; to 0x06000, which is probably an alias to the main memory (I haven't looked).
+
+    maclib cpmish
+    maclib cpm
+    maclib pn8800
+    maclib addresses
+
+    extrn FDBUF
+    extrn FDCAL2
+    extrn FDDEBLK
+    extrn FDINIT
+    extrn FDR512
+    extrn FDRECAL
+    extrn FDRSTAT
+    extrn FDTX
+    extrn FDSTAT
+    
+    extrn TTYINIT
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+    extrn TTYPUTSI
+    extrn TTYGOTO
+
+    org 0x8000
+start:
+    dw 0xc185           ; Brother magic numbers
+    dw 0x0201
+    dw 0x0000
+    db "BR"
+
+entry:
+    di                  ; The Brother OS is not at home.
+    ld sp, stack
+    
+    ; Adjust MMU so that our own memory is being provided by B, rather than C.
+
+    ld a, 0x61
+    out0 (BBR), a
+    ld a, 0xe8
+    out0 (CBAR), a
+
+    ; Make C point at the area from 0x70000 to 0x80000. The top 0x2000 of this
+    ; will be visible from 0xe000 to 0x10000.
+
+    ld a, 0x70
+    out0 (CBR), a
+
+    ; Set up the disk system.
+
+    call FDCAL2
+
+    ld a, 0x03          ; SPECIFY
+    call FDTX
+
+    ld a, 0xdf          ; SRT, HUT
+    call FDTX
+
+    ld a, 0x0c          ; HLT, !ND
+    call FDTX
+
+    call FDRSTAT
+
+    ld d, 2             ; current track
+    ld e, 0             ; current sector
+    ld hl, BBASE        ; destination address
+    ld b, (BIOS_SIZE+511)/512 ; number of 512-byte sectors to load
+
+    ; BBASE might not be aligned to a 512-byte boundary. If this happens,
+    ; then we'll overrun the end of memory and corrupt the bottom. As we're
+    ; not using it, that's not important.
+
+.1
+    push bc
+    push de
+    push hl
+    call FDR512
+    jr z, entry
+    pop de
+    ld bc, 512
+    ldir                ; copy buffer data to memory
+    ex de, hl           ; updated destination address to HL
+    pop de
+    pop bc
+
+    inc e               ; advance to next sector
+    ld a, 18
+    cp e
+    jr nz, .3
+    inc d               ; advance to next track, if necessary
+    ld e, 0
+.3
+    djnz .1             ; loop
+
+    ; Start BIOS.
+
+.4
+    jr .4
+    jp BBASE
+
+    ds 128
+stack:
