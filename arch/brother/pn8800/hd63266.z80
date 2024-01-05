@@ -21,6 +21,16 @@ label FDCTX
     out0 (PORT_HD63266_DATA), a
 	ret
 
+; Writes a complete command. HL is pointer, B is length.
+
+label FDCTXB
+.1
+    ld a, (hl)
+    inc hl
+    call FDCTX
+    djnz .1
+    ret
+
 ; Finish up a read or write transfer.
 ; Returns nz on success, z on failure.
 

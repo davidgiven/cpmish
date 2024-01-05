@@ -54,7 +54,7 @@
 
     ; CP/M boot image, aligned with the beginning of side 0, track 1.
     org 0x4800
-    ;incbin "systemtrack_img.img"
+    incbin "systemtrack_img.img"
 
     ; End of boot image
     org 0x6c00

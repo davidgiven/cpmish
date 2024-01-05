@@ -17,7 +17,7 @@
     extern FDCRDST
     extern FDCSTAT
     extern FDCENDRW
-    extern FDCTX
+    extern FDCTXB
     extern FDCSEEK
     
     org 0x8000
@@ -72,11 +72,7 @@ entry:
 
     ld hl, fdc_read_command
     ld b, fdc_read_command.end - fdc_read_command
-.1
-    ld a, (hl)
-    inc hl
-    call FDCTX
-    djnz .1
+    call FDCTXB
     
     ; Wait for command completion and stop the transfer.
 
@@ -93,7 +89,7 @@ entry:
 ; If the BBASE isn't aligned on a 512-byte boundary, the last sector will
 ; overrun the end of memory. Luckily, 0x80000 contains ROM so this doesn't
 ; matter.
-BOOT_SECTORS = (0x10000 - BBASE + 511) / 512
+BOOT_SECTORS = (0x10000 - CBASE + 511) / 512
 
 fdc_read_command:
     db 0x66      ; 0: READ SECTORS
@@ -108,7 +104,7 @@ fdc_read_command:
 fdc_read_command.end:
 
 fdc_read_dma:
-    dw BBASE                ; MAR1
+    dw CBASE                ; MAR1
     db USER_BANK            ; MAR1B
     dw PORT_HD63266_DATA    ; IAR1
     db 0                    ; IAR1B, unused

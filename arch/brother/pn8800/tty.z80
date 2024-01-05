@@ -1,0 +1,201 @@
+; Brother SuperPowerNote cpmish BIOS © 2023 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib pn8800
+
+    extrn SYSIN
+    extrn SYSOUT
+    extrn ADDAHL
+
+    public TTYINIT
+    public TTYPUTC
+    public TTYPUT8
+    public TTYPUT16
+    public TTYPUTSI
+    public TTYGOTO
+
+    cseg
+
+SCREEN_WIDTH = 80
+SCREEN_HEIGHT = 25
+
+CURSOR_UPDATES = 0
+CLEAR_SCREEN_ON_INIT = 1
+EMULATE_CLEAR_TO_EOL = 1
+EMULATE_CLEAR_TO_EOS = 1
+    maclib tty
+    maclib print
+
+TTYPUTC equ tty_putc
+TTYPUT8 equ tty_puthex8
+TTYPUT16 equ tty_puthex16
+TTYPUTSI equ tty_putsi
+TTYGOTO equ tty_goto_xy
+
+label TTYINIT
+    ld a, SCREEN_ON | SCREEN_SQUASHED
+    out0 (PORT_VIDEO_CTRL), a
+    jp tty_init
+
+label CURON
+    ld hl, cursor_state
+    bit 0, (hl)
+    ret nz
+    set 0, (hl)
+toggle_cursor:
+    ld hl, (tty_cursorx)
+    sla l
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
+    in0 a, (PORT_VIDEO_DATA)
+    nop
+    nop
+    nop
+    xor ATTR_BOTFLASH_BACK | ATTR_TOPFLASH_BACK
+    out0 (PORT_VIDEO_DATA), a
+    ret
+
+label CUROFF
+    ld hl, cursor_state
+    bit 0, (hl)
+    ret z
+    res 0, (hl)
+    ld a, (cursor_state)
+    jr toggle_cursor
+
+tty_rawwrite:
+    ld d, 0
+    ld hl, tty_attributes
+    bit 0, (hl)
+    jr z, .1
+    ld d, ATTR_INVERSE
+.1
+
+    and 0x7f
+    sub 0x20
+    ld hl, character_map_table
+    call ADDAHL
+    ld c, (hl)
+
+    ld hl, (tty_cursorx)    ; h=Y, l=X
+    sla l
+
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
+    out0 (PORT_VIDEO_DATA), d
+    nop
+    nop
+    nop
+    nop
+
+    inc hl
+    out0 (PORT_VIDEO_ADDR_LO), l
+    out0 (PORT_VIDEO_ADDR_HI), h
+    out0 (PORT_VIDEO_DATA), c
+    ret
+
+; On entry, A is the Y offset.
+clear_line:
+    out0 (PORT_VIDEO_ADDR_HI), a
+    
+    xor a                   ; X position
+    ld e, SCREEN_HEIGHT-1   ; Y position
+    ld d, 0                 ; fill character
+.1
+    out0 (PORT_VIDEO_ADDR_LO), a
+    out0 (PORT_VIDEO_DATA), d
+    inc a
+    out0 (PORT_VIDEO_ADDR_LO), a
+    out0 (PORT_VIDEO_DATA), d
+    inc a
+    cp SCREEN_WIDTH*2
+    jr nz, .1
+    ret
+
+tty_delete_line:
+    ld a, (tty_cursory)
+    ld h, a
+    cp SCREEN_HEIGHT - 1
+    jr z, on_last_line      ; skip scroll if there's nothing to do
+
+    ld b, a
+    ld a, SCREEN_HEIGHT - 1
+    sub b                   ; calculate number of text lines to move
+    ld b, a
+
+    xor a                   ; X position
+.1
+    inc h
+    out0 (PORT_VIDEO_ADDR_LO), a
+    out0 (PORT_VIDEO_ADDR_HI), h
+    in0 e, (PORT_VIDEO_DATA)
+    dec h
+    nop
+    nop
+    out0 (PORT_VIDEO_ADDR_HI), h
+    out0 (PORT_VIDEO_DATA), e
+    inc a
+    cp SCREEN_WIDTH*2
+    jr nz, .1
+
+    inc h
+    djnz .1
+
+on_last_line:
+    ld a, SCREEN_HEIGHT-1
+    jr clear_line
+
+tty_insert_line:
+    ld a, (tty_cursory)
+    ld h, a
+    cp SCREEN_HEIGHT - 1
+    jr z, on_last_line      ; skip scroll if there's nothing to do
+
+    ld b, a
+    ld a, SCREEN_HEIGHT - 1
+    sub b                   ; calculate number of text lines to move
+    xor a                   ; X position
+    dec h                   ; Y position (initially SCREEN_HEIGHT-2)
+.1
+    out0 (PORT_VIDEO_ADDR_LO), a
+    out0 (PORT_VIDEO_ADDR_HI), h
+    in0 e, (PORT_VIDEO_DATA)
+    inc h
+    nop
+    nop
+    out0 (PORT_VIDEO_ADDR_HI), h
+    out0 (PORT_VIDEO_DATA), e
+    dec h
+    inc a
+    cp SCREEN_WIDTH*2
+    jr nz, .1
+
+    dec h
+    djnz .1
+
+    ld a, (tty_cursory)
+    jr clear_line
+
+; Maps from ASCII (minus $20) to the Brother character set.
+
+character_map_table:
+    db 0,   '!', '"', $7d, '$', '%', '&', $27
+    db '(', ')', '*', '+', ',', '-', '.', '/'
+    db '0', '1', '2', '3', '4', '5', '6', '7'
+    db '8', '9', ':', ';', $40, '=', $60, '?'
+    db $f6, 'A', 'B', 'C', 'D', 'E', 'F', 'G'
+    db 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'
+    db 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W'
+    db 'X', 'Y', 'Z', $f2, $ef, $f3, $8b, '_'
+    db $90, 'a', 'b', 'c', 'd', 'e', 'f', 'g'
+    db 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o'
+    db 'p', 'q', 'r', 's', 't', 'u', 'v', 'w'
+    db 'x', 'y', 'z', $ae, $0e, $af, $be, $0d
+cursor_state:
+    db 0
+
+; vim: ts=4 sw=4 et ft=asm
+

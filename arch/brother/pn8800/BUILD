@@ -19,22 +19,22 @@ top_of_memory = 0x10000
 
 # Generated tables ----------------------------------------------------------
 
-#genrule(
-#    name = "keytab_inc",
-#	tools = [ "//arch/brother/pn8510/utils:mkkeytab" ],
-#    outs = [ "keytab.inc" ],
-#	cmd = "$(location //arch/brother/pn8510/utils:mkkeytab) > $@"
-#)
+genrule(
+    name = "keytab_inc",
+	tools = [ "//arch/brother/pn8800/utils:mkkeytab" ],
+    outs = [ "keytab.inc" ],
+	cmd = "$(location //arch/brother/pn8800/utils:mkkeytab) > $@"
+)
 
 # Object files --------------------------------------------------------------
 
 BIOS_SRCS = [
     "boot",
     "hd63266",
- #   "bios",
-#    "floppy",
-#    "tty",
-#    "keyboard",
+    "bios",
+    "floppy",
+    "tty",
+    "keyboard",
 ]
 
 [
@@ -46,7 +46,7 @@ BIOS_SRCS = [
             "//include:cpm.lib",
             "//include:cpmish.lib",
             "//include:z180.lib",
-            #":keytab_inc",
+            ":keytab_inc",
             "//arch/brother/pn8800/include:pn8800.lib",
             "//arch/common/utils:tty.lib",
             "//arch/common/utils:print.lib",
@@ -76,36 +76,36 @@ ld80(
 
 # This is a 64kB file containing the entire CP/M memory image.
 
-#ld80(
-#    name = "memory_img",
-#    address = 0,
-#    objs = {
-#        cbase: [ "//third_party/zcpr1" ],
-#        fbase: [ "//third_party/zsdos" ],
-#        bbase: [
-#            ":bios_o",
-##            ":hd63266_o",
-##            ":tty_o",
-# #           ":floppy_o",
-##            ":keyboard_o",
-#        ]
-#    }
-#)
+ld80(
+    name = "memory_img",
+    address = 0,
+    objs = {
+        cbase: [ "//third_party/zcpr1" ],
+        fbase: [ "//third_party/zsdos" ],
+        bbase: [
+            ":bios_o",
+            ":hd63266_o",
+            ":tty_o",
+            ":floppy_o",
+            ":keyboard_o",
+        ]
+    }
+)
 
 # Currently only used for debugging.
-#binslice(
-#    name = "bios_img",
-#    src = ":memory_img",
-#    start = bbase,
-#    length = 0x10000 - bbase
-#)
+binslice(
+    name = "bios_img",
+    src = ":memory_img",
+    start = bbase,
+    length = 0x10000 - bbase
+)
 
-#binslice(
-#    name = "systemtrack_img",
-#    src = ":memory_img",
-#    start = cbase,
-#    length = 0x10000 - cbase
-#)
+binslice(
+    name = "systemtrack_img",
+    src = ":memory_img",
+    start = cbase,
+    length = 0x10000 - cbase
+)
 
 # FAT file system -----------------------------------------------------------
 
@@ -116,8 +116,7 @@ zmac(
 	srcs = [
 		"fat.z80",
 		":boot_img",
-#        ":bios_img",
-#        ":systemtrack_img",
+        ":systemtrack_img",
 	],
 	relocatable = False,
 	z180 = True,
