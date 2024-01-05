@@ -13,20 +13,34 @@
     export FDTX, fd765_tx
     export FDCAL2, fd765_recalibrate_twice
     export FDRSTAT, fd765_read_status
-    export FDMOFF, fd765_motor_off
     export DBGET, db_get
 
     cseg
 
-fd765_motor_on:
-    ld a, 0xe1          ; motor on
-    out0 (PORT_HD63266_STATUS), a
+label FDMTICK
+    ld hl, disk_off_count
+    ld a, (hl)
+    or a
+    ret z                   ; already zero? Do nothing.
+    inc (hl)                ; increment drive motor count and...
+    jp z, FDMOFF            ; ...turn motor off if rollover.
     ret
-
-fd765_motor_off:
+    ret nz                  ; ...return if not rollover.
+label FDMOFF
     ld a, 0xd1          ; motor off
     out0 (PORT_HD63266_STATUS), a
+    
+    xor a
+set_disk_off_count:
+    ld (disk_off_count), a
     ret
+
+label FDMON
+    ld a, 0xe1          ; motor on
+    out0 (PORT_HD63266_STATUS), a
+
+    ld a, 1
+    jr set_disk_off_count
 
 fd765_nudge_tc:
     ret

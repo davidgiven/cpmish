@@ -30,7 +30,8 @@ top_of_memory = 0x10000
 
 BIOS_SRCS = [
     "boot",
-    "hd63266",
+ #   "hd63266",
+ #   "bios",
 #    "floppy",
 #    "tty",
 #    "keyboard",
@@ -49,8 +50,6 @@ BIOS_SRCS = [
             "//arch/brother/pn8800/include:pn8800.lib",
             "//arch/common/utils:tty.lib",
             "//arch/common/utils:print.lib",
-            "//arch/common/utils:deblocker.lib",
-            "//arch/common/utils:upd765.lib",
             ":addresses",
         ]
     )
@@ -67,26 +66,13 @@ ld80(
     name = "boot_img",
     address = 0x8000,
     objs = {
-        0: [ ":boot_o", ":hd63266_o" ]
+        0: [ ":boot_o" ]
     }
 )
 
 # BIOS ----------------------------------------------------------------------
 
 # The CP/M BIOS itself.
-
-#zmac(
-#    name = "bios_o",
-#    z180 = True,
-#    srcs = [
-#        "bios.z80",
-#        "//include:cpm.lib",
-#        "//include:cpmish.lib",
-#        "//include:z180.lib",
-#        "//arch/brother/pn8510/include:brotherpowernote.lib",
-#        ":addresses",
-#    ],
-#)
 
 # This is a 64kB file containing the entire CP/M memory image.
 
@@ -98,9 +84,10 @@ ld80(
 #        fbase: [ "//third_party/zsdos" ],
 #        bbase: [
 #            ":bios_o",
-#            ":tty_o",
-#            ":floppy_o",
-#            ":keyboard_o",
+##            ":hd63266_o",
+##            ":tty_o",
+# #           ":floppy_o",
+##            ":keyboard_o",
 #        ]
 #    }
 #)
