@@ -30,7 +30,7 @@ top_of_memory = 0x10000
 
 BIOS_SRCS = [
     "boot",
- #   "hd63266",
+    "hd63266",
  #   "bios",
 #    "floppy",
 #    "tty",
@@ -66,7 +66,7 @@ ld80(
     name = "boot_img",
     address = 0x8000,
     objs = {
-        0: [ ":boot_o" ]
+        0: [ ":boot_o", ":hd63266_o" ]
     }
 )
 

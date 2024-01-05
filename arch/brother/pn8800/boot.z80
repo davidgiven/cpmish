@@ -14,6 +14,12 @@
     maclib pn8800
     maclib addresses
 
+    extern FDCRDST
+    extern FDCSTAT
+    extern FDCENDRW
+    extern FDCTX
+    extern FDCSEEK
+    
     org 0x8000
 start:
     dw 0xc185           ; Brother magic numbers
@@ -43,12 +49,12 @@ entry:
     ld a, 0xe1          ; motor on
     out0 (PORT_HD63266_STATUS), a
 
-    call fdc_read_status
+    call FDCRDST
 
     ; The boot track is track 1, side 0. Do the seek.
 
     ld a, 1
-    call fdc_seek
+    call FDCSEEK
 
     ; Set up DMA.
 
@@ -56,9 +62,6 @@ entry:
     ld b, fdc_read_dma.end - fdc_read_dma
     ld c, MAR1L
     otimr
-
-    ld a, 0x10
-    out0 (0x01), a
 
     ld a, 01001010b         ; One memory wait state, 0 I/O wait state, DMS1 edge sense, IO to memory
     out0 (DCNTL), a
@@ -72,12 +75,12 @@ entry:
 .1
     ld a, (hl)
     inc hl
-    call fdc_tx
+    call FDCTX
     djnz .1
     
     ; Wait for command completion and stop the transfer.
 
-    call fdc_complete_transfer
+    call FDCENDRW
     ld a, 00000000b         ; DE1 disable
     out0 (DSTAT), a
     jr c, entry
@@ -86,126 +89,6 @@ entry:
 
     jr $
     jp BBASE
-
-; Writes A to the FDC data register.
-
-fdc_tx:
-	push af
-.1:
-    in0 a, (PORT_HD63266_STATUS)
-	rla							; RQM...
-	jr nc, .1		            ; ...low, keep waiting
-
-	pop af
-    out0 (PORT_HD63266_DATA), a
-	ret
-
-; Reads bytes from the FDC data register until the FDC tells us to stop (by
-; lowering DIO in the status register).
-
-fdc_read_status:
-	ld hl, fdc_status
-.1:
-    in0 a, (PORT_HD63266_STATUS)
-	rla							; RQM...
-	jr nc, .1              		; ...low, keep waiting 
-	rla							; DIO...
-	ret nc						; ...low, no more data
-    in0 a, (PORT_HD63266_DATA)
-	ld (hl), a
-	inc hl
-	jr .1
-fdc_status:
-	ds 8						; 8 bytes of status data
- 
-; Waits until the drive is ready.
- 
-fdc_wait_until_drive_ready:
-	call fdc_sense_drive_state
-	bit 5, a
-	ret nz
-    jr fdc_wait_until_drive_ready
-
- ; Seeks to track A.
- ; Returns nz on success, z on failure.
-
- fdc_seek:
-    ld b, a
-	call fdc_wait_until_drive_ready
-	ret z
-
-	ld a, 0x0f                  ; SEEK
-	call fdc_tx
-	xor a                       ; head 0, drive 0
-	call fdc_tx
-	ld a, b                     ; track number
-	call fdc_tx
-
-    ; Wait for the command to start.
-
-.2
-    in0 a, (PORT_HD63266_STATUS)
-    and 0x0f
-    jr z, .2
-
-    ; Wait for the command to _end_...
-
-.1:
-	ld a, 8						; SENSE INTERRUPT STATUS
-	call fdc_tx
-	call fdc_read_status
-
-	ld a, (fdc_status)
-	bit 5, a					; SE, seek end
-	jr z, .1
-	ret
-
-; Performs the SENSE DRIVE STATE command, returning S3 in A.
-
-fdc_sense_drive_state:
-	ld a, 4                         ; SENSE DRIVE STATE
-	call fdc_tx
-	xor a                           ; head 0, drive 0
-	call fdc_tx
-	call fdc_read_status
-	ld a, (fdc_status)
-	ret
-
-; Finish up a read or write transfer.
-; Returns nz on success, z on failure.
-
-fdc_complete_transfer:
-    call fdc_read_status
-    ; Parsing the status code is fiddly, because we're allowed a readfail if
-    ; EN is set.
-    ld a, (fdc_status+1)
-    rla             ; EN->C
-    ld a, (fdc_status+0)
-    rla             ; IC6->b7, IC7->C, EN->b0
-    rla             ; IC6->C, IC7->b0, EN->b1
-    rla             ; IC6->b0, IC7->b1, EN->b2
-    and 7           ; clip off stray bits
-    ; This gives us a number from 0..7 which is our error. We use this
-    ; bitmap to determine whether it's fatal or not.
-    ; EN, IC7, IC6
-    ; 1    ; OK
-    ; 0    ; readfail
-    ; 0    ; unknown command
-    ; 0    ; disk removed
-    ; 1    ; OK
-    ; 1    ; reached end of track
-    ; 0    ; unknown command
-    ; 0    ; disk removed
-    inc a
-    ld b, a
-    ld a, 10001100b
-.1
-    add a
-    djnz .1
-    ; The appropriate bit from the bitmap is now in C.
-    ld a, 0
-    rla             ; copy carry to bit 0, set z or nz
-    ret
 
 ; If the BBASE isn't aligned on a 512-byte boundary, the last sector will
 ; overrun the end of memory. Luckily, 0x80000 contains ROM so this doesn't
@@ -231,6 +114,8 @@ fdc_read_dma:
     db 0                    ; IAR1B, unused
     dw BOOT_SECTORS * 512   ; BCR1
 fdc_read_dma.end:
+
+    dseg
 
     ds 128
 stack:
