@@ -22,7 +22,7 @@
 SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 25
 
-CURSOR_UPDATES = 0
+CURSOR_UPDATES = 1
 CLEAR_SCREEN_ON_INIT = 1
 EMULATE_CLEAR_TO_EOL = 1
 EMULATE_CLEAR_TO_EOS = 1
@@ -38,33 +38,18 @@ TTYGOTO equ tty_goto_xy
 label TTYINIT
     ld a, SCREEN_ON | SCREEN_SQUASHED
     out0 (PORT_VIDEO_CTRL), a
+    ld a, CURSOR_CURU | CURSOR_CURL | CURSOR_CREV
+    out0 (PORT_VIDEO_CURSOR_CTRL), a
     jp tty_init
 
-label CURON
-    ld hl, cursor_state
-    bit 0, (hl)
-    ret nz
-    set 0, (hl)
-toggle_cursor:
-    ld hl, (tty_cursorx)
+tty_update_cursor
+    ld hl, (tty_cursorx)    ; h=Y, l=X
     sla l
-    out0 (PORT_VIDEO_ADDR_LO), l
-    out0 (PORT_VIDEO_ADDR_HI), h
-    in0 a, (PORT_VIDEO_DATA)
-    nop
-    nop
-    nop
-    xor ATTR_BOTFLASH_BACK | ATTR_TOPFLASH_BACK
-    out0 (PORT_VIDEO_DATA), a
+    srl h
+    rr l
+    out0 (PORT_CURSOR_ADDR_LO), l
+    out0 (PORT_CURSOR_ADDR_HI), h
     ret
-
-label CUROFF
-    ld hl, cursor_state
-    bit 0, (hl)
-    ret z
-    res 0, (hl)
-    ld a, (cursor_state)
-    jr toggle_cursor
 
 tty_rawwrite:
     ld d, 0

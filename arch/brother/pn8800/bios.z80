@@ -39,7 +39,7 @@
     jp BOOTE
     jp WBOOTE
     jp CONSTE
-    jp CONINE
+    jp KBGET
     jp CONOUTE
     jp LISTE
     jp PUNCHE
@@ -118,17 +118,11 @@ start_ccp:
     jp CBASE                ; pass control to CCP
 
 CONSTE:
-    call CURON
-
     call KBTEST
     ld a, 0
     ret z                   ; no key pressed
     dec a                   ; key pressed
     ret
-
-CONINE:
-    call CURON
-    jp KBGET
 
 ADDAHL
     add a, l
@@ -138,9 +132,6 @@ ADDAHL
     ret
 
 CONOUTE:
-    push bc
-    call CUROFF
-    pop bc
     ld a, c
     jp TTYPUTC
 
