@@ -32,7 +32,7 @@ label FDCTXB
     ret
 
 ; Finish up a read or write transfer.
-; Returns nz on success, z on failure.
+; Returns c on failure.
 
 label FDCENDRW
     call FDCRDST
@@ -40,31 +40,30 @@ label FDCENDRW
     ; EN is set.
     ld a, (FDCSTAT+1)
     rla             ; EN->C
-    ld a, (FDCSTAT+0)
+    ld a, (FDCSTAT+0) ; IC6->b6, IC7->b7, EN->C
     rla             ; IC6->b7, IC7->C, EN->b0
     rla             ; IC6->C, IC7->b0, EN->b1
     rla             ; IC6->b0, IC7->b1, EN->b2
     and 7           ; clip off stray bits
+    
     ; This gives us a number from 0..7 which is our error. We use this
     ; bitmap to determine whether it's fatal or not.
     ; EN, IC7, IC6
-    ; 1    ; OK
-    ; 0    ; readfail
-    ; 0    ; unknown command
-    ; 0    ; disk removed
-    ; 1    ; OK
-    ; 1    ; reached end of track
-    ; 0    ; unknown command
-    ; 0    ; disk removed
+    ; 0    0    0   ->  0    ; OK
+    ; 0    0    1   ->  1    ; readfail
+    ; 0    1    0   ->  1    ; unknown command
+    ; 0    1    1   ->  1    ; disk removed
+    ; 1    0    0   ->  0    ; OK
+    ; 1    0    1   ->  0    ; reached end of track
+    ; 1    1    0   ->  1    ; unknown command
+    ; 1    1    1   ->  1    ; disk removed
     inc a
     ld b, a
-    ld a, 10001100b
+    ld a, 01110011b
 .1
     add a
     djnz .1
     ; The appropriate bit from the bitmap is now in C.
-    ld a, 0
-    rla             ; copy carry to bit 0, set z or nz
     ret
 
 ; Reads bytes from the FDC data register until the FDC tells us to stop (by

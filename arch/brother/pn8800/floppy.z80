@@ -96,7 +96,7 @@ label WRITEE
     ld (deblock_flag), a
 
     call change_track
-    jp nz, return_bios_error
+    jr nz, return_bios_error
 
     ld a, 1
     ld (track_dirty), a
@@ -130,12 +130,15 @@ label WRITEE
 deblock_flag equ $+1
     ld a, 0
     cp 1
-    jp z, flush_track
+    jr nz, return_bios_success
+    call flush_track
+    jp nz, return_bios_error
     ; fall through
 return_bios_success:
     xor a
     ret
 
+; Returns nz on error.
 change_track:
     BTRACK equ $+1
     ld a, 0
@@ -147,33 +150,35 @@ track_dirty equ $ + 1
     ld a, 0
     or a
     call nz, flush_track
+    ret nz
 
     ; Switch to the new track.
     
     ld a, (BTRACK)
     ld (current_track), a
     
-    ; Send command.
-
-    ld a, 0x66              ; READ SECTORS
-    call send_read_write_command
-
-    ; Do DMA to read data.
+    ; Set up DMA to read data.
 
     ld d, 1010b
-    call perform_fdc_dma_readwrite
-    jr c_to_nz
+    call start_fdc_dma_readwrite
 
-flush_track:
     ; Send command.
 
-    ld a, 0x65              ; WRITE SECTORS
-    call send_read_write_command
+    ld a, 0x46              ; READ SECTORS
+    call do_read_write_command
+    jr c_to_nz
 
-    ; Do DMA to write data.
+; Returns nz on error.
+flush_track:
+    ; Set up DMA to write data.
 
     ld d, 1000b
-    call perform_fdc_dma_readwrite
+    call start_fdc_dma_readwrite
+    
+    ; Send command.
+
+    ld a, 0x45              ; WRITE SECTORS
+    call do_read_write_command
     jr c, c_to_nz
 
     xor a                   ; sets z
@@ -194,7 +199,7 @@ flush_cache:
     ret
 
 ; Command opcode in A.
-send_read_write_command:
+do_read_write_command:
     ld (fdc_readwrite), a
 
     ; Seek to track.
@@ -215,10 +220,19 @@ send_read_write_command:
 
     ld hl, fdc_readwrite
     ld b, fdc_readwrite.end - fdc_readwrite
-    jp FDCTXB
+    call FDCTXB
+    
+    ; Wait for completion.
+
+    call FDCENDRW
+
+    ; carry preserved
+    ld a, 00010000b
+    out0 (DSTAT), a
+    ret
 
 ; Low four bits of DCNTL should be in d.
-perform_fdc_dma_readwrite:
+start_fdc_dma_readwrite:
     ld hl, fdc_dma
     ld b, fdc_dma.end - fdc_dma
     ld c, MAR1L
@@ -232,12 +246,6 @@ perform_fdc_dma_readwrite:
     out0 (DCNTL), a
     ld a, 10000000b         ; DE1 enable, DWE1 disable
     out0 (DSTAT), a         ; start the transfer
-
-    call FDCENDRW
-
-    ; carry preserved
-    ld a, 00010000b
-    out0 (DSTAT), a
     ret
 
 ; Returns a=0 and z on exit.
