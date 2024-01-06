@@ -1,0 +1,308 @@
+; Brother Super PowerNote cpmish BIOS © 2023 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib pn8800
+
+    extrn TTYPUTC
+    extrn TTYPUT8
+    extrn TTYPUT16
+    extrn TTYPUTSI
+    
+    extern FDCRDST
+    extern FDCSTAT
+    extern FDCENDRW
+    extern FDCTXB
+    extern FDCSEEK
+    
+    public BTRACK
+
+
+; Selects a drive, returning the address of the DPH in HL (or 0x0000 on
+; error).
+label SELDSKE
+    bit 0, e
+    call z, flush_cache
+
+    ld hl, 0
+    ld a, c
+    or a
+    ret nz                  ; return 0 if not drive 0
+    ld hl, drive_a_dph
+    ret
+
+label HOMEE
+    ld c, 0
+    ; fall through
+label SETTRKE
+    ld a, c
+    ld (BTRACK), a
+    ret
+
+label SETSECE
+    ld a, c
+    ld (BSECTOR), a
+    ret
+
+label SETDMAE
+    ld (BDMA), bc
+    ret
+
+label SECTRANE
+    ld h, b
+    ld l, c
+    ret
+
+return_bios_error:
+    ld a, 1
+    ret
+
+label READE
+    call change_track
+    jr nz, return_bios_error
+
+    ld a, (BSECTOR)
+    ld l, 0
+    srl a
+    rr l
+    out0 (SAR0L), l
+    out0 (SAR0H), a
+    ld a, CACHE_BANK
+    out0 (SAR0B), a
+
+    ld hl, (BDMA)
+    out0 (DAR0L), l
+    out0 (DAR0H), h
+    ld a, USER_BANK
+    out0 (DAR0B), a
+
+    ld hl, 128
+    out0 (BCR0L), l
+    out0 (BCR0H), h
+
+    ld a, 00000010b     ; burst mode
+    out0 (DMODE), a
+    ld a, 01000000b
+    out0 (DSTAT), a
+
+    call wait_for_memory_dma
+
+    xor a
+    ret
+
+label WRITEE
+    ld a, c
+    ld (deblock_flag), a
+
+    call change_track
+    jp nz, return_bios_error
+
+    ld a, 1
+    ld (track_dirty), a
+
+    ld hl, (BDMA)
+    out0 (SAR0L), l
+    out0 (SAR0H), h
+    ld a, USER_BANK
+    out0 (SAR0B), a
+
+    ld a, (BSECTOR)
+    ld l, 0
+    srl a
+    rr l
+    out0 (DAR0L), l
+    out0 (DAR0H), a
+    ld a, CACHE_BANK
+    out0 (DAR0B), a
+
+    ld hl, 128
+    out0 (BCR0L), l
+    out0 (BCR0H), h
+
+    ld a, 00000010b     ; burst mode
+    out0 (DMODE), a
+    ld a, 01000000b
+    out0 (DSTAT), a
+
+    call wait_for_memory_dma
+
+deblock_flag equ $+1
+    ld a, 0
+    cp 1
+    jp z, flush_track
+    ; fall through
+return_bios_success:
+    xor a
+    ret
+
+change_track:
+    BTRACK equ $+1
+    ld a, 0
+    current_track equ $+1
+    cp 0xff
+    ret z                   ; already on the desired track
+    ; fall through
+track_dirty equ $ + 1
+    ld a, 0
+    or a
+    call nz, flush_track
+
+    ; Switch to the new track.
+    
+    ld a, (BTRACK)
+    ld (current_track), a
+    
+    ; Send command.
+
+    ld a, 0x66              ; READ SECTORS
+    call send_read_write_command
+
+    ; Do DMA to read data.
+
+    ld d, 1010b
+    call perform_fdc_dma_readwrite
+    jr c_to_nz
+
+flush_track:
+    ; Send command.
+
+    ld a, 0x65              ; WRITE SECTORS
+    call send_read_write_command
+
+    ; Do DMA to write data.
+
+    ld d, 1000b
+    call perform_fdc_dma_readwrite
+    jr c, c_to_nz
+
+    xor a                   ; sets z
+    ld (track_dirty), a
+    ret
+
+; Converts a error-on-C to error-on-NZ.
+c_to_nz:
+    ld a, 0
+    adc 0                   ; set nz on error
+    ret
+
+flush_cache:
+    xor a
+    ld (track_dirty), a
+    dec a
+    ld (current_track), a
+    ret
+
+; Command opcode in A.
+send_read_write_command:
+    ld (fdc_readwrite), a
+
+    ; Seek to track.
+
+    ld a, (current_track)
+    srl a
+    ld (fdc_readwrite.logtrack), a
+    call FDCSEEK
+
+    ; Send actual command.
+
+    ld a, (current_track)
+    and 0x01
+    ld (fdc_readwrite.loghead), a
+    add a
+    add a
+    ld (fdc_readwrite.phyhead), a
+
+    ld hl, fdc_readwrite
+    ld b, fdc_readwrite.end - fdc_readwrite
+    jp FDCTXB
+
+; Low four bits of DCNTL should be in d.
+perform_fdc_dma_readwrite:
+    ld hl, fdc_dma
+    ld b, fdc_dma.end - fdc_dma
+    ld c, MAR1L
+    otimr
+    
+    ld a, 00010000b
+    out0 (CNTLA1), a
+    in0 a, (DCNTL)
+    and 0xf0
+    or d
+    out0 (DCNTL), a
+    ld a, 10000000b         ; DE1 enable, DWE1 disable
+    out0 (DSTAT), a         ; start the transfer
+
+    call FDCENDRW
+
+    ; carry preserved
+    ld a, 00010000b
+    out0 (DSTAT), a
+    ret
+
+; Returns a=0 and z on exit.
+wait_for_memory_dma:
+    in0 a, (DSTAT)
+    and 01000000b           ; test for DMA completion
+    ret z
+    jr wait_for_memory_dma
+
+drive_a_dph:
+    dw 0                    ; Sector translation vector
+    dw 0, 0, 0              ; BDOS scratchpad
+    dw dirbuf               ; Directory scratchpad
+    dw drive_a_dpd          ; Drive parameter block
+    dw drive_a_check_vector ; Disk change check vector
+    dw drive_a_bitmap       ; Allocation bitmap
+
+RESERVED_TRACKS = 3
+DRIVE_A_SIZE = 1440 ; kB
+DRIVE_A_BLOCKS = (DRIVE_A_SIZE - (RESERVED_TRACKS*9)) / 2 ; 2kB blocks
+
+drive_a_dpd:
+    dw 18*4                 ; Number of CP/M sectors per track
+    db 4, 15                ; BSH/BLM for 2048-byte blocks
+    db 0                    ; EXM for 2048-byte allocation units and >255 blocks
+    dw DRIVE_A_BLOCKS-1     ; DSM
+    dw 127                  ; DRM, one fewer than the number of directory entries
+    db 0xc0, 0x00           ; Initial allocation vector for two directory blocks
+    dw 32                   ; Size of disk change check vector: (DRM+1)/4
+    dw RESERVED_TRACKS      ; Number of reserved tracks
+
+fdc_readwrite:
+    db 0x66      ; 0: READ SECTORS
+fdc_readwrite.phyhead:
+    db 0         ; 1: physical head 0, drive 0
+fdc_readwrite.logtrack:
+    db 1         ; 2: track 0
+fdc_readwrite.loghead:
+    db 0         ; 3: logical head 1
+    db 1         ; 4: first sector
+    db 2         ; 5: bytes per sector: 512
+    db 18        ; 6: last sector (*inclusive*)
+    db 27        ; 7: gap 3 length (27 is standard for 3.5" drives)
+    db 0         ; 8: sector length (unused)
+fdc_readwrite.end:
+  
+fdc_dma:
+    dw 0                 ; MAR1 low
+    db CACHE_BANK        ; MAR1 high
+    dw PORT_HD63266_DATA ; IAR1
+    db 0                 ; unused
+    dw TRACK_BUFFER_LEN  ; BCR1
+fdc_dma.end:
+
+drive_a_bitmap:
+    ds (DRIVE_A_BLOCKS+7) / 8
+drive_a_check_vector:
+    ds 32
+dirbuf:
+    ds 128
+
+disk_off_count: db 0         ; cheap and nasty drive motor timer
+
+label BSECTOR
+    db 0
+label BDMA
+    dw 0
+

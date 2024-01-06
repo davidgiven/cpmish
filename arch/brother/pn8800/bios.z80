@@ -1,0 +1,147 @@
+; Brother Super PowerNote cpmish BIOS © 2023 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+    maclib cpm
+    maclib cpmish
+    maclib pn8800
+    maclib addresses
+
+    extern BDMA
+    extern BSECTOR
+    extern BTRACK
+    extern CUROFF
+    extern CURON
+    extern KBGET
+    extern KBTEST
+    extern SETCURS
+    extern TTYHOME
+    extern TTYINIT
+    extern TTYNL
+    extern TTYPUT16
+    extern TTYPUT8
+    extern TTYPUTC
+    extern TTYPUTSI
+    extern READE
+    extern WRITEE
+    extern SECTRANE
+    extern HOMEE
+    extern SELDSKE
+    extern SETTRKE
+    extern SETSECE
+    extern SETDMAE
+
+    public ADDAHL
+    
+; BIOS jump table.
+
+; BBASE is here
+    jp BOOTE
+    jp WBOOTE
+    jp CONSTE
+    jp KBGET
+    jp CONOUTE
+    jp LISTE
+    jp PUNCHE
+    jp READERE
+    jp HOMEE
+    jp SELDSKE
+    jp SETTRKE
+    jp SETSECE
+    jp SETDMAE
+    jp READE
+    jp WRITEE
+    jp LISTSTE
+    jp SECTRANE
+
+; Cold boot on system startup. At this point the BIOS is loaded, but the CCP
+; and BDOS aren't.
+BOOTE:
+    ; Map the entire 0x70000 to 0x80000 space to 0x0000-0x10000.
+
+    ld a, 0x00
+    out0 (CBAR), a
+    
+    ld sp, 0x0100           ; ephemeral user stack
+
+    call TTYINIT
+    call TTYPUTSI
+    cpmish_banner "Brother Super PowerNote PN8800"
+    db 0
+
+    xor a
+    ld (IOBYTE), a          ; reset iobyte and current disk
+    ld (CDISK), a
+
+; Warm boot on application exit.
+WBOOTE:
+    ld sp, 0x0100           ; ephemeral user stack
+
+    ; Reload the and CCP and BDOS.
+
+LOADABLE_SECTORS = (BDOS_SIZE + CCP_SIZE) / 128
+    ld b, LOADABLE_SECTORS
+    ld a, 2
+    sta (BTRACK)            ; current CP/M track
+    ld a, 0
+    sta (BSECTOR)           ; current CP/M sector
+    ld hl, CBASE
+    ld (BDMA), hl           ; destination address
+.1
+    call READE              ; go via the main entrypoint because of the buffer
+
+    ld bc, 128
+    ld hl, (BDMA)
+    add hl, bc
+    ld (BDMA), hl
+
+    ld hl, BSECTOR
+    inc (hl)
+    ld a, (hl)
+    cp LOADABLE_SECTORS
+    jr nz, .1
+
+    ; Perform configuration and start the CCP.
+
+start_ccp:
+    ld a, 0xc3
+    ld hl, BBASE + 3        ; init BIOS entrypoint
+    ld (0x0000), a
+    ld (0x0001), hl
+
+    ld hl, FBASE + 6        ; init BDOS entrypoint
+    ld (0x0005), a
+    ld (0x0006), hl
+
+    ld a, (CDISK)
+    ld c, a                 ; c = current disk
+    jp CBASE                ; pass control to CCP
+
+CONSTE:
+    call KBTEST
+    ld a, 0
+    ret z                   ; no key pressed
+    dec a                   ; key pressed
+    ret
+
+ADDAHL
+    add a, l
+    ld l, a
+    ret nc
+    inc h
+    ret
+
+CONOUTE:
+    ld a, c
+    jp TTYPUTC
+
+; List, punch and reader are unsupported.
+LISTSTE:
+    ld a, 0xff
+LISTE:
+PUNCHE:
+READERE:
+    ret
+
+; vim: ts=4 sw=4 et ft=asm
+

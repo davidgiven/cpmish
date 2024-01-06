@@ -1,0 +1,116 @@
+; Brother WP2450DS cpmish BIOS © 2019 David Given
+; This file is distributable under the terms of the 2-clause BSD license.
+; See COPYING.cpmish in the distribution root directory for more information.
+
+; This is the executable which is loaded and run by the Brother's OS. It
+; gets loaded at 0x8000 with BBR=0x20, CBR=0x61 and CBAR=0x88. This puts
+; common 1 at logical 0x8000, physical 0x69000.
+;
+; Physical memory extends from 0x60000 to 0x80000. There is also RAM at 0x02000
+; to 0x06000, which is an alias for 0x62000.
+
+    maclib cpmish
+    maclib cpm
+    maclib pn8800
+    maclib addresses
+
+    extern FDCRDST
+    extern FDCSTAT
+    extern FDCENDRW
+    extern FDCTXB
+    extern FDCSEEK
+    
+    org 0x8000
+start:
+    dw 0xc185           ; Brother magic numbers
+    dw 0x0201
+    dw 0x0000
+    db "BR"
+
+entry:
+    di                  ; The Brother OS is not at home.
+    ld sp, stack
+    
+    ; Adjust MMU so that our own memory is being provided by B, rather than C.
+
+    ld a, 0x61
+    out0 (BBR), a
+    ld a, 0xe8
+    out0 (CBAR), a
+
+    ; Make C point at the area from 0x70000 to 0x80000. The top 0x2000 of this
+    ; will be visible from 0xe000 to 0x10000.
+
+    ld a, 0x70
+    out0 (CBR), a
+
+    ; Set up the disk system.
+
+    ld a, 0xe1          ; motor on
+    out0 (PORT_HD63266_STATUS), a
+
+    call FDCRDST
+
+    ; The boot track is track 1, side 0. Do the seek.
+
+    ld a, 1
+    call FDCSEEK
+
+    ; Set up DMA.
+
+    ld hl, fdc_read_dma
+    ld b, fdc_read_dma.end - fdc_read_dma
+    ld c, MAR1L
+    otimr
+
+    ld a, 01001010b         ; One memory wait state, 0 I/O wait state, DMS1 edge sense, IO to memory
+    out0 (DCNTL), a
+    ld a, 10000000b         ; DE1 enable, DWE1 disable
+    out0 (DSTAT), a         ; start the transfer
+
+    ; Now send the command.
+
+    ld hl, fdc_read_command
+    ld b, fdc_read_command.end - fdc_read_command
+    call FDCTXB
+    
+    ; Wait for command completion and stop the transfer.
+
+    call FDCENDRW
+    ld a, 00000000b         ; DE1 disable
+    out0 (DSTAT), a
+    jr c, entry
+
+    ; Start BIOS.
+
+    jp BBASE
+
+; If the BBASE isn't aligned on a 512-byte boundary, the last sector will
+; overrun the end of memory. Luckily, 0x80000 contains ROM so this doesn't
+; matter.
+BOOT_SECTORS = (0x10000 - CBASE + 511) / 512
+
+fdc_read_command:
+    db 0x66      ; 0: READ SECTORS
+    db 0         ; 1: physical head 0, drive 0
+    db 1         ; 2: track 1
+    db 0         ; 3: logical head 0
+    db 1         ; 4: first sector
+    db 2         ; 5: bytes per sector: 512
+    db 1 + BOOT_SECTORS ; 6: last sector (*inclusive*)
+    db 27        ; 7: gap 3 length (27 is standard for 3.5" drives)
+    db 0         ; 8: sector length (unused)
+fdc_read_command.end:
+
+fdc_read_dma:
+    dw CBASE                ; MAR1
+    db USER_BANK            ; MAR1B
+    dw PORT_HD63266_DATA    ; IAR1
+    db 0                    ; IAR1B, unused
+    dw BOOT_SECTORS * 512   ; BCR1
+fdc_read_dma.end:
+
+    dseg
+
+    ds 128
+stack:
