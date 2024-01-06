@@ -142,7 +142,7 @@ change_track:
     current_track equ $+1
     cp 0xff
     ret z                   ; already on the desired track
-
+    ; fall through
 track_dirty equ $ + 1
     ld a, 0
     or a
@@ -162,11 +162,7 @@ track_dirty equ $ + 1
 
     ld d, 1010b
     call perform_fdc_dma_readwrite
-    call FDCRDST
-
-    ld a, (FDCSTAT+0)
-    and 0xf0
-    ret
+    jr c_to_nz
 
 flush_track:
     ; Send command.
@@ -178,14 +174,16 @@ flush_track:
 
     ld d, 1000b
     call perform_fdc_dma_readwrite
-    call FDCRDST
+    jr c, c_to_nz
 
-    ld a, (FDCSTAT+0)
-    and 0xf0
-    ret nz
-
-    xor a
+    xor a                   ; sets z
     ld (track_dirty), a
+    ret
+
+; Converts a error-on-C to error-on-NZ.
+c_to_nz:
+    ld a, 0
+    adc 0                   ; set nz on error
     ret
 
 flush_cache:
@@ -203,6 +201,7 @@ send_read_write_command:
 
     ld a, (current_track)
     srl a
+    ld (fdc_readwrite.logtrack), a
     call FDCSEEK
 
     ; Send actual command.
@@ -231,11 +230,12 @@ perform_fdc_dma_readwrite:
     and 0xf0
     or d
     out0 (DCNTL), a
-    ld a, 10010000b
-    out0 (DSTAT), a
+    ld a, 10000000b         ; DE1 enable, DWE1 disable
+    out0 (DSTAT), a         ; start the transfer
 
     call FDCENDRW
 
+    ; carry preserved
     ld a, 00010000b
     out0 (DSTAT), a
     ret
@@ -243,7 +243,7 @@ perform_fdc_dma_readwrite:
 ; Returns a=0 and z on exit.
 wait_for_memory_dma:
     in0 a, (DSTAT)
-    and 10000000b           ; test for DMA completion
+    and 01000000b           ; test for DMA completion
     ret z
     jr wait_for_memory_dma
 

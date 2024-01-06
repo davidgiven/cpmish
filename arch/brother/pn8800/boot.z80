@@ -83,7 +83,6 @@ entry:
 
     ; Start BIOS.
 
-    jr $
     jp BBASE
 
 ; If the BBASE isn't aligned on a 512-byte boundary, the last sector will
