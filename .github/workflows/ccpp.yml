@@ -31,6 +31,7 @@ jobs:
         name:  ${{ github.event.repository.name }}.${{ github.sha }}
         path: |
           bazel-bin/arch/brother/pn8510/diskimage.img
+          bazel-bin/arch/brother/pn8800/diskimage.img
           bazel-bin/arch/brotherop2/diskimage.img
           bazel-bin/arch/brotherwp1/diskimage.img
           bazel-bin/arch/kayproii/diskimage.img
