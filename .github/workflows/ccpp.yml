@@ -36,5 +36,5 @@ jobs:
           bazel-bin/arch/brotherwp1/diskimage.img
           bazel-bin/arch/kayproii/diskimage.img
           bazel-bin/arch/nc200/diskimage.img
-          bazel-bin/arch/wp2450ds/diskimage.img
+          bazel-bin/arch/wp2450/diskimage.img
       

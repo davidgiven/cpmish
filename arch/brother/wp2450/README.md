@@ -41,7 +41,7 @@ How to use it
 
 Build cpmish.
 
-Use `dd` or your favourite disk imager to write the `wp2450ds.img` file to a DD
+Use `dd` or your favourite disk imager to write the `wp2450.img` file to a DD
 3.5" floppy. You're probably best off formatting this on the machine itself, to
 get optimal interleave for the very slow machine.
 

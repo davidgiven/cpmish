@@ -68,7 +68,7 @@ end
 # Brother WP2450DS 720kB disk image
 # This is just a 720kB DOS disk with enough reserved sectors to allow
 # the CCP/BDOS/BIOS to live in the first two tracks.
-diskdef brother-wp2450ds
+diskdef brother-wp2450
 	seclen 512
 	tracks 80
 	sectrk 18

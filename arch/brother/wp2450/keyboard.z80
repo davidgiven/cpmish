@@ -2,7 +2,7 @@
 ; This file is distributable under the terms of the 2-clause BSD license.
 ; See COPYING.cpmish in the distribution root directory for more information.
 
-    maclib wp2450ds
+    maclib wp2450
     maclib cpmish
     maclib cpm
 
