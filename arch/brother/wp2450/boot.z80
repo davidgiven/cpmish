@@ -6,7 +6,7 @@
 ; gets loaded with BBR=CBR=0x60, CBAR=0x55, which means that DRAM from
 ; physical addresses 0x65000 to 0x6ffff is mapped to logical 0x5000 to 0xffff.
 
-    maclib wp2450ds
+    maclib wp2450
     maclib cpmish
     maclib cpm
     maclib addresses

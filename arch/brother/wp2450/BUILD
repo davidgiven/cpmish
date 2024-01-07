@@ -21,17 +21,17 @@ package(default_visibility = ["//visibility:public"])
 
 genrule(
     name = "keytab_inc",
-	tools = [ "//arch/brother/wp2450ds/utils:mkkeytab" ],
+	tools = [ "//arch/brother/wp2450/utils:mkkeytab" ],
     outs = [ "keytab.inc" ],
-	cmd = "$(location //arch/brother/wp2450ds/utils:mkkeytab) > $@"
+	cmd = "$(location //arch/brother/wp2450/utils:mkkeytab) > $@"
 )
 
 genrule(
 	name = "font_inc",
-	tools = [ "//arch/brother/wp2450ds/utils:fontconvert" ],
+	tools = [ "//arch/brother/wp2450/utils:fontconvert" ],
 	srcs = [ "//utils:6x7font.bdf" ],
 	outs = [ "font.inc" ],
-	cmd = "$(location //arch/brother/wp2450ds/utils:fontconvert) $< > $@"
+	cmd = "$(location //arch/brother/wp2450/utils:fontconvert) $< > $@"
 )
 
 # Libraries -----------------------------------------------------------------
@@ -48,7 +48,7 @@ zmac(
 		"//include:z180.lib",
 		"//arch/common/utils:tty.lib",
 		"//arch/common/utils:print.lib",
-		"//arch/brother/wp2450ds/include:wp2450ds.lib",
+		"//arch/brother/wp2450/include:wp2450.lib",
 		":font_inc"
     ],
 )
@@ -63,7 +63,7 @@ zmac(
 		"//include:z180.lib",
 		"//arch/common/utils:upd765.lib",
 		"//arch/common/utils:deblocker.lib",
-		"//arch/brother/wp2450ds/include:wp2450ds.lib",
+		"//arch/brother/wp2450/include:wp2450.lib",
     ],
 )
 
@@ -75,7 +75,7 @@ zmac(
 		"//include:cpm.lib",
 		"//include:cpmish.lib",
 		"//include:z180.lib",
-		"//arch/brother/wp2450ds/include:wp2450ds.lib",
+		"//arch/brother/wp2450/include:wp2450.lib",
 		":keytab_inc",
 	]
 )
@@ -94,7 +94,7 @@ zmac(
 		"//include:cpm.lib",
 		"//include:cpmish.lib",
 		"//include:z180.lib",
-		"//arch/brother/wp2450ds/include:wp2450ds.lib",
+		"//arch/brother/wp2450/include:wp2450.lib",
 		":addresses",
 	],
 )
@@ -119,7 +119,7 @@ zmac(
 		"//include:cpm.lib",
 		"//include:cpmish.lib",
 		"//include:z180.lib",
-		"//arch/brother/wp2450ds/include:wp2450ds.lib",
+		"//arch/brother/wp2450/include:wp2450.lib",
 		":addresses",
 	],
 )
@@ -185,7 +185,7 @@ unix2cpm(
 
 diskimage(
 	name = "diskimage",
-	format = "brother-wp2450ds",
+	format = "brother-wp2450",
 	bootfile = ":bootfile_img",
 	map = {
         "-readme.txt": ":readme",

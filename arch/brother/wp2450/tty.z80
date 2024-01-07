@@ -1,10 +1,10 @@
-; Brother WP2450DS cpmish BIOS © 2020 David Given
+; Brother wp2450 cpmish BIOS © 2020 David Given
 ; This file is distributable under the terms of the 2-clause BSD license.
 ; See COPYING.cpmish in the distribution root directory for more information.
 
     maclib cpm
     maclib cpmish
-    maclib wp2450ds
+    maclib wp2450
 
     extrn SYSIN
     extrn SYSOUT

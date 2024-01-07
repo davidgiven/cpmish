@@ -8,7 +8,7 @@
 
     maclib cpm
     maclib cpmish
-    maclib wp2450ds
+    maclib wp2450
     maclib addresses
 
     extrn TTYINIT
