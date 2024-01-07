@@ -38,7 +38,7 @@ Currently it supports these platforms:
 
   - [the Amstrad NC200 laptop](arch/nc200/README.md)
   - [the Kaypro II](arch/kayproii/README.md)
-  - [the Brother WP-1 typewriter (and probably others)](arch/brotherwp1/README.md)
+  - [the Brother WP-1 typewriter (and probably others)](arch/brother/wp1/README.md)
   - [the Brother LW-30 typewriter (and probably others)](arch/lw30/README.md)
   - [the Brother WP-2450DS typewriter (and probably others)](arch/brother/wp2450/README.md)
   - [the Brother PN-8510MDS SuperPowerNote laptop (and probably others)](arch/brother/pn8510/README.md)

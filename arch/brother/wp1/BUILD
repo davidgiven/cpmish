@@ -52,7 +52,7 @@ BIOS_SRCS = [
             "//include:cpm.lib",
             "//include:cpmish.lib",
             "//include:z180.lib",
-            "//arch/brotherwp1/include:brotherwp1.lib",
+            "//arch/brother/wp1/include:wp1.lib",
             "//arch/common/utils:tty.lib",
             "//arch/common/utils:print.lib",
             ":addresses",
@@ -64,10 +64,10 @@ BIOS_SRCS = [
 
 genrule(
     name = "keytab",
-    tools = [ "//arch/brotherwp1/utils:mkkeytab" ],
+    tools = [ "//arch/brother/wp1/utils:mkkeytab" ],
     srcs = [],
     outs = [ "keytab.inc" ],
-    cmd = "$(location //arch/brotherwp1/utils:mkkeytab) > $@"
+    cmd = "$(location //arch/brother/wp1/utils:mkkeytab) > $@"
 )
 
 # This is a 64kB file containing the entire CP/M memory image.

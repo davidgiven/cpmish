@@ -47,7 +47,7 @@ Build cpmish.
 
 Use FluxEngine to write this to a DD 3.5" floppy, using a command line like:
 
-    fluxengine write brother120 -i brotherwp1.img
+    fluxengine write brother120 -i wp1.img
 
 Insert the disk into the machine's drive, and then power on while holding
 CODE+Q. The machine will boot from the disk.

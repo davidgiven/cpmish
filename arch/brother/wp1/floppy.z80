@@ -4,7 +4,7 @@
 
     maclib cpm
     maclib cpmish
-    maclib brotherwp1
+    maclib wp1
 
     extrn SYSIN
     extrn SYSOUT

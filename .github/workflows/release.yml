@@ -54,7 +54,7 @@ jobs:
           pn8800.img
           brotherop2.img
           lw30.img
-          brotherwp1.img
+          wp1.img
           kayproii.img
           nc200.img
           wp2450.img
@@ -69,7 +69,7 @@ jobs:
           pn8510.img
           pn8800.img
           lw30.img
-          brotherwp1.img
+          wp1.img
           kayproii.img
           nc200.img
           wp2450.img
