@@ -37,7 +37,7 @@ How to use it
 
 Build cpmish.
 
-Use `dd` or your favourite disk imager to write the `brotherpowernote.img` file
+Use `dd` or your favourite disk imager to write the `pn8510.img` file
 to an HD 3.5" floppy. You're probably best off formatting this on a PC as the
 way the disk system works means that you want 1:1 interleave.
 

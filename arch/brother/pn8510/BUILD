@@ -45,7 +45,7 @@ BIOS_SRCS = [
             "//include:cpmish.lib",
             "//include:z180.lib",
             ":keytab_inc",
-            "//arch/brother/pn8510/include:brotherpowernote.lib",
+            "//arch/brother/pn8510/include:pn8510.lib",
             "//arch/common/utils:tty.lib",
             "//arch/common/utils:print.lib",
             ":addresses",
@@ -80,7 +80,7 @@ zmac(
         "//include:cpm.lib",
         "//include:cpmish.lib",
         "//include:z180.lib",
-        "//arch/brother/pn8510/include:brotherpowernote.lib",
+        "//arch/brother/pn8510/include:pn8510.lib",
         ":addresses",
     ],
 )
