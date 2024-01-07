@@ -49,11 +49,12 @@ jobs:
         token: ${{ github.token }}
         tag: dev
         assets: | 
-          brotherpowernote.img
+          pn8510.img
           pn8510.img
           pn8800.img
           brotherop2.img
-          brotherwp1.img
+          lw30.img
+          wp1.img
           kayproii.img
           nc200.img
           wp2450.img
@@ -67,8 +68,8 @@ jobs:
         files: |
           pn8510.img
           pn8800.img
-          brotherop2.img
-          brotherwp1.img
+          lw30.img
+          wp1.img
           kayproii.img
           nc200.img
           wp2450.img

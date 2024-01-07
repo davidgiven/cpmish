@@ -4,7 +4,7 @@
 
     maclib cpm
     maclib cpmish
-    maclib brotherpowernote
+    maclib pn8510
     maclib addresses
 
     extern BDMA

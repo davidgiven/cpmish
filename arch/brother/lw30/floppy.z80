@@ -4,17 +4,15 @@
 
     maclib cpm
     maclib cpmish
-    maclib brotherwp1
+    maclib lw30
 
     extrn SYSIN
     extrn SYSOUT
     extrn ADDAHL
-    extrn DMAMEM
 
     extrn TTYPUTC
     extrn TTYPUT8
     extrn TTYPUT16
-    extrn TTYPUTSI
 
     public SELDSKE
     public HOMEE
@@ -24,9 +22,6 @@
     public SECTRANE
     public READE
     public WRITEE
-    public MOTORTICK
-    public MOTORON
-    public MOTOROFF
 
 ; This file contains the floppy drive handling code, and the deblocker. We
 ; don't use the standard deblocker because space is really at a premium and
@@ -103,48 +98,6 @@ return_bios_error:
     ld a, 1
     ret
 
-MOTORON:
-    ld hl, motor_status
-    ld a, (hl)
-    or a
-    ld (hl), 0xff
-    ret nz
-    call SYSIN
-    push ix
-    push bc
-    ld a, 1                  ; turn disk motor on
-    rst 0x28
-    pop bc
-    pop ix
-    call SYSOUT
-    ret
-
-MOTORTICK:
-    ld hl, motor_status
-    ld a, (hl)
-    or a
-    ret z
-    dec (hl)
-    jr z, really_motor_off
-    ret
-
-MOTOROFF:
-    ld hl, motor_status
-    ld a, (hl)
-    or a
-    ret z
-    ld (hl), 0
-really_motor_off:
-    call SYSIN
-    push ix
-    push bc
-    ld a, 2                  ; turn disk motor off
-    rst 0x28
-    pop bc
-    pop ix
-    call SYSOUT
-    ret
-
     ; Changes the block in the deblocking buffer.
     ; Returns C on exit; HL contains the address of the CP/M sector.
 getblock;
@@ -165,7 +118,7 @@ getblock;
     jr z, calculate_physical_address ; block hasn't changed
 
     ld a, (dirty)           ; was the previous block dirty?
-    or a                    ; clear carry
+    or a
     call nz, flush_current_block ; HL is preserved
     ret c
 
@@ -176,7 +129,8 @@ getblock;
     push hl
     ld b, h                 ; new current block (zero based)
     ld c, l
-    call read_syscall
+    ld a, 3                 ; read sector
+    call xfer_syscall
     pop hl
     ret c
 
@@ -197,7 +151,8 @@ calculate_physical_address:
 flush_current_block:
     push hl
     ld bc, (current_block)  ; old current block
-    call write_syscall
+    ld a, 4                 ; write block
+    call xfer_syscall
     pop hl
     ret c                   ; exit on error
 
@@ -205,65 +160,20 @@ flush_current_block:
     ld (dirty), a           ; clear dirty flag
     ret
 
-; On entry, BC = zero-based block to transfer.
-read_syscall:
-    call MOTORON
-    call SYSIN
-
-    ld hl, $f800
-    inc bc                  ; block number must be one based
+; On entry, A = syscall number, BC = zero-based block to transfer.
+xfer_syscall:
     push ix
-    ld a, 6                 ; read sector
-    rst 0x28
-    pop ix
-
-    ld b, fdd_read_dma_buffer_end - fdd_read_dma_buffer
-    ld c, SAR0L
-    ld hl, fdd_read_dma_buffer
-    call DMAMEM
-    
-    call SYSOUT
-    ret
-
-; On entry, BC = zero-based block to transfer.
-write_syscall:
-    call MOTORON
     call SYSIN
-
-    push bc
-    ld b, fdd_write_dma_buffer_end - fdd_write_dma_buffer
-    ld c, SAR0L
-    ld hl, fdd_write_dma_buffer
-    call DMAMEM
-    pop bc
-    
-    ld hl, $f800
+    ld ix, disk_buffer + 0x5000 ; low byte of physical address
     inc bc                  ; block number must be one based
-    push ix
-    ld a, 7                 ; write sector
-    rst 0x28
-    pop ix
-
+    ld h, 6                 ; high nibble of physical address
+    ld de, 1                ; sector count
+    rst 0x28                ; disk access
     call SYSOUT
+    pop ix
     ret
 
     dseg
-
-fdd_read_dma_buffer:
-    dw 0x5800               ; SAR0 low
-    db 0x02                 ; SAR0 high
-    dw disk_buffer+0x7000   ; DAR0 low
-    db 0x02                 ; DAR0 high
-    dw 0x0100               ; BCR0
-fdd_read_dma_buffer_end:
-
-fdd_write_dma_buffer:
-    dw disk_buffer+0x7000   ; SAR0 low
-    db 0x02                 ; SAR0 high
-    dw 0x5800               ; DAR0 low
-    db 0x02                 ; DAR0 high
-    dw 0x0100               ; BCR0
-fdd_write_dma_buffer_end:
 
 drive_a_dph:
     dw 0                    ; Sector translation vector
@@ -273,8 +183,8 @@ drive_a_dph:
     dw drive_a_check_vector ; Disk change check vector
     dw drive_a_bitmap       ; Allocation bitmap
 
-RESERVED_TRACKS = 3
-DRIVE_A_BLOCKS = (39-RESERVED_TRACKS)*12*256 / 1024
+RESERVED_TRACKS = 4
+DRIVE_A_BLOCKS = (78-RESERVED_TRACKS)*12*256 / 1024
 drive_a_dpd:
     dw 12*2                 ; Number of CP/M sectors per track
     db 3, 7                 ; BSH/BLM for 1024-byte blocks
@@ -299,7 +209,6 @@ current_sector: db 0
 current_track:  db 0
 current_block:  dw 0xffff
 disk_buffer:    ds 256
-motor_status:   db 0
 
 ; vim: ts=4 sw=4 et ft=asm
 

@@ -3,7 +3,7 @@
 ; See COPYING.cpmish in the distribution root directory for more information.
 
     maclib cpm
-    maclib brotherpowernote
+    maclib pn8510
 
     extrn TTYPUTC
     extrn TTYPUT8

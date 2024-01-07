@@ -11,7 +11,7 @@
 
     maclib cpmish
     maclib cpm
-    maclib brotherpowernote
+    maclib pn8510
     maclib addresses
 
     extrn FDBUF
