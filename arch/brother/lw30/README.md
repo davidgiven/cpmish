@@ -48,7 +48,7 @@ Build cpmish.
 
 Use FluxEngine to write this to a DD 3.5" floppy, using a command line like:
 
-    fluxengine write brother -i brotherop2.img
+    fluxengine write brother -i lw30.img
 
 Insert the disk into the machine's drive, power on, and press FILE to open the
 disk menu.

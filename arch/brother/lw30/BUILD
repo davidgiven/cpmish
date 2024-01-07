@@ -7,10 +7,10 @@ package(default_visibility = ["//visibility:public"])
 
 genrule(
 	name = "font_inc",
-	tools = [ "//arch/brotherop2/utils:fontconvert" ],
+	tools = [ "//arch/brother/lw30/utils:fontconvert" ],
 	srcs = [ "//utils:6x7font.bdf" ],
 	outs = [ "font.inc" ],
-	cmd = "$(location //arch/brotherop2/utils:fontconvert) $< > $@"
+	cmd = "$(location //arch/brother/lw30/utils:fontconvert) $< > $@"
 )
 
 zmac(
@@ -18,7 +18,7 @@ zmac(
 	z180 = True,
     srcs = [
 		"boot.z80",
-		"//arch/brotherop2/include:brotherop2.lib",
+		"//arch/brother/lw30/include:lw30.lib",
 		"//arch/common/utils:tty.lib",
 		"//include:cpmish.lib",
 		"//include:z180.lib",
@@ -40,7 +40,7 @@ ld80(
 		z180 = True,
 		srcs = [
 			n + ".z80",
-			"//arch/brotherop2/include:brotherop2.lib",
+			"//arch/brother/lw30/include:lw30.lib",
 			"//arch/common/utils:print.lib",
 			"//arch/common/utils:tty.lib",
 			"//include:cpm.lib",

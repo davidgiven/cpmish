@@ -32,9 +32,9 @@ jobs:
         path: |
           bazel-bin/arch/brother/pn8510/diskimage.img
           bazel-bin/arch/brother/pn8800/diskimage.img
-          bazel-bin/arch/brotherop2/diskimage.img
+          bazel-bin/arch/brother/lw30/diskimage.img
+          bazel-bin/arch/brother/wp2450/diskimage.img
           bazel-bin/arch/brotherwp1/diskimage.img
           bazel-bin/arch/kayproii/diskimage.img
           bazel-bin/arch/nc200/diskimage.img
-          bazel-bin/arch/wp2450/diskimage.img
       

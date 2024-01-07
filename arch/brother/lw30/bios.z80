@@ -4,7 +4,7 @@
 
     maclib cpm
     maclib cpmish
-    maclib brotherop2
+    maclib lw30
 
     public SYSIN
     public SYSOUT

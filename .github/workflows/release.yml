@@ -53,6 +53,7 @@ jobs:
           pn8510.img
           pn8800.img
           brotherop2.img
+          lw30.img
           brotherwp1.img
           kayproii.img
           nc200.img
@@ -67,7 +68,7 @@ jobs:
         files: |
           pn8510.img
           pn8800.img
-          brotherop2.img
+          lw30.img
           brotherwp1.img
           kayproii.img
           nc200.img
