@@ -39,6 +39,7 @@ def ld80(self, name, address=0x0100, objs: ListOfTargetsMap = {}):
             + (" ".join(args)),
             f"tail -c+{address+1} {{outs[0]}}.all > {{outs[0]}}",
         ],
+        label="LD80",
     )
 
 

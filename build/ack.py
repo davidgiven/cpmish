@@ -1,13 +1,27 @@
-from build.c import cprogram
+from build.ab import emit
+from build.c import cprogram, clibrary
+
+emit(
+    """
+ACKCC ?= ack
+ACKAAL ?= aal
+     """
+)
+
 
 class AckToolchain:
     label = "ACK"
-    cfile = ["$(CC) -c -o {outs[0]} {ins[0]} $(CFLAGS) {cflags}"]
-    cxxfile = ["$(CXX) -c -o {outs[0]} {ins[0]} $(CFLAGS) {cflags}"]
-    clibrary = ["$(AR) cqs {outs[0]} {ins}"]
-    cxxlibrary = ["$(AR) cqs {outs[0]} {ins}"]
-    cprogram = ["$(CC) -o {outs[0]} {ins} {ldflags} $(LDFLAGS)"]
-    cxxprogram = ["$(CXX) -o {outs[0]} {ins} {ldflags} $(LDFLAGS)"]
+    cfile = ["$(ACKCC) -mcpm -c -o {outs[0]} {ins[0]} $(ACKCFLAGS) {cflags}"]
+    cxxfile = (["false"],)
+    clibrary = ["$(ACKAAL) cq {outs[0]} {ins}"]
+    cxxlibrary = (["false"],)
+    cprogram = ["$(ACKCC) -mcpm -.c -o {outs[0]} {ins} {ldflags} $(ACKLDFLAGS)"]
+    cxxprogram = (["false"],)
+
+
+def acklibrary(**kwargs):
+    return clibrary(**kwargs, toolchain=AckToolchain)
+
 
 def ackprogram(**kwargs):
     return cprogram(**kwargs, toolchain=AckToolchain)
