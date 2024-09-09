@@ -145,7 +145,7 @@ diskimage(
         "submit.com": "cpmtools+submit",
         "asm80.com": "third_party/dr/asm80",
         "camel80.com": "third_party/camelforth",
-        #"bbcbasic.com": "third_party/bbcbasic+bbcbasic_ADM3A",
+        "bbcbasic.com": "third_party/bbcbasic+bbcbasic_ADM3A",
         "mkfs.com": "cpmtools+mkfs",
         "rawdisk.com": "cpmtools+rawdisk",
         "qe.com": "cpmtools+qe_BROTHER_POWERNOTE",
