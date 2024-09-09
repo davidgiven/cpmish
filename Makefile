@@ -1,3 +1,4 @@
+export ACKCFLAGS = -O3
 export OBJ = .obj
 
 .PHONY: all

@@ -68,14 +68,14 @@ def zmac(
         archflag += " --dri"
     outfile = f"={self.localname}{ext}"
 
-    hdrflags = [f"-I{dirname(f)}" for f in filenamesof(deps)]
+    hdrflags = " ".join([f"-I{dirname(f)}" for f in filenamesof(deps)])
 
     simplerule(
         replaces=self,
         ins=[src, "third_party/zmac"] + deps,
         outs=[f"={self.localname}{ext}"],
         commands=[
-            f"{{ins[1]}} --nmnv --zmac -m {relflag} {archflag} {" ".join(hdrflags)} -o {{outs[0]}} {{ins[0]}}"
+            f"{{ins[1]}} --nmnv --zmac -m {relflag} {archflag} {hdrflags} -o {{outs[0]}} {{ins[0]}}"
         ],
         label="ZMAC",
     )
