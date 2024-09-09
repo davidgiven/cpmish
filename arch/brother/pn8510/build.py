@@ -149,7 +149,7 @@ diskimage(
         "mkfs.com": "cpmtools+mkfs",
         "rawdisk.com": "cpmtools+rawdisk",
         "qe.com": "cpmtools+qe_BROTHER_POWERNOTE",
-        #"z8e.com": "third_party/z8e+z8e_POWERNOTE",
+        "z8e.com": "third_party/z8e+z8e_POWERNOTE",
         #"ted.com": "third_party/ted+ted_POWERNOTE",
     },
 )
