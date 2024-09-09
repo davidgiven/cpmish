@@ -5,5 +5,6 @@ export(
     items={
         "pn8510.img": "arch/brother/pn8510+diskimage",
         "pn8800.img": "arch/brother/pn8800+diskimage",
+        "wp2450.img": "arch/brother/wp2450+diskimage",
     },
 )

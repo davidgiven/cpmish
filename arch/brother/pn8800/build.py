@@ -21,7 +21,7 @@ simplerule(
     ins=["arch/brother/pn8800/utils+mkkeytab"],
     outs=["=keytab.inc"],
     commands=["{ins[0]} > {outs[0]}"],
-    label="MKKEYTAB"
+    label="MKKEYTAB",
 )
 
 # Object files --------------------------------------------------------------

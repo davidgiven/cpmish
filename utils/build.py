@@ -8,7 +8,7 @@ cprogram(name="unix2cpm", srcs=["./unix2cpm.c"])
 clibrary(
     name="libbdf",
     srcs=["./libbdf.c"],
-    hdrs={"libbf.h": "./libbdf.h"},
+    hdrs={"libbdf.h": "./libbdf.h"},
     cflags=["-Wno-unused-label"],
 )
 
