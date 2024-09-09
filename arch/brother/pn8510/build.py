@@ -143,7 +143,7 @@ diskimage(
         "asm.com": "cpmtools+asm",
         "copy.com": "cpmtools+copy",
         "submit.com": "cpmtools+submit",
-        #"asm80.com": "third_party/dr/asm80",
+        "asm80.com": "third_party/dr/asm80",
         #"camel80.com": "third_party/camelforth",
         #"bbcbasic.com": "third_party/bbcbasic+bbcbasic_ADM3A",
         "mkfs.com": "cpmtools+mkfs",
