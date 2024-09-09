@@ -11,5 +11,5 @@ simplerule(
     ins=[".+" + f for f in SRCS],
     outs=["=asm80.com"],
     commands=["cat {ins[0]} > {outs[0]}"],
-    label="CAT"
+    label="CAT",
 )
