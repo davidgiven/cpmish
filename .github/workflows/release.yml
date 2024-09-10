@@ -20,7 +20,7 @@ jobs:
     - name: apt
       run: |
         sudo apt update
-        sudo apt install cpmtools bazel-bootstrap flex bison libreadline-dev libz80ex-dev lua5.2
+        sudo apt install cpmtools flex bison libreadline-dev libz80ex-dev lua5.2
 
     - name: build-ack
       run: |
@@ -49,7 +49,6 @@ jobs:
         token: ${{ github.token }}
         tag: dev
         assets: | 
-          pn8510.img
           pn8510.img
           pn8800.img
           brotherop2.img
