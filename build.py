@@ -8,5 +8,6 @@ export(
         "wp2450.img": "arch/brother/wp2450+diskimage",
         "lw30.img": "arch/brother/lw30+diskimage",
         "wp1.img": "arch/brother/wp1+diskimage",
+        "kayproii.img": "arch/kayproii+diskimage",
     },
 )
