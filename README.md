@@ -81,7 +81,6 @@ This are built automatically and aren't tested in any way.
 need to install the dependencies. These are the names of the Debian packages:
 
   - cpmtools
-  - bazel-bootstrap
   - libz80ex-dev
   - libreadline-dev
 
