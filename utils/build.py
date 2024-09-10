@@ -22,3 +22,12 @@ def unix2cpm(self, name, src: Target):
         commands=["{ins[0]} < {ins[1]} > {outs[0]}"],
         label="UNIX2CPM",
     )
+
+@Rule
+def objectify(self, name, src:Target):
+    simplerule(
+        replaces=self,
+        ins = [ src, "utils+objectify" ],
+        outs = [ f"={self.localname}.inc" ],
+        commands=["{ins[1]} < {ins[0]} > {outs[0]}"],
+        label="OBJECTIFY")

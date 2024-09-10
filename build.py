@@ -9,5 +9,6 @@ export(
         "lw30.img": "arch/brother/lw30+diskimage",
         "wp1.img": "arch/brother/wp1+diskimage",
         "kayproii.img": "arch/kayproii+diskimage",
+        "nc200.img": "arch/nc200+diskimage"
     },
 )
