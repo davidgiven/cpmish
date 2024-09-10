@@ -112,6 +112,12 @@ def Rule(func):
         t.types = func.__annotations__
         t.callback = func
         t.traits.add(func.__name__)
+        if "args" in kwargs:
+            t.args |= kwargs["args"]
+            del kwargs["args"]
+        if "traits" in kwargs:
+            t.traits |= kwargs["traits"]
+            del kwargs["traits"]
 
         t.binding = sig.bind(name=name, self=t, **kwargs)
         t.binding.apply_defaults()
@@ -185,7 +191,6 @@ class Target:
         # Perform type conversion to the declared rule parameter types.
 
         try:
-            self.args = {}
             for k, v in self.binding.arguments.items():
                 if k != "kwargs":
                     t = self.types.get(k, None)
@@ -206,7 +211,7 @@ class Target:
 
             cwdStack.append(self.cwd)
             self.callback(
-                **{k: v for k, v in self.args.items() if k not in {"dir"}}
+                **{k: self.args[k] for k in self.binding.arguments.keys()}
             )
             cwdStack.pop()
         except BaseException as e:
@@ -409,7 +414,6 @@ def simplerule(
     deps: Targets = [],
     commands=[],
     label="RULE",
-    **kwargs,
 ):
     self.ins = ins
     self.outs = outs
