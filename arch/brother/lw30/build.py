@@ -27,7 +27,7 @@ zmac(
 
 ld80(name="boot", address=0x5000, objs={0x5000: [".+boot_o"]})
 
-[
+for n in ["bios", "floppy", "tty"]:
     zmac(
         name=n,
         z180=True,
@@ -41,8 +41,6 @@ ld80(name="boot", address=0x5000, objs={0x5000: [".+boot_o"]})
             "include/z180.lib",
         ],
     )
-    for n in ["bios", "floppy", "tty"]
-]
 
 # This is the bit which CP/M reloads on warm boot (well, some of it).
 ld80(
