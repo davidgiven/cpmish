@@ -16,7 +16,7 @@ jobs:
     - name: apt
       run: |
         sudo apt update
-        sudo apt install cpmtools bazel-bootstrap flex bison libreadline-dev libz80ex-dev lua5.2
+        sudo apt install cpmtools flex bison libreadline-dev libz80ex-dev lua5.2
     - name: build-ack
       run: |
         git clone --depth=1 https://github.com/davidgiven/ack.git
@@ -30,11 +30,11 @@ jobs:
       with:
         name:  ${{ github.event.repository.name }}.${{ github.sha }}
         path: |
-          bazel-bin/arch/brother/pn8510/diskimage.img
-          bazel-bin/arch/brother/pn8800/diskimage.img
-          bazel-bin/arch/brother/lw30/diskimage.img
-          bazel-bin/arch/brother/wp2450/diskimage.img
-          bazel-bin/arch/brother/wp1/diskimage.img
-          bazel-bin/arch/kayproii/diskimage.img
-          bazel-bin/arch/nc200/diskimage.img
+          pn8510.img
+          pn8800.img
+          lw30.img
+          wp2450.img
+          wp1.img
+          kayproii.img
+          nc200.img
       
