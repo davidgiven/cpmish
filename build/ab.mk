@@ -28,9 +28,15 @@ ifeq ($(OS), Windows_NT)
 endif
 EXT ?=
 
+ifeq ($(PROGRESSINFO),)
+rulecount := $(shell test -f $(OBJ)/build.mk && $(MAKE) -n $(MAKECMDGOALS) PROGRESSINFO=XXXPROGRESSINFOXXX | grep XXXPROGRESSINFOXXX | wc -l)
+ruleindex := 1
+PROGRESSINFO = "$(shell $(PYTHON) build/_progress.py $(ruleindex) $(rulecount))$(eval ruleindex := $(shell expr $(ruleindex) + 1))"
+endif
+
 include $(OBJ)/build.mk
 
-MAKEFLAGS += -r -j$(nprocs)
+MAKEFLAGS += -r -j$(shell nproc)
 .DELETE_ON_ERROR:
 
 .PHONY: update-ab
