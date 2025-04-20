@@ -25,7 +25,7 @@ jobs:
     - name: build-ack
       run: |
         git clone --depth=1 https://github.com/davidgiven/ack.git
-        make -C ack PREFIX=$HOME +ack-cpm
+        sed -i 's/PLATS = all/PLATS = cpm/' ack/Makefile
         make -C ack PREFIX=$HOME install
     - name: make
       run: PATH=$PATH:$HOME/bin make
