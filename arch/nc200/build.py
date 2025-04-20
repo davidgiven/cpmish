@@ -126,6 +126,8 @@ diskimage(
         "camel80.com": "third_party/camelforth",
         "copy.com": "cpmtools+copy",
         "dump.com": "cpmtools+dump",
+        "flash.com": "arch/nc200/tools+flash",
+        "flipdisk.com": "arch/nc200/tools+flipdisk",
         "mkfs.com": "cpmtools+mkfs",
         "qe.com": "cpmtools+qe_NC200",
         "rawdisk.com": "cpmtools+rawdisk",
