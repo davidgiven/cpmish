@@ -1,0 +1,3 @@
+# keep artifacts out of github
+.obj/
+*.img

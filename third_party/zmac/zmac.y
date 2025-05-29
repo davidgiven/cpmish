@@ -733,7 +733,7 @@ void putout(int value);
 int outrec;
 int outlen;
 unsigned char outbuf[1024 * 1024];
-void bookmark();
+void bookmark(int);
 void listfrombookmark();
 
 
@@ -5820,7 +5820,7 @@ int nextchar()
 {
 	int c, ch;
 	unsigned char *p;
-	char *getlocal();
+	char *getlocal(int, int);
 
 	if (peekc != NOPEEK) {
 		c = peekc;
