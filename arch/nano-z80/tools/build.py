@@ -50,3 +50,8 @@ ackprogram(
     name="nanoterm",
     srcs=["./nanoterm.c", "./uart.s"],
 )
+
+ackprogram(
+    name="imgview",
+    srcs=["./imgview.c", "./gfx.s"],
+)
