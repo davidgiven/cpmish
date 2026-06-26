@@ -142,3 +142,36 @@ _set_pal_b:
     out PAL_B
     ret
 
+! Get palette R
+.sect .text
+.define _get_pal_r
+_get_pal_r:
+    mvi a, IO_SELECT_VIDEO
+    out IOBANK
+    in PAL_R
+    mvi d,0
+    mov e,a
+    ret
+
+! Get palette G
+.sect .text
+.define _get_pal_g
+_get_pal_g:
+    mvi a, IO_SELECT_VIDEO
+    out IOBANK
+    in PAL_G
+    mvi d,0
+    mov e,a
+    ret
+
+! Get palette B
+.sect .text
+.define _get_pal_b
+_get_pal_b:
+    mvi a, IO_SELECT_VIDEO
+    out IOBANK
+    in PAL_B
+    mvi d,0
+    mov e,a
+    ret
+
