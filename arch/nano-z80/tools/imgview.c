@@ -19,10 +19,19 @@ static uint8_t pal[768];
 static uint8_t vid_mode;
 FCB img_fcb;
 
+static void print(const char* s) {
+    for(;;) {
+        uint8_t b = *s++;
+        if(!b) return;
+        cpm_conout(b);
+    }
+}
+
 void print_info(void) {
-    printf("imgview <gfxmode> <imagefile>\n");
-    printf("gfxmode == 0 -> 160x120x8\n");
-    printf("gfxmode == 1 -> 320x200x8\n");
+    print("imgview - Image viewer for the nano-z80. Usage:\r\n");
+    print("imgview <gfxmode> <imagefile>\r\n");
+    print("gfxmode == 0 -> 160x120x8\r\n");
+    print("gfxmode == 1 -> 320x200x8\r\n");
     cpm_exit();
 }
 
@@ -34,27 +43,29 @@ int main(int argc, const char *argv[]) {
     if(argc != 3) print_info();
 
     if(*argv[1]=='0') {
-        vid_mode = 0x01;;
+        // Setup buffer size
+        set_vid_mode(0x00);
+        vid_mode = 0x01;
         blocks = 150;
     } else if(*argv[1]=='1') {
-        vid_mode = 0x02;
+        // Setup buffer size
+        set_vid_mode(0x02);
+        vid_mode = 0x03;
         blocks = 500;
     } else print_info();
     
     cpm_parse_filename(&img_fcb, argv[2]);
     if(cpm_open_file(&img_fcb) == 0xff) print_info();    
 
-    // Set graphics mode
-    set_vid_mode(vid_mode);
-    
+    print("Loading image");
+
     // Load and set palette, 768 bytes = 6 blocks
     color = 0;
     pos = 0;
     n = 0;
     for(i=0; i<6; i++) {
         cpm_set_dma(&buffer);
-        cpm_read_sequential(&img_fcb);
-        
+        cpm_read_sequential(&img_fcb);;
         for(j=0; j<128; j++) {
             if(pos == 0) {
                 set_pal_color(color);
@@ -77,20 +88,29 @@ int main(int argc, const char *argv[]) {
 
         }
     }
+    cpm_conout('.');
 
     // Load and set image data, 19200 bytes = 150 blocks
     set_pixel_x(0);
     set_pixel_y(0);
     set_vid_page(0);
-
+    pos=0;
     for(i=0; i<blocks; i++) {
         cpm_set_dma(&buffer);
         cpm_read_sequential(&img_fcb);
+        pos++;
+        if(pos>9) {
+            cpm_conout('.');
+            pos=0;
+        }
         for(j=0; j<128; j++) {
             set_pixel_data(buffer[j]);
         }
     }
 
+    // Set graphics mode
+    set_vid_mode(vid_mode);
+ 
     // Wait for keypress
     while(!cpm_const());
 
@@ -105,4 +125,5 @@ int main(int argc, const char *argv[]) {
         set_pal_g(pal[n]); n++;
         set_pal_b(pal[n]); n++;
     }
+    print("\r\n");
 }
