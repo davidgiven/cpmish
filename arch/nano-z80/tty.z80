@@ -28,11 +28,19 @@ EMULATE_CLEAR_TO_EOS = 0
     maclib tty
     maclib print
 
-TTYINIT equ tty_init
+;TTYINIT equ tty_init
 TTYPUTC equ tty_putc
 TTYPUT8 equ tty_puthex8
 TTYPUT16 equ tty_puthex16
 TTYPUTSI equ tty_putsi
+
+TTYINIT:
+    ; Disable autoscrolling
+    call video_init
+    ld a,0
+    out (VID_AUTOSCROLL),a
+    call tty_init 
+    ret
 
 tty_rawwrite:
     push af
