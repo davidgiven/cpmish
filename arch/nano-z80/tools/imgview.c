@@ -90,7 +90,7 @@ int main(int argc, const char *argv[]) {
     }
     cpm_conout('.');
 
-    // Load and set image data, 19200 bytes = 150 blocks
+    // Load and set image data
     set_pixel_x(0);
     set_pixel_y(0);
     set_vid_page(0);
