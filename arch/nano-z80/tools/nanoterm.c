@@ -71,26 +71,6 @@ void printhex8(uint8_t b)
     printhex4(b);
 }
 
-/*uint8_t dummy(uint8_t b) {
-    uint8_t x;
-    x=b;
-    return x;
-}*/
-// Wrapper which is only used since I for the life of me can't figure out
-// the correct calling convention
-/*void uart_putc(uint8_t b) {
-    dummy(b);    
-    uart_putc_raw(b);   
-}
-
-void uart_setbaud(uint8_t b) {
-    if(b>5) b=5;
-    
-    dummy(b);
-    uart_setbaud_raw(b);
-}
-*/
-
 void print_settings(void) {
     printx("Current settings");    
     print("Local echo: ");
