@@ -322,7 +322,7 @@ void redraw_current_line(void)
 
 void insert_file(void)
 {
-	strcpy(buffer, "Reading ");
+	memcpy(buffer, "Reading ", sizeof("Reading "));
 	render_fcb(&cpm_fcb);
 	print_status(buffer);
 
@@ -382,7 +382,7 @@ bool really_save_file(FCB* fcb)
 	uint8_t* outp;
 	static uint16_t pushed;
 
-	strcpy(buffer, "Writing ");
+	memcpy(buffer, "Writing ", sizeof("Writing "));
 	render_fcb(fcb);
 	print_status(buffer);
 
@@ -455,14 +455,14 @@ bool save_file(void)
 
 	/* Write to a temporary file. */
 
-	strcpy((char*)tempfcb.f, "QETEMP  $$$");
+	memcpy((char*)tempfcb.f, "QETEMP  $$$", sizeof("QETEMP  $$$"));
 	tempfcb.dr = cpm_fcb.dr;
 	if (really_save_file(&tempfcb) == 0xff)
 		goto tempfile;
 
-	strcpy(buffer, "Renaming ");
+	memcpy(buffer, "Renaming ", sizeof("Renaming "));
 	render_fcb(&tempfcb);
-	strcat(buffer, " to ");
+	{ size_t _len = strlen(buffer); memcpy(buffer + _len, " to ", sizeof(" to ")); }
 	render_fcb(&cpm_fcb);
 	print_status(buffer);
 
@@ -1001,10 +1001,11 @@ void colon(uint16_t count)
 
 		buffer[buffer[1]+2] = '\0';
 
-		w = strtok(buffer+2, " ");
+		{ char* _strtok_save;
+		w = strtok_r(buffer+2, " ", &_strtok_save);
 		if (!w)
 			break;
-		arg = strtok(NULL, " ");
+		arg = strtok_r(NULL, " ", &_strtok_save); }
 		switch (*w)
 		{
 			case 'w':
@@ -1102,7 +1103,7 @@ void main(int argc, const char* argv[])
 	print_status = set_status_line;
 
 	itoa((uint16_t)(buffer_end - buffer_start), buffer, 10);
-	strcat(buffer, " bytes free");
+	{ size_t _len = strlen(buffer); memcpy(buffer + _len, " bytes free", sizeof(" bytes free")); }
 	print_status(buffer);
 
 	load_file();
@@ -1127,7 +1128,7 @@ void main(int argc, const char* argv[])
 			{
 				command_count = (command_count*10) + (c-'0');
 				itoa(command_count, buffer, 10);
-				strcat(buffer, " repeat");
+				{ size_t _len = strlen(buffer); memcpy(buffer + _len, " repeat", sizeof(" repeat")); }
 				set_status_line(buffer);
 			}
 			else
