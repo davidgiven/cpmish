@@ -37,4 +37,6 @@ jobs:
           wp1.img
           kayproii.img
           nc200.img
+          nano-z80.img
+
       

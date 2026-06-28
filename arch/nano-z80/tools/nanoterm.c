@@ -70,25 +70,6 @@ void printhex8(uint8_t b)
     printhex4(b>>4);
     printhex4(b);
 }
-uint8_t dummy(uint8_t b) {
-    uint8_t x;
-    x=b;
-    return x;
-}
-// Wrapper which is only used since I for the life of me can't figure out
-// the correct calling convention
-void uart_putc(uint8_t b) {
-    dummy(b);    
-    uart_putc_raw(b);   
-}
-
-void uart_setbaud(uint8_t b) {
-    if(b>5) b=5;
-    
-    dummy(b);
-    uart_setbaud_raw(b);
-}
-
 
 void print_settings(void) {
     printx("Current settings");    
@@ -144,7 +125,7 @@ void set_baudrate(void) {
         printx("Invalid selection");
         return;        
     }
-    uart_setbaud(b);
+    uart_setbaud_raw(b);
     baudrate = uart_getbaud();
     crlf();
     print_settings();
@@ -199,7 +180,7 @@ static void xmodem_receive(void) {
     outp = NAK;
     // Transmission
     while(1) {
-        uart_putc(outp);
+        uart_putc_raw(outp);
         if(getblockchar(&inp)) {
             if(inp == EOT) {
                 crlf();
@@ -260,20 +241,20 @@ static void xmodem_send_block(uint8_t block_cnt) {
     print(".");
 
     // Send header
-    uart_putc(SOH);
-    uart_putc(block_cnt);
-    uart_putc(block_cnt ^ 0xFF);
+    uart_putc_raw(SOH);
+    uart_putc_raw(block_cnt);
+    uart_putc_raw(block_cnt ^ 0xFF);
 
     checksum = 0;
     // Send data
     for(i=0; i<128; i++) {
         data = xmodem_buffer[i];
         checksum += data;
-        uart_putc(data);
+        uart_putc_raw(data);
     }
 
     // Send checksum
-    uart_putc(checksum);    
+    uart_putc_raw(checksum);    
 }
 
 static void xmodem_send(void) {
@@ -324,7 +305,7 @@ static void xmodem_send(void) {
                 if(nak_cnt == 11) {
                     print("Too many NAKs, aborting");
                     crlf();
-                    uart_putc(CAN);
+                    uart_putc_raw(CAN);
                     cpm_close_file(&xmodem_file);
                     return;
                 }
@@ -337,7 +318,7 @@ static void xmodem_send(void) {
                     crlf();
                     print("Transmission done");
                     crlf();
-                    uart_putc(EOT);
+                    uart_putc_raw(EOT);
                     cpm_close_file(&xmodem_file);
                     return;
                 }
@@ -349,7 +330,7 @@ static void xmodem_send(void) {
         if(cpm_const()) {
             // Cancel due to keypress
             cpm_close_file(&xmodem_file);
-            uart_putc(CAN);
+            uart_putc_raw(CAN);
             return;
         }
     }
@@ -412,7 +393,7 @@ int main(void) {
                         xmodem_receive();
                         break;
                     case LOCAL_CMD:
-                        uart_putc(LOCAL_CMD);
+                        uart_putc_raw(LOCAL_CMD);
                         break;
                     case 'h':
                     case 'H':
@@ -435,7 +416,7 @@ int main(void) {
                     cpm_conout(console_data);
                 }
               
-                uart_putc(console_data);
+                uart_putc_raw(console_data);
             }
         }
         if(uart_rx_avail()) {

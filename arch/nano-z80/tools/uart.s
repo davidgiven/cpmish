@@ -41,7 +41,7 @@ _uart_putc_raw:
     pop d                       ! pop return address
     pop h                       ! pop character to send
     
-    xthl                        ! L = character to send
+    !xthl                        ! L = character to send
     push h
     push d
     mvi a, IO_SELECT_UART 
@@ -72,7 +72,7 @@ _uart_setbaud_raw:
     pop d                       ! pop return address
     pop h                       ! pop setting
     
-    xthl                        ! L = setting
+    !xthl                        ! L = setting
     push h
     push d
     mvi a, IO_SELECT_UART 

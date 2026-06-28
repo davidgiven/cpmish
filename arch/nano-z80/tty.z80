@@ -28,11 +28,19 @@ EMULATE_CLEAR_TO_EOS = 0
     maclib tty
     maclib print
 
-TTYINIT equ tty_init
+;TTYINIT equ tty_init
 TTYPUTC equ tty_putc
 TTYPUT8 equ tty_puthex8
 TTYPUT16 equ tty_puthex16
 TTYPUTSI equ tty_putsi
+
+TTYINIT:
+    ; Disable autoscrolling
+    call video_init
+    ld a,0
+    out (VID_AUTOSCROLL),a
+    call tty_init 
+    ret
 
 tty_rawwrite:
     push af
@@ -84,18 +92,14 @@ tty_clear_to_eos:
     out (VID_CLEAR_TO_EOS), a
     ret ;jp tty_update_cursor
 
-; Add a timeout as just checking the busy flag gets stuck sometimes
-; for unknows reasons
 video_init:
     ld a, IO_SELECT_VID
     out (IO_BANK), a
-    ld b,37
-video_init_delay:
+video_init_wait:
     in a, (VID_BUSY)
-    ret z
-    djnz video_init_delay
+    or a
+    jr nz, video_init_wait
     ret
-   
 
 ; vim: ts=4 sw=4 et ft=asm
 

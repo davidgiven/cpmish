@@ -58,6 +58,7 @@ jobs:
           nc200.img
           wp2450.img
           wp2450ds.img
+          nano-z80.img
         fail-if-no-assets: false
 
     - name: release
@@ -72,6 +73,7 @@ jobs:
           kayproii.img
           nc200.img
           wp2450.img
+          nano-z80.img
         tag_name: dev
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
