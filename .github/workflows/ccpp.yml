@@ -1,6 +1,8 @@
 name: C/C++ CI
 
-on: [push]
+on:
+  pull_request_review:
+    types: [submitted, edited]
 
 concurrency: 
   group: environment-${{ github.head_ref }}
